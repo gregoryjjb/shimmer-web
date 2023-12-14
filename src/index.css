@@ -2,6 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-:focus {
+:focus-visible {
   @apply outline outline-offset-2 outline-blue-500;
 }

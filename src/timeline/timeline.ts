@@ -517,6 +517,7 @@ class Timeline {
 
     const ctx = this.canvas.getContext('2d');
     if (!ctx) return;
+    ctx.reset();
     ctx.scale(this.dpiScale, this.dpiScale);
     ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
 
@@ -1180,14 +1181,15 @@ DPI scale: ${this.dpiScale}`;
   };
 
   private handleKeyDown = (e: KeyboardEvent): boolean => {
+    // Ignore if an input is focused
     if (e.target && 'nodeName' in e.target && e.target.nodeName === 'INPUT') {
       return false;
     }
 
-    const normalizedKey = e.key.toLowerCase();
+    // Ignore if the event is being fired because the key is held
+    if (e.repeat) return false;
 
-    // Some keypress events will require a draw
-    this.requestDraw();
+    const normalizedKey = e.key.toLowerCase();
 
     if (normalizedKey === 'b') {
       // Benchmark
