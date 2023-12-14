@@ -2,7 +2,7 @@ import { Signal, createSignal } from 'solid-js';
 
 export const createStoredSignal = <T>(
   key: string,
-  defaultValue: T
+  defaultValue: T,
 ): Signal<T> => {
   const raw = localStorage.getItem(key);
   const initialValue = raw ? (JSON.parse(raw) as T) : defaultValue;

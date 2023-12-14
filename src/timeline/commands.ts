@@ -47,5 +47,5 @@ export type CommandArg<T extends Command> = [T] extends [ComplexCommand]
 
 export type ComplexCommandHandler = <T extends ComplexCommand>(
   command: T,
-  arg: ArgOf<T>
+  arg: ArgOf<T>,
 ) => void;

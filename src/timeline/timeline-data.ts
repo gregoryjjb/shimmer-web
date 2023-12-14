@@ -45,7 +45,7 @@ type BinarySearchSide = 'left' | 'right';
 export const binarySearch = (
   array: Keyframe[],
   time: number,
-  side?: BinarySearchSide
+  side?: BinarySearchSide,
 ): number | undefined => {
   let start = 0;
   let end = array.length - 1;
@@ -290,7 +290,7 @@ class TimelineData {
   binarySearch = (
     trackIndex: number,
     time: number,
-    side?: BinarySearchSide
+    side?: BinarySearchSide,
   ): number | undefined => {
     const array = this.channels[trackIndex]?.keyframes;
     if (!array) return undefined;
@@ -345,7 +345,7 @@ class TimelineData {
     channel: number,
     time: number,
     tolerance: number,
-    keepExisting: boolean
+    keepExisting: boolean,
   ): number | undefined => {
     const p = perfEvent('selectSingle');
 
@@ -490,7 +490,7 @@ class TimelineData {
 
     // Grab selected
     const selected = this.channels.map((track) =>
-      track.keyframes.filter((k) => k.selected)
+      track.keyframes.filter((k) => k.selected),
     );
 
     // Delete selected
@@ -614,7 +614,7 @@ interface ActionReturns<T> extends ActionResult {}
 
 type ActionHandler<T extends Action> = (
   action: T,
-  args: ActionArgs[T]
+  args: ActionArgs[T],
 ) => boolean;
 
 export default TimelineData;

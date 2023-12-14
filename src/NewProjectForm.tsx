@@ -17,7 +17,7 @@ const NewProjectForm: Component<{
 
   return (
     <form
-      class="flex flex-col gap-4 items-start"
+      class="flex flex-col items-start gap-4"
       onSubmit={(e) => {
         e.preventDefault();
         console.log(e);
@@ -32,13 +32,13 @@ const NewProjectForm: Component<{
       }}
     >
       <div class="flex flex-col">
-        <label for="project-name" class="text-sm font-semibold mb-1">
+        <label for="project-name" class="mb-1 text-sm font-semibold">
           Name
         </label>
         <input
           id="project-name"
           value={name()}
-          class="bg-zinc-700 hover:bg-zinc-600 focus:bg-zinc-600 p-2 rounded"
+          class="rounded bg-zinc-700 p-2 hover:bg-zinc-600 focus:bg-zinc-600"
           onInput={(e) => setName(e.target.value)}
         />
         <Show when={!nameValid()}>
@@ -46,10 +46,10 @@ const NewProjectForm: Component<{
         </Show>
       </div>
       <FileInput onChange={(f) => setFile(() => f)} />
-      <div class="flex justify-end w-full">
+      <div class="flex w-full justify-end">
         <button
           type="submit"
-          class="px-3 py-2 font-semibold bg-emerald-500 rounded text-black"
+          class="rounded bg-emerald-500 px-3 py-2 font-semibold text-black"
         >
           Create
         </button>

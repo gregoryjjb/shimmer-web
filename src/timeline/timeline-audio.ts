@@ -32,7 +32,7 @@ type PeaksConfig = {
 
 const coalescePeaksOptions = (
   samplesDuration: number,
-  options: PeaksOptions
+  options: PeaksOptions,
 ): PeaksConfig => {
   const start = ('start' in options && options.start) || 0;
   const duration =
@@ -51,11 +51,11 @@ const coalescePeaksOptions = (
 const getPeaks = (
   samples: Float32Array,
   samplesDuration: number,
-  options: PeaksOptions
+  options: PeaksOptions,
 ): Peaks => {
   const { start, duration, peaksCount } = coalescePeaksOptions(
     samplesDuration,
-    options
+    options,
   );
 
   // Raw data
@@ -101,11 +101,11 @@ const getPeaks = (
 const downsamplePeaks = (
   sourcePeaks: Peaks,
   sourceDuration: number,
-  options: PeaksOptions
+  options: PeaksOptions,
 ): Peaks => {
   const { start, duration, peaksCount } = coalescePeaksOptions(
     sourceDuration,
-    options
+    options,
   );
 
   // Raw data
@@ -178,7 +178,7 @@ export default class TimelineAudio extends Emitter<{
     this.input.style.display = 'none';
     this.input.addEventListener(
       'change',
-      this.handleOpenFile as (e: Event) => void
+      this.handleOpenFile as (e: Event) => void,
     );
     // document.body.appendChild(this.input);
 
@@ -217,7 +217,7 @@ export default class TimelineAudio extends Emitter<{
   private handleOpenFile = (
     event: Event & {
       target: HTMLInputElement;
-    }
+    },
   ) => {
     const file = event.target.files?.[0];
 
@@ -323,7 +323,7 @@ export default class TimelineAudio extends Emitter<{
   getPeaks = (
     segmentCount: number,
     start: number,
-    duration: number
+    duration: number,
   ): Peaks | undefined => {
     if (!this.buffer) return;
 
@@ -336,8 +336,8 @@ export default class TimelineAudio extends Emitter<{
       rate < 10
         ? this.precomputedPeaks![10]
         : rate < 100
-        ? this.precomputedPeaks![100]
-        : this.precomputedPeaks![1000];
+          ? this.precomputedPeaks![100]
+          : this.precomputedPeaks![1000];
 
     // Use existing array if we can, to save memory
     const cached =

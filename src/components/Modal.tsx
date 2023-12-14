@@ -13,8 +13,8 @@ export const ModalTitle: ParentComponent = (props) => {
   const modal = useModal();
 
   return (
-    <div class="flex flex-row mb-6">
-      <h1 class="text-lg font-bold flex-1">{props.children}</h1>
+    <div class="mb-6 flex flex-row">
+      <h1 class="flex-1 text-lg font-bold">{props.children}</h1>
       <button onClick={() => modal?.hide()}>X</button>
     </div>
   );

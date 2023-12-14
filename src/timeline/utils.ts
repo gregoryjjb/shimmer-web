@@ -68,4 +68,4 @@ export const abs = (p: Point): Point => {
     x: Math.abs(p.x),
     y: Math.abs(p.y),
   };
-}
+};

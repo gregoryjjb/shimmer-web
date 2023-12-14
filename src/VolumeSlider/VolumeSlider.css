@@ -35,7 +35,9 @@
 .volume-slider::-moz-range-thumb,
 .volume-slider::-webkit-slider-thumb,
 .volume-slider::-ms-thumb {
-  box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
+  box-shadow:
+    1px 1px 1px #000000,
+    0px 0px 1px #0d0d0d;
   border: 1px solid #000000;
   height: 36px;
   width: 16px;

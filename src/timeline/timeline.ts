@@ -131,7 +131,7 @@ type TimelineOptions = DeepPartial<DeepWritable<TimelineConfig>>;
 const createDiamond = (
   size: number,
   strokeStyle: string | CanvasGradient | CanvasPattern,
-  fillStyle: string | CanvasGradient | CanvasPattern
+  fillStyle: string | CanvasGradient | CanvasPattern,
 ): CanvasImageSource => {
   const squareRootTwo = 1.41421356237;
   const edgeSize = size / squareRootTwo;
@@ -152,7 +152,7 @@ const createDiamond = (
     Math.ceil(edgeSize / -2 + 1),
     Math.ceil(edgeSize / -2 + 1),
     Math.floor(edgeSize - 2),
-    Math.floor(edgeSize - 2)
+    Math.floor(edgeSize - 2),
   );
   ctx.fill();
   ctx.stroke();
@@ -294,7 +294,7 @@ class Timeline {
       span.style.width = `${layout.sidebarWidth}px`;
       span.style.height = `${layout.channelHeight}px`;
       const colors = ['red', 'green', 'blue', 'yellow'].sort(
-        () => Math.random() - 0.5
+        () => Math.random() - 0.5,
       );
       console.log('Colors', colors);
       for (let i = 0; i < 4; i++) {
@@ -345,7 +345,7 @@ class Timeline {
         this.container.clientWidth,
         this.container.clientHeight,
         entries[0].contentRect.width,
-        entries[0].contentRect.height
+        entries[0].contentRect.height,
       );
       console.log(entries);
 
@@ -355,7 +355,7 @@ class Timeline {
 
       this.resizeCanvas(
         this.container.clientWidth,
-        this.container.clientHeight
+        this.container.clientHeight,
       );
     });
     this.resizeObserver.observe(this.container);
@@ -493,7 +493,7 @@ class Timeline {
   };
 
   private getLocalCoordinates = (
-    event: MouseEvent | WheelEvent
+    event: MouseEvent | WheelEvent,
   ): { x: number; y: number } => {
     const rect = this.canvas.getBoundingClientRect();
     const x = event.clientX - rect.left;
@@ -607,7 +607,7 @@ class Timeline {
     const peaks = this.audio.getPeaks(
       waveformWidth,
       this.position,
-      waveformWidth / this.pxPerSecond
+      waveformWidth / this.pxPerSecond,
     );
 
     if (peaks) {
@@ -671,8 +671,8 @@ class Timeline {
           ? theme.channelDisabledAlternate
           : theme.channelDisabled
         : alt
-        ? theme.channelAlternate
-        : theme.channel;
+          ? theme.channelAlternate
+          : theme.channel;
 
       // ctx.fillStyle = i % 2 === 0 ? theme.channel : theme.channelAlternate;
 
@@ -691,22 +691,22 @@ class Timeline {
         keyframeOn: createDiamond(
           layout.keyframeSize * this.dpiScale,
           theme.keyframeOn, // theme.keyframeOutline,
-          theme.keyframeOn
+          theme.keyframeOn,
         ),
         keyframeOff: createDiamond(
           layout.keyframeSize * this.dpiScale,
           theme.keyframeOutline,
-          'transparent'
+          'transparent',
         ),
         keyframeOnSelected: createDiamond(
           layout.keyframeSize * this.dpiScale,
           theme.keyframeOutlineSelected,
-          theme.keyframeOn
+          theme.keyframeOn,
         ),
         keyframeOffSelected: createDiamond(
           layout.keyframeSize * this.dpiScale,
           theme.keyframeOutlineSelected,
-          'transparent'
+          'transparent',
         ),
       };
     }
@@ -717,10 +717,10 @@ class Timeline {
     performance.mark('keyframes-start');
     if (this.data) {
       const cutoffTimeLeft = this.absolutePxToTime(
-        channelsX - layout.keyframeSize / 2
+        channelsX - layout.keyframeSize / 2,
       );
       const cutoffTimeRight = this.absolutePxToTime(
-        this.canvasWidth + layout.keyframeSize / 2
+        this.canvasWidth + layout.keyframeSize / 2,
       );
 
       this.data.channels.forEach((channel, i) => {
@@ -769,15 +769,15 @@ class Timeline {
                 ? this.diamondCache!.keyframeOffSelected
                 : this.diamondCache!.keyframeOff
               : selected
-              ? this.diamondCache!.keyframeOnSelected
-              : this.diamondCache!.keyframeOn;
+                ? this.diamondCache!.keyframeOnSelected
+                : this.diamondCache!.keyframeOn;
 
           ctx.drawImage(
             source,
             x - layout.keyframeSize / 2,
             y - layout.keyframeSize / 2,
             layout.keyframeSize,
-            layout.keyframeSize
+            layout.keyframeSize,
           );
         }
       });
@@ -853,7 +853,7 @@ class Timeline {
     performance.measure(
       'draw waveform',
       'draw-waveform-start',
-      'draw-waveform-end'
+      'draw-waveform-end',
     );
     performance.measure('diamonds', 'diamonds-start', 'diamonds-end');
     performance.measure('keyframes', 'keyframes-start', 'keyframes-end');
@@ -1025,7 +1025,7 @@ DPI scale: ${this.dpiScale}`;
             channel,
             time,
             tolerance,
-            e.shiftKey
+            e.shiftKey,
           );
 
           // If no single keyframe was clicked, start a box select
@@ -1084,7 +1084,7 @@ DPI scale: ${this.dpiScale}`;
       y: clamp(
         p.y,
         this.config.layout.timelineHeight + this.config.layout.waveformHeight,
-        this.canvasHeight
+        this.canvasHeight,
       ),
     };
 
@@ -1110,7 +1110,7 @@ DPI scale: ${this.dpiScale}`;
     if (this.seeking) {
       const clamped = Math.min(
         Math.max(this.config.layout.sidebarWidth, x),
-        this.canvasWidth
+        this.canvasWidth,
       );
       const time = this.absolutePxToTime(clamped);
       if (time >= 0) {
@@ -1145,7 +1145,7 @@ DPI scale: ${this.dpiScale}`;
     } else if (e.button === LEFT_MOUSE_BUTTON) {
       if (this.boxSelection) {
         const size = abs(
-          difference(this.boxSelection.start, this.boxSelection.end)
+          difference(this.boxSelection.start, this.boxSelection.end),
         );
 
         // Don't count it as a box select unless the box is bigger than 2x2 px
@@ -1193,7 +1193,7 @@ DPI scale: ${this.dpiScale}`;
       // Benchmark
       let start = performance.now();
       this.data?.channels.forEach((channel) =>
-        channel.keyframes.forEach((keyframe) => (keyframe.selected = false))
+        channel.keyframes.forEach((keyframe) => (keyframe.selected = false)),
       );
       let duration = performance.now() - start;
       console.log('Iterating over all keyframes took', duration);

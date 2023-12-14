@@ -93,5 +93,5 @@ export class UndoHistory<T> {
 
   debug = () => {
     return this.buffer;
-  }
+  };
 }

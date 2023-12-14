@@ -44,7 +44,7 @@ const ToolbarButton: ParentComponent<{
       disabled={props.disabled}
     >
       {props.children}
-      <Icon path={props.path} class="w-5 h-5" />
+      <Icon path={props.path} class="h-5 w-5" />
     </button>
   );
 };
@@ -54,7 +54,7 @@ const ToolbarButtonGroup: ParentComponent = (props) => (
 );
 
 const Bar: Component = () => {
-  return <div class="w-px h-6 mx-2 bg-zinc-400" />;
+  return <div class="mx-2 h-6 w-px bg-zinc-400" />;
 };
 
 const Toolbar: Component<{
@@ -74,13 +74,13 @@ const Toolbar: Component<{
   return (
     <div class="flex flex-row items-center gap-2">
       <button
-        class={`rounded-full p-2 text-emerald-950 bg-emerald-500 hover:bg-emerald-400`}
+        class={`rounded-full bg-emerald-500 p-2 text-emerald-950 hover:bg-emerald-400`}
         onClick={createOnClick('playtoggle')}
       >
-        <Icon path={props.playing ? pause : play} class="w-6 h-6" />
+        <Icon path={props.playing ? pause : play} class="h-6 w-6" />
       </button>
       <select
-        class="bg-zinc-700 hover:bg-zinc-600 text-zinc-100 rounded-lg h-9 px-2"
+        class="h-9 rounded-lg bg-zinc-700 px-2 text-zinc-100 hover:bg-zinc-600"
         onChange={(e) =>
           props.onPlaybackRateChange?.(parseFloat(e.target.value))
         }

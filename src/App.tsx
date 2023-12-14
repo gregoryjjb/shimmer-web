@@ -70,7 +70,7 @@ function App() {
   };
 
   return (
-    <div class="h-screen flex flex-col">
+    <div class="flex h-screen flex-col">
       <MenuBar>
         <Menu name="File">
           <MenuItem name="New project" onClick={() => modal.show()} />
@@ -87,7 +87,7 @@ function App() {
           <MenuItem name="Shift down" />
         </Menu>
       </MenuBar>
-      <div class="p-3 flex flex-col gap-3">
+      <div class="flex flex-col gap-3 p-3">
         <input class="bg-transparent p-0 text-white" value="Untitled show" />
         <Toolbar
           selectedCount={selectedCount()}
@@ -100,7 +100,7 @@ function App() {
         />
       </div>
       <div
-        class="flex-1 min-h-0"
+        class="min-h-0 flex-1"
         // style={{
         //   position: 'absolute',
         //   top: '78px',
@@ -113,7 +113,7 @@ function App() {
           t.on('play', () => setPlaying(true));
           t.on('pause', () => setPlaying(false));
           t.on('edit', (action) =>
-            setEditLog((a) => [{ time: Date.now(), message: action }, ...a])
+            setEditLog((a) => [{ time: Date.now(), message: action }, ...a]),
           );
           t.on('selected', (n) => setSelectedCount(n));
 
@@ -138,7 +138,7 @@ function App() {
         }}
       />
       <p>{selectedCount()} keyframes selected</p>
-      <ul class="fixed left-0 bottom-0 flex flex-col-reverse text-white font-mono">
+      <ul class="fixed bottom-0 left-0 flex flex-col-reverse font-mono text-white">
         {editLog().map((a) => (
           <li>
             {new Date(a.time).toLocaleTimeString()} {a.message}

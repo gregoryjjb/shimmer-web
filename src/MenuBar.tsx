@@ -11,7 +11,7 @@ import {
 
 export default function clickOutside(
   el: Element,
-  accessor: Accessor<() => void>
+  accessor: Accessor<() => void>,
 ) {
   const onClick = (e: MouseEvent) =>
     !el.contains(e.target as Node) && accessor()?.();
@@ -84,7 +84,7 @@ export const Menu: ParentComponent<{
   return (
     <div class="relative">
       <button
-        class="text-white hover:bg-zinc-600 text-sm px-2 py-0.5 rounded"
+        class="rounded px-2 py-0.5 text-sm text-white hover:bg-zinc-600"
         classList={{
           'bg-zinc-600': isOpen(),
         }}
@@ -98,7 +98,7 @@ export const Menu: ParentComponent<{
         {props.name}
       </button>
       {isOpen() && (
-        <div class="absolute z-10 bg-zinc-800 py-2 px-1 rounded flex flex-col min-w-[300px] shadow-md">
+        <div class="absolute z-10 flex min-w-[300px] flex-col rounded bg-zinc-800 px-1 py-2 shadow-md">
           {props.children}
         </div>
       )}
@@ -117,7 +117,7 @@ export const MenuItem: Component<MenuItemProps> = (props) => {
 
   return (
     <button
-      class="text-white text-sm hover:bg-zinc-600 focus:bg-zinc-600 text-left px-2 py-1 rounded"
+      class="rounded px-2 py-1 text-left text-sm text-white hover:bg-zinc-600 focus:bg-zinc-600"
       onClick={() => {
         ctx?.setOpen(null);
         props.onClick && props.onClick();
@@ -130,5 +130,5 @@ export const MenuItem: Component<MenuItemProps> = (props) => {
 };
 
 export const MenuItemSpacer: Component = () => {
-  return <hr class="border-zinc-500 my-1 mx-2" />;
+  return <hr class="mx-2 my-1 border-zinc-500" />;
 };

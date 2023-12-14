@@ -8,12 +8,11 @@ import { createStoredSignal } from '../hooks/createStorageSignal';
 const VolumeSlider: Component<{
   onChange?: (n: number) => void;
 }> = (props) => {
-
   const [volume, setVolume] = createStoredSignal('volume', 0.5);
 
   return (
-    <div class="flex items-center p-2 bg-zinc-700 rounded-lg">
-      <Icon path={speakerWave} class="w-5 h-5 mr-2 text-zinc-100" />
+    <div class="flex items-center rounded-lg bg-zinc-700 p-2">
+      <Icon path={speakerWave} class="mr-2 h-5 w-5 text-zinc-100" />
       <input
         type="range"
         min="0"
@@ -22,7 +21,7 @@ const VolumeSlider: Component<{
         value={volume()}
         class="volume-slider w-28"
         onInput={(e) => {
-          setVolume(parseFloat(e.target.value))
+          setVolume(parseFloat(e.target.value));
           props.onChange?.(parseFloat(e.target.value));
         }}
       />
