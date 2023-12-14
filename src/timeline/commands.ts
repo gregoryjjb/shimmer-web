@@ -9,8 +9,10 @@ export type SimpleCommand =
   | 'shiftDown'
   | 'grab'
   | 'scale'
+  | 'align'
   | 'duplicate'
   | 'delete'
+  | 'dedup'
   | 'cancel'
   | 'pickAudioFile'
   | 'selectAll'
@@ -20,15 +22,17 @@ export const keybinds: Record<string, SimpleCommand> = {
   ' ': 'playtoggle',
   ctrl_z: 'undo',
   ctrl_shift_z: 'redo',
-  delete: 'delete',
   i: 'invert',
   arrowup: 'shiftUp',
   arrowdown: 'shiftDown',
   g: 'grab',
   s: 'scale',
   ctrl_d: 'duplicate',
+  delete: 'delete',
+  w: 'dedup',
   escape: 'cancel',
   ctrl_a: 'selectAll',
+  a: 'align',
 };
 
 export type CommandsWithArgs = {

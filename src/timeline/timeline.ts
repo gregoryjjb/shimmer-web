@@ -1261,12 +1261,14 @@ DPI scale: ${this.dpiScale}`;
     shiftDown: () => this.data?.shiftSelected('down'),
     grab: this.startGrab,
     scale: this.startScale,
+    align: () => this.data?.alignSelected(),
     duplicate: () => {
       this.data?.duplicateSelected();
       this.startGrab();
     },
     cancel: this.cancelGrab,
     delete: () => this.data?.deleteSelected(),
+    dedup: () => this.data?.dedup(),
     pickAudioFile: () => this.persistence.pickAudio(),
     selectAll: () => this.data?.selectAll(true),
 

@@ -588,6 +588,78 @@ class TimelineData {
       this.emit('No keyframes selected');
     }
   };
+
+  alignSelected = () => {
+    const selectedIndexes: number[][] = this.channels.map(() => []);
+
+    let timeSum = 0;
+
+    this.channels.forEach((track, i) => {
+      track.keyframes.forEach((keyframe, j) => {
+        if (keyframe.selected) {
+          selectedIndexes[i].push(j);
+          timeSum += keyframe.timestamp;
+        }
+      });
+    });
+
+    const count = selectedIndexes
+      .map((is) => is.length)
+      .reduce((lens, len) => lens + len);
+    const avg = timeSum / count;
+
+    selectedIndexes.forEach((indexes, channel) => {
+      indexes.forEach((i) => {
+        this.channels[channel].keyframes[i].timestamp = avg;
+      });
+    });
+
+    if (count) {
+      this.markEdit(`Aligned ${count} keyframes`);
+    } else {
+      this.emit('No keyframes selected');
+    }
+  };
+
+  dedup = () => {
+    // Keyframes closer than this (in seconds) are merged
+    const threshold = 0.001; // 1ms
+    const markedForDeletion: number[][] = this.channels.map(() => []);
+
+    this.channels.forEach((track, i) => {
+      let lastTimestamp: number | undefined;
+
+      track.keyframes.forEach((kf, j) => {
+        if (kf.selected) {
+          if (lastTimestamp === undefined) {
+            lastTimestamp = kf.timestamp;
+          } else if (kf.timestamp - lastTimestamp < threshold) {
+            markedForDeletion[i].push(j);
+          }
+        }
+      });
+    });
+
+    const count = markedForDeletion
+      .map((is) => is.length)
+      .reduce((lens, len) => lens + len);
+
+    if (count) {
+      this.delete(markedForDeletion);
+      this.markEdit(`Deduped ${count} keyframes`);
+    } else {
+      this.emit(`Didn't dedup anything`);
+    }
+  };
+
+  // Deletes the provided indexes (array of indexes by channel)
+  private delete = (indexes: number[][]) => {
+    indexes.forEach((idx, channel) => {
+      for (let ii = idx.length - 1; ii >= 0; ii--) {
+        this.channels[channel].keyframes.splice(idx[ii]);
+      }
+    });
+  };
 }
 
 interface ActionResult {
