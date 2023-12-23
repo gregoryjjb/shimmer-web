@@ -88,7 +88,7 @@ const defaultConfig = {
   layout: {
     timelineHeight: 40,
     waveformHeight: 100,
-    sidebarWidth: 200,
+    sidebarWidth: 160,
     channelHeight: 30,
     keyframeSize: 20,
   },
@@ -166,13 +166,38 @@ interface RenderedBoxSelection extends BoxSelection {
   end: Point;
 }
 
-const stringifyTime = (time: number): string => {
-  const minutes = Math.floor(time / 60)
-    .toString()
-    .padStart(2, '0');
-  const seconds = (time % 60).toString().padStart(2, '0');
+const timeResolutions = {
+  minutes: 0,
+  seconds: 1,
+  milliseconds: 2,
+};
 
-  return minutes + ':' + seconds;
+type TimestampResolution = keyof typeof timeResolutions;
+
+const stringifyTime = (time: number, resolution: TimestampResolution): string => {
+  const res = timeResolutions[resolution];
+  
+  let t = '';
+
+  if (res >= timeResolutions.minutes) {
+    t = Math.floor(time / 60)
+      .toString()
+      .padStart(2, '0');
+  }
+
+  if (res >= timeResolutions.seconds) {
+    t += ':' + Math.floor(time % 60)
+      .toString()
+      .padStart(2, '0');
+  }
+
+  if (res >= timeResolutions.milliseconds) {
+    t += ':' + Math.floor((time * 1000) % 1000)
+      .toString()
+      .padStart(3, '0');
+  }
+
+  return t;
 };
 
 // const createTemporaryCanvas = (callback: (ctx: CanvasRenderingContext2D))
@@ -265,7 +290,7 @@ class Timeline {
     this.debugDisplay = document.createElement('pre');
     this.debugDisplay.innerText = 'Foo\nBar';
     this.debugDisplay.style.position = 'absolute';
-    this.debugDisplay.style.top = '0';
+    this.debugDisplay.style.bottom = '0';
     this.debugDisplay.style.left = '0';
     this.debugDisplay.style.margin = '0';
     this.debugDisplay.style.fontSize = '12px';
@@ -379,42 +404,50 @@ class Timeline {
     this.destroyed = true;
   };
 
-  load = async (data: ShowDataJSON, audioPath: string) => {
-    // const [_, rawData] = await Promise.all([
-    //   this.audio.load(`/api/shows/${id}/audio`),
-    //   api.getShowData(id),
-    // ]);
-
+  load = async (data: Track[], audio: Blob) => {
     const start = performance.now();
-    // await this.audio.load(audioPath);
-    console.log('Loading audio took ms:', performance.now() - start);
 
-    // this.data = new TimelineData(this.emitter, data);
+    this.emitter.emit('loading', true);
+
+    try {
+      const p = this.audio.load(audio);
+      this.loadData(data);
+      await p;
+    } finally {
+      console.log('Load took ms:', performance.now() - start);
+      this.emitter.emit('loading', false);
+    }
 
     this.requestDraw();
   };
 
-  loadLegacyJSON = (data: ShowDataJSON) => {
-    const tracks = mapJSONToMemory(data);
+  loadData = (data: Track[]) => {
+    if (this.data) {
+      this.data.replace(data);
+    } else {
+      this.data = new TimelineData(this.emitter, data);
+    }
+  };
 
-    this.data = new TimelineData(this.emitter, tracks);
+  loadLegacyJSON = (json: ShowDataJSON) => {
+    const data = mapJSONToMemory(json);
+
+    this.loadData(data);
   };
 
   loadPersistence = async (source: IPersistence) => {
-    const marshaled = await source.get('tracks');
-    const data = JSON.parse(marshaled as string);
+    const start = performance.now();
+    const [data, audio] = await Promise.all([
+      source.get('tracks'),
+      source.get('audio'),
+    ]);
+    console.log('Fetched from IndexedDB in ms:', performance.now() - start);
 
-    console.log('LOADED PERSISTENT DATA', data);
+    if (data && audio) {
+      const parsedData = JSON.parse(data);
 
-    if (data) {
-      this.data = new TimelineData(this.emitter, data as Track[]);
+      await this.load(parsedData, audio);
     }
-
-    // await this.audio.load('/queen_of_the_winter_night.mp3');
-    // await this.audio.loadFromPersistence();
-
-    const audio = await source.get('audio'); // .retrieveAudio();
-    if (audio) await this.audio.load(audio);
 
     this.requestDraw();
   };
@@ -508,11 +541,11 @@ class Timeline {
     const theme = colors.dark;
 
     // Compute needed height of canvas
-    const tempChannelCount = 8;
+    const channelCount = this.data?.channels?.length || 0;
     const totalHeight =
       layout.timelineHeight +
       layout.waveformHeight +
-      tempChannelCount * layout.channelHeight;
+      channelCount * layout.channelHeight;
     // this.canvas.height = totalHeight * this.dpiScale;
 
     const ctx = this.canvas.getContext('2d');
@@ -568,7 +601,7 @@ class Timeline {
       ctx.lineTo(x, Math.round(height));
       ctx.stroke();
 
-      const timeString = stringifyTime(currentMark);
+      const timeString = stringifyTime(currentMark, 'seconds');
       ctx.font = '12px sans-serif';
       ctx.fillStyle = theme.ticks;
       ctx.fillText(timeString, x + 2, height + 12);
@@ -659,13 +692,13 @@ class Timeline {
     const channelsX = layout.sidebarWidth;
     const channelsY = waveformY + layout.waveformHeight;
     const channelsWidth = this.canvasWidth - channelsX;
-    const channelsHeight = tempChannelCount * layout.channelHeight;
+    const channelsHeight = channelCount * layout.channelHeight;
     ctx.translate(channelsX, channelsY);
 
     // Draw alternating background colors for channels
     for (let i = 0; i < 100; i++) {
       const alt = i % 2 === 0;
-      const disabled = i >= tempChannelCount;
+      const disabled = i >= channelCount;
 
       ctx.fillStyle = disabled
         ? alt
@@ -831,6 +864,16 @@ class Timeline {
     ctx.fillStyle = theme.sidebar;
     ctx.fillRect(0, 0, layout.sidebarWidth, this.canvasHeight);
 
+    // Current time
+    const timeString = stringifyTime(this.audio.currentTime, 'milliseconds');
+    ctx.font = '16px Courier New,monospace';
+    ctx.fillStyle = theme.ticks;
+    ctx.fillText(timeString, 4, 20);
+
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'white';
+    ctx.strokeRect(4, 2, 90, 22);
+
     // Turn the lights on or off
     this.lights.forEach((light, i) => {
       const time = this.audio.currentTime || 0;
@@ -885,6 +928,8 @@ DPI scale: ${this.dpiScale}`;
     // console.log(performance.getEntriesByType("measure"));
     performance.clearMarks();
     performance.clearMeasures();
+
+    this.emitter.emit('render', undefined);
   };
 
   ///////////////////
@@ -1182,7 +1227,8 @@ DPI scale: ${this.dpiScale}`;
 
   private handleKeyDown = (e: KeyboardEvent): boolean => {
     // Ignore if an input is focused
-    if (e.target && 'nodeName' in e.target && e.target.nodeName === 'INPUT') {
+    const target = e.target as EventTarget & { nodeName: string; type: string };
+    if (target?.nodeName === 'INPUT' && target?.type === 'text') {
       return false;
     }
 
@@ -1284,6 +1330,25 @@ DPI scale: ${this.dpiScale}`;
     if (command === 'setVolume') {
       this.audio.volume = arg as number;
     }
+  };
+
+  ///////////////////
+  // State ?
+
+  getPrompt = (): string => {
+    if (this.grabbing) {
+      return `Moving keyframes; (Right-click or Esc to cancel)`;
+    }
+
+    if (this.scaling) {
+      return `Scaling keyframes; (Right-click or Esc to cancel)`;
+    }
+
+    if (this.boxSelection) {
+      return `Box-selecting; (Right-click or Esc to cancel)`;
+    }
+
+    return '';
   };
 }
 

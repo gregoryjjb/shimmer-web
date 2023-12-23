@@ -2,9 +2,10 @@ import { Component, Show, createMemo, createSignal } from 'solid-js';
 import FileInput from './components/FileInput';
 
 const NewProjectForm: Component<{
-  onSubmit?: (result: { name: string; file: File }) => void;
+  onSubmit?: (result: { name: string; file: File, channelCount: number }) => void;
 }> = (props) => {
   const [name, setName] = createSignal('Untitled project');
+  const [channelCount, setChannelCount] = createSignal(8);
   const [file, setFile] = createSignal<File>();
 
   const invalidRegex = /[<>/\\:"|?*\n]/m;
@@ -20,7 +21,6 @@ const NewProjectForm: Component<{
       class="flex flex-col items-start gap-4"
       onSubmit={(e) => {
         e.preventDefault();
-        console.log(e);
 
         const f = file();
         if (!f) return;
@@ -28,6 +28,7 @@ const NewProjectForm: Component<{
         props.onSubmit?.({
           name: name(),
           file: f,
+          channelCount: channelCount(),
         });
       }}
     >
@@ -41,6 +42,20 @@ const NewProjectForm: Component<{
           class="rounded bg-zinc-700 p-2 hover:bg-zinc-600 focus:bg-zinc-600"
           onInput={(e) => setName(e.target.value)}
         />
+
+        <label for="channel-count" class="mb-1 text-sm font-semibold">
+          Number of channels
+        </label>
+        <input
+          id="channel-count"
+          type="number"
+          min="1"
+          step="1"
+          value={channelCount()}
+          class="rounded bg-zinc-700 p-2 hover:bg-zinc-600 focus:bg-zinc-600"
+          onInput={(e) => setChannelCount(parseInt(e.target.value))}
+        />
+
         <Show when={!nameValid()}>
           <p>Invalid</p>
         </Show>

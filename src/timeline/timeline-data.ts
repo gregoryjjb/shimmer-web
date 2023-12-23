@@ -15,6 +15,13 @@ export type Keyframe = {
   selected: boolean;
 };
 
+export const newTracks = (count: number): Track[] => {
+  return Array.from(Array(count).keys()).map((n) => ({
+    name: `${n}`,
+    keyframes: [],
+  }));
+};
+
 const compareKeyframes = (a: Keyframe, b: Keyframe): number => {
   if (a.timestamp < b.timestamp) return -1;
   if (a.timestamp > b.timestamp) return 1;
@@ -163,65 +170,24 @@ class TimelineData {
 
   constructor(emitter: TimelineEmitter, data: Track[]) {
     this.emitter = emitter;
-    // this.channels = mapJSONToMemory(dataJSON);
-    // localPersistence.getData().then((d) => {
-    //   this.channels = JSON.parse(d as string);
-    //   this.undoHistory = new UndoHistory(100, {
-    //     action: 'Initial state',
-    //     channels: JSON.stringify(this.channels), //deepClone(this.channels),
-    //   });
-    // });
     this.channels = data;
     this.undoHistory = new UndoHistory(100, {
       action: 'Initial state',
       channels: JSON.stringify(data),
     });
-    // this.takeUndoSnapshot('Loaded data');
-
-    // type ActionKey = keyof typeof this.actions;
-    // type ActionArgs<K extends ActionKey> = Parameters<(typeof this.actions)[K]>;
-    // type ActionReturns<K extends ActionKey> = ReturnType<
-    //   (typeof this.actions)[K]
-    // >;
-
-    // localPersistence.saveData('FOO!');
-
-    // setTimeout(() => {
-    //   localPersistence.getData().then((d) => console.log(d));
-    // }, 1000);
   }
 
-  // performAction = <T extends keyof typeof this.actions>(
-  //   action: T,
-  //   ...args: Parameters<(typeof this.actions)[T]>
-  // ): ReturnType<(typeof this.actions)[T]> => {
-  //   const a = this.actions[action];
-
-  //   const result = a(...args);
-
-  //   if (result.changed) {
-  //     this.takeUndoSnapshot(action);
-  //   }
-  //   this.emit(action);
-
-  //   return result;
-  // };
-
-  // actions = {
-  //   insert: (channel: number, time: number, value: number) => {
-  //     this.channels[channel].keyframes.push({
-  //       timestamp: time,
-  //       value,
-  //       selected: false,
-  //     });
-  //     this.channels[channel].keyframes.sort(compareKeyframes);
-
-  //     // this.takeUndoSnapshot('Added keyframe');
-  //     // this.emit('Added keyframe');
-
-  //     return { changed: true };
-  //   },
-  // };
+  /**
+   * Replaces all data with the provided. CLEARS UNDO HISTORY!
+   */
+  replace = (data: Track[]) => {
+    const d = structuredClone(data);
+    this.channels = d;
+    this.undoHistory = new UndoHistory(100, {
+      action: 'Initial state',
+      channels: JSON.stringify(d),
+    });
+  };
 
   private takeUndoSnapshot = (action: string) => {
     console.log('Undo snapshot taken:', action);
@@ -234,8 +200,6 @@ class TimelineData {
     });
 
     localPersistence.saveData(marshaled);
-
-    console.log(this.undoHistory.debug().map((s) => s?.action));
   };
 
   private emit = (action: string) => {

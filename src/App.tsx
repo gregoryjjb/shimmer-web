@@ -11,6 +11,7 @@ import { Menu, MenuBar, MenuItem, MenuItemSpacer } from './MenuBar';
 import { createStoredSignal } from './hooks/createStorageSignal';
 import { ModalTitle, createModal } from './components/Modal';
 import NewProjectForm from './NewProjectForm';
+import { newTracks } from './timeline/timeline-data';
 
 const show: ShowDataJSON = {
   tracks: [
@@ -29,10 +30,12 @@ function App() {
   let t: Timeline;
 
   const [playing, setPlaying] = createSignal(false);
+  const [loading, setLoading] = createSignal(false);
   const [editLog, setEditLog] = createSignal<
     { time: number; message: string }[]
   >([]);
   const [selectedCount, setSelectedCount] = createSignal(0);
+  const [prompt, setPrompt] = createSignal('');
 
   const [volume] = createStoredSignal('volume', 0.5);
 
@@ -82,9 +85,13 @@ function App() {
           <MenuItem name="Undo" />
           <MenuItem name="Redo" />
           <MenuItemSpacer />
-          <MenuItem name="Invert state" />
+          <MenuItem name="Invert" />
           <MenuItem name="Shift up" />
           <MenuItem name="Shift down" />
+          <MenuItemSpacer />
+          <MenuItem name="Align" />
+          <MenuItem name="Dedup" />
+          <MenuItem name="Delete" />
         </Menu>
       </MenuBar>
       <div class="flex flex-col gap-3 p-3">
@@ -116,6 +123,8 @@ function App() {
             setEditLog((a) => [{ time: Date.now(), message: action }, ...a]),
           );
           t.on('selected', (n) => setSelectedCount(n));
+          t.on('render', () => setPrompt(t.getPrompt()));
+          t.on('loading', (l) => setLoading(l));
 
           t.executeWithArgs('setVolume', volume());
 
@@ -137,17 +146,30 @@ function App() {
           });
         }}
       />
-      <p>{selectedCount()} keyframes selected</p>
+      <p>{prompt() || `${selectedCount()} keyframes selected`}</p>
+      {/* <p>{selectedCount()} keyframes selected</p>
       <ul class="fixed bottom-0 left-0 flex flex-col-reverse font-mono text-white">
         {editLog().map((a) => (
           <li>
             {new Date(a.time).toLocaleTimeString()} {a.message}
           </li>
         ))}
-      </ul>
+      </ul> */}
+      {loading() && (
+        <div class="fixed inset-0 flex items-center justify-center bg-black/25">
+          <p class="text-3xl text-white">LOADING...</p>
+        </div>
+      )}
       <NewProjectModal>
         <ModalTitle>New project</ModalTitle>
-        <NewProjectForm />
+        <NewProjectForm
+          onSubmit={(project) => {
+            const blankData = newTracks(project.channelCount);
+            modal.hide();
+            
+            t.load(blankData, project.file);
+          }}
+        />
       </NewProjectModal>
     </div>
   );

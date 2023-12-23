@@ -21,6 +21,8 @@ export class TimelineEmitter extends Emitter<{
   pause: undefined;
   edit: string;
   selected: number;
+  render: void;
+  loading: boolean;
 }> {
   // constructor() {
   //   super();
