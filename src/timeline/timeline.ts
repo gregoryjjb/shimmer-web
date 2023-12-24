@@ -1214,13 +1214,13 @@ DPI scale: ${this.dpiScale}`;
     e.preventDefault();
 
     console.log({
-      x: e.deltaX, y: e.deltaY, z: e.deltaZ, mode: e.deltaMode, ctrl: e.ctrlKey
+      x: e.deltaX, y: e.deltaY, z: e.deltaZ, mode: e.deltaMode, ctrl: e.ctrlKey, dpi: this.dpiScale,
     });
 
     if (!e.ctrlKey) {
       // Regular pan
-      const pxPerDelta = 10;
-      const offset = e.deltaX * pxPerDelta / this.pxPerSecond
+      const pxPerDelta = 1;
+      const offset = (e.deltaX * this.dpiScale) * pxPerDelta / this.pxPerSecond
 
       this.basePosition = Math.max(this.basePosition + offset, 0);
       this.requestDraw();
@@ -1235,7 +1235,7 @@ DPI scale: ${this.dpiScale}`;
     // y=10e^{4.60517x}
     // where y is px per second and x is the "zoom" level
 
-    this.newZoom = clamp(this.newZoom - e.deltaY * 0.0005, 0, 1)
+    this.newZoom = clamp(this.newZoom - e.deltaY * 0.0005 * this.dpiScale, 0, 1)
 
     const newTime = this.absolutePxToTime(x);
     this.basePosition = Math.max(this.basePosition + anchorTime - newTime, 0);
