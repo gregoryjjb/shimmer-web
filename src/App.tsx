@@ -1,17 +1,16 @@
-import { createSignal, onCleanup, onMount } from 'solid-js';
-import solidLogo from './assets/solid.svg';
-import viteLogo from '/vite.svg';
+import { createSignal, onCleanup } from 'solid-js';
 import './App.css';
-import Timeline from './timeline/timeline';
-import { ShowDataJSON } from './timeline/types';
-import Toolbar from './Toolbar';
-import { Command } from './timeline/commands';
-import { LocalPersistence, localPersistence } from './timeline/persistence';
+import Help from './Help';
 import { Menu, MenuBar, MenuItem, MenuItemSpacer } from './MenuBar';
-import { createStoredSignal } from './hooks/createStorageSignal';
-import { ModalTitle, createModal } from './components/Modal';
 import NewProjectForm from './NewProjectForm';
+import Toolbar from './Toolbar';
+import { ModalTitle, createModal } from './components/Modal';
+import { createStoredSignal } from './hooks/createStorageSignal';
+import { Command } from './timeline/commands';
+import { LocalPersistence } from './timeline/persistence';
+import Timeline from './timeline/timeline';
 import { newTracks } from './timeline/timeline-data';
+import { ShowDataJSON } from './timeline/types';
 
 const show: ShowDataJSON = {
   tracks: [
@@ -38,6 +37,8 @@ function App() {
   const [prompt, setPrompt] = createSignal('');
 
   const [volume] = createStoredSignal('volume', 0.5);
+
+  const [showHelp, setShowHelp] = createStoredSignal('showHelp', false);
 
   const handleCommand = (c: Command) => {
     t.execute(c);
@@ -93,6 +94,9 @@ function App() {
           <MenuItem name="Dedup" />
           <MenuItem name="Delete" />
         </Menu>
+        <Menu name="Help">
+          <MenuItem name="Show help" onClick={() => setShowHelp(true)} />
+        </Menu>
       </MenuBar>
       <div class="flex flex-col gap-3 p-3">
         <input class="bg-transparent p-0 text-white" value="Untitled show" />
@@ -146,7 +150,10 @@ function App() {
           });
         }}
       />
-      <p>{prompt() || `${selectedCount()} keyframes selected`}</p>
+      <div class="border-t border-zinc-400 bg-zinc-800 px-2 py-1">
+        <p>{prompt() || `${selectedCount()} keyframes selected`}</p>
+      </div>
+      {showHelp() && <Help onClose={() => setShowHelp(false)} />}
       {/* <p>{selectedCount()} keyframes selected</p>
       <ul class="fixed bottom-0 left-0 flex flex-col-reverse font-mono text-white">
         {editLog().map((a) => (
@@ -166,7 +173,7 @@ function App() {
           onSubmit={(project) => {
             const blankData = newTracks(project.channelCount);
             modal.hide();
-            
+
             t.load(blankData, project.file);
           }}
         />
