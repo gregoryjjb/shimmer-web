@@ -65,7 +65,7 @@ const darkTheme = {
   channelAlternate: colors.zinc[600],
   channelDisabled: colors.zinc[900],
   channelDisabledAlternate: colors.zinc[800],
-  keyframeOutline: colors.gray[50],
+  keyframeOutline: colors.gray[900],
   keyframeOutlineSelected: colors.red[500],
   keyframeOn: colors.yellow[300],
   boxSelectOutline: colors.cyan[300],
@@ -119,6 +119,7 @@ const createDiamond = (
   size: number,
   strokeStyle: string | CanvasGradient | CanvasPattern,
   fillStyle: string | CanvasGradient | CanvasPattern,
+  borderWidth: number,
 ): CanvasImageSource => {
   const squareRootTwo = 1.41421356237;
   const edgeSize = size / squareRootTwo;
@@ -130,6 +131,7 @@ const createDiamond = (
   const ctx = canvas.getContext('2d')!;
   ctx.strokeStyle = strokeStyle;
   ctx.fillStyle = fillStyle;
+  ctx.lineWidth = borderWidth
 
   ctx.translate(size / 2, size / 2);
   ctx.rotate(Math.PI / 4);
@@ -745,23 +747,27 @@ class Timeline {
       this.diamondCache = {
         keyframeOn: createDiamond(
           layout.keyframeSize * this.dpiScale,
-          theme.keyframeOn, // theme.keyframeOutline,
+          theme.keyframeOutline,
           theme.keyframeOn,
+          1 * this.dpiScale,
         ),
         keyframeOff: createDiamond(
           layout.keyframeSize * this.dpiScale,
           theme.keyframeOutline,
           'transparent',
+          1 * this.dpiScale,
         ),
         keyframeOnSelected: createDiamond(
           layout.keyframeSize * this.dpiScale,
           theme.keyframeOutlineSelected,
           theme.keyframeOn,
+          1 * this.dpiScale,
         ),
         keyframeOffSelected: createDiamond(
           layout.keyframeSize * this.dpiScale,
           theme.keyframeOutlineSelected,
           'transparent',
+          1 * this.dpiScale,
         ),
       };
     }
