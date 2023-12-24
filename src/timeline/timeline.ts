@@ -48,8 +48,8 @@ interface Point {
 type DeepWritable<T> = { -readonly [P in keyof T]: DeepWritable<T[P]> };
 type DeepPartial<T> = T extends object
   ? {
-      [P in keyof T]?: DeepPartial<T[P]>;
-    }
+    [P in keyof T]?: DeepPartial<T[P]>;
+  }
   : T;
 
 const lightTheme = {
@@ -176,7 +176,7 @@ type TimestampResolution = keyof typeof timeResolutions;
 
 const stringifyTime = (time: number, resolution: TimestampResolution): string => {
   const res = timeResolutions[resolution];
-  
+
   let t = '';
 
   if (res >= timeResolutions.minutes) {
@@ -362,7 +362,7 @@ class Timeline {
 
     this.canvas.addEventListener('mousedown', this.handleMouseDown);
     this.canvas.addEventListener('mouseup', this.handleMouseUp);
-    this.canvas.addEventListener('wheel', this.handleWheel);
+    this.canvas.addEventListener('wheel', this.handleWheel, { passive: false });
 
     this.resizeObserver = new ResizeObserver((entries) => {
       console.log(
@@ -1209,6 +1209,21 @@ DPI scale: ${this.dpiScale}`;
 
   private handleWheel = (e: WheelEvent) => {
     e.preventDefault();
+
+    console.log({
+      x: e.deltaX, y: e.deltaY, z: e.deltaZ, mode: e.deltaMode, ctrl: e.ctrlKey
+    });
+
+    if (!e.ctrlKey) {
+      // Regular pan
+      const pxPerDelta = 10;
+      const offset = e.deltaX * pxPerDelta / this.pxPerSecond
+
+      this.basePosition = Math.max(this.basePosition + offset, 0);
+      this.requestDraw();
+      return;
+    }
+
     const { x, y: _ } = this.getLocalCoordinates(e);
     const anchorTime = this.absolutePxToTime(x);
 
