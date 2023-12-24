@@ -224,11 +224,14 @@ class Timeline {
   // Display stuff
 
   private get pxPerSecond() {
-    return this.zoomTiers[this.zoom];
+    // return this.zoomTiers[this.zoom];
+
+    return Math.pow(Math.E, this.newZoom * 4.60517) * 10;
   }
 
   private zoomTiers = buildZoomTiers(); //[1000, 500, 250, 250 / 2, 250 / 4, 250 / 8];
   private zoom = 10;
+  private newZoom = 0.5;
   private dpiScale = 1;
 
   // Offset in seconds
@@ -1227,12 +1230,12 @@ DPI scale: ${this.dpiScale}`;
     const { x, y: _ } = this.getLocalCoordinates(e);
     const anchorTime = this.absolutePxToTime(x);
 
-    if (e.deltaY > 0) {
-      // Zoom out
-      this.zoom = Math.max(this.zoom - 1, 0);
-    } else {
-      this.zoom = Math.min(this.zoom + 1, this.zoomTiers.length - 1);
-    }
+    // Actual zoom formula:
+    // If zoom is from 0-1, with 0 being most zoomed out and 1 being most zoomed in, then the formula is
+    // y=10e^{4.60517x}
+    // where y is px per second and x is the "zoom" level
+
+    this.newZoom = clamp(this.newZoom - e.deltaY * 0.0005, 0, 1)
 
     const newTime = this.absolutePxToTime(x);
     this.basePosition = Math.max(this.basePosition + anchorTime - newTime, 0);
