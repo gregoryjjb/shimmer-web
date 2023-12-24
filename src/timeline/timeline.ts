@@ -131,7 +131,7 @@ const createDiamond = (
   const ctx = canvas.getContext('2d')!;
   ctx.strokeStyle = strokeStyle;
   ctx.fillStyle = fillStyle;
-  ctx.lineWidth = borderWidth
+  ctx.lineWidth = borderWidth;
 
   ctx.translate(size / 2, size / 2);
   ctx.rotate(Math.PI / 4);
@@ -264,6 +264,8 @@ class Timeline {
     keyframeOff: CanvasImageSource;
     keyframeOnSelected: CanvasImageSource;
     keyframeOffSelected: CanvasImageSource;
+    keyframeOnPlaying: CanvasImageSource;
+    keyframeOffPlaying: CanvasImageSource;
   };
 
   /**
@@ -769,6 +771,18 @@ class Timeline {
           'transparent',
           1 * this.dpiScale,
         ),
+        keyframeOnPlaying: createDiamond(
+          layout.keyframeSize * this.dpiScale,
+          theme.boxSelectOutline,
+          theme.keyframeOn,
+          1 * this.dpiScale,
+        ),
+        keyframeOffPlaying: createDiamond(
+          layout.keyframeSize * this.dpiScale,
+          theme.boxSelectOutline,
+          'transparent',
+          1 * this.dpiScale,
+        ),
       };
     }
 
@@ -818,6 +832,12 @@ class Timeline {
 
           const x = this.absoluteTimeToPx(t) - layout.sidebarWidth;
 
+          const next = channel.keyframes[i + 1];
+
+          const playing =
+            kf.timestamp <= this.audio.currentTime &&
+            (!next || next.timestamp > this.audio.currentTime);
+
           const selected =
             kf.selected ||
             (boxSelectingChannel &&
@@ -826,12 +846,16 @@ class Timeline {
 
           const source =
             kf.value === 0
-              ? selected
-                ? this.diamondCache!.keyframeOffSelected
-                : this.diamondCache!.keyframeOff
-              : selected
-                ? this.diamondCache!.keyframeOnSelected
-                : this.diamondCache!.keyframeOn;
+              ? playing
+                ? this.diamondCache!.keyframeOffPlaying
+                : selected
+                  ? this.diamondCache!.keyframeOffSelected
+                  : this.diamondCache!.keyframeOff
+              : playing
+                ? this.diamondCache!.keyframeOnPlaying
+                : selected
+                  ? this.diamondCache!.keyframeOnSelected
+                  : this.diamondCache!.keyframeOn;
 
           ctx.drawImage(
             source,
