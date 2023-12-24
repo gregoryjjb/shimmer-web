@@ -10,6 +10,7 @@ export const createStoredSignal = <T>(
   const [value, setValue] = createSignal<T>(initialValue);
 
   const setValueAndStore = ((arg) => {
+    // @ts-ignore
     const v = setValue(arg);
     localStorage.setItem(key, JSON.stringify(v));
     return v;

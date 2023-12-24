@@ -66,6 +66,7 @@ export const MenuBar: ParentComponent = (props) => {
   return (
     <MenuContext.Provider value={ctx}>
       <div class="flex items-start bg-zinc-800">
+        {/* @ts-ignore -- why doesn't TS like Solid's use: ? */}
         <div use:clickOutside={() => ctx.setOpen(null)} class="flex  p-1">
           {props.children}
         </div>
