@@ -27,19 +27,6 @@ const LEFT_MOUSE_BUTTON = 0;
 const MIDDLE_MOUSE_BUTTON = 1;
 const RIGHT_MOUSE_BUTTON = 2;
 
-const buildZoomTiers = (): number[] => {
-  let pxPerSecond = 10;
-
-  const tiers = [pxPerSecond];
-
-  while (pxPerSecond < 1000) {
-    pxPerSecond = pxPerSecond * 1.25;
-    tiers.push(pxPerSecond);
-  }
-
-  return tiers;
-};
-
 interface Point {
   x: number;
   y: number;
@@ -48,8 +35,8 @@ interface Point {
 type DeepWritable<T> = { -readonly [P in keyof T]: DeepWritable<T[P]> };
 type DeepPartial<T> = T extends object
   ? {
-    [P in keyof T]?: DeepPartial<T[P]>;
-  }
+      [P in keyof T]?: DeepPartial<T[P]>;
+    }
   : T;
 
 const lightTheme = {
@@ -174,7 +161,10 @@ const timeResolutions = {
 
 type TimestampResolution = keyof typeof timeResolutions;
 
-const stringifyTime = (time: number, resolution: TimestampResolution): string => {
+const stringifyTime = (
+  time: number,
+  resolution: TimestampResolution,
+): string => {
   const res = timeResolutions[resolution];
 
   let t = '';
@@ -186,21 +176,23 @@ const stringifyTime = (time: number, resolution: TimestampResolution): string =>
   }
 
   if (res >= timeResolutions.seconds) {
-    t += ':' + Math.floor(time % 60)
-      .toString()
-      .padStart(2, '0');
+    t +=
+      ':' +
+      Math.floor(time % 60)
+        .toString()
+        .padStart(2, '0');
   }
 
   if (res >= timeResolutions.milliseconds) {
-    t += ':' + Math.floor((time * 1000) % 1000)
-      .toString()
-      .padStart(3, '0');
+    t +=
+      ':' +
+      Math.floor((time * 1000) % 1000)
+        .toString()
+        .padStart(3, '0');
   }
 
   return t;
 };
-
-// const createTemporaryCanvas = (callback: (ctx: CanvasRenderingContext2D))
 
 class Timeline {
   private container: Element; // Outer container provided to us
@@ -223,15 +215,33 @@ class Timeline {
 
   // Display stuff
 
+  /**
+   * The number of canvas pixels for one second of audio
+   */
   private get pxPerSecond() {
-    // return this.zoomTiers[this.zoom];
+    const minPxPerSecond = 8;
+    const maxPxPerSecond = 1000;
 
-    return Math.pow(Math.E, this.newZoom * 4.60517) * 10;
+    // The formula for converting zoom into pxPerSecond is:
+    // y = a * e^{bx}
+    // Where:
+    //   x = zoom scaler
+    //   y = px per second
+    //   a = min px per second (since y = a when x = 0)
+    //   b = some coefficient such that y = max px when x = max zoom
+
+    // We have to solve for b:
+    const b = Math.log(maxPxPerSecond / minPxPerSecond);
+
+    // Then use b
+    return Math.pow(Math.E, this.zoom * b) * minPxPerSecond;
   }
 
-  private zoomTiers = buildZoomTiers(); //[1000, 500, 250, 250 / 2, 250 / 4, 250 / 8];
-  private zoom = 10;
-  private newZoom = 0.5;
+  /**
+   * Linear zoom value between 0 and 1, with 0 being most zoomed out and 1 being most
+   * zoomed in. This is smoothly converted to pxPerSecond as we zoom in and out.
+   */
+  private zoom = 0.5;
   private dpiScale = 1;
 
   // Offset in seconds
@@ -254,6 +264,9 @@ class Timeline {
     keyframeOffSelected: CanvasImageSource;
   };
 
+  /**
+   * Position of the left side of the viewport in seconds
+   */
   private get position() {
     return Math.max(this.basePosition + this.panOffset, 0);
   }
@@ -377,10 +390,6 @@ class Timeline {
       );
       console.log(entries);
 
-      // const size = entries[0].borderBoxSize[0].blockSize;
-
-      // entries[0].target.clientWidth
-
       this.resizeCanvas(
         this.container.clientWidth,
         this.container.clientHeight,
@@ -389,8 +398,6 @@ class Timeline {
     this.resizeObserver.observe(this.container);
 
     this.resizeCanvas(this.container.clientWidth, this.container.clientHeight);
-
-    // this.load(2); // TEMPORARY
   }
 
   destroy = () => {
@@ -497,20 +504,32 @@ class Timeline {
     }
   };
 
+  /**
+   * Converts a distance of pixels to a distance of time
+   */
   private pxToDuration = (px: number): number => {
     return px / this.pxPerSecond;
   };
 
+  /**
+   * Converts a distance of time to a distance of pixels
+   */
   private durationToPx = (t: number): number => {
     return t * this.pxPerSecond;
   };
 
+  /**
+   * Converts an absolute position of pixels on the canvas to the matching time
+   */
   private absolutePxToTime = (x: number) => {
     return (
-      (x - this.config.layout.sidebarWidth) / this.pxPerSecond + this.position
+      this.pxToDuration(x - this.config.layout.sidebarWidth) + this.position
     );
   };
 
+  /**
+   * Converts a timeline time to the matching absolute position on the canvas
+   */
   private absoluteTimeToPx = (seconds: number) => {
     return (
       (seconds - this.position) * this.pxPerSecond +
@@ -549,7 +568,6 @@ class Timeline {
       layout.timelineHeight +
       layout.waveformHeight +
       channelCount * layout.channelHeight;
-    // this.canvas.height = totalHeight * this.dpiScale;
 
     const ctx = this.canvas.getContext('2d');
     if (!ctx) return;
@@ -911,10 +929,6 @@ class Timeline {
     //   Cross-Origin-Opener-Policy: same-origin
     //   Cross-Origin-Embedder-Policy: require-corp
 
-    const drawTime = `${performance
-      .getEntriesByName('draw full')[0]
-      .duration.toPrecision(3)}ms`;
-
     const getPerfMS = (key: string) => {
       return performance.getEntriesByName(key)[0].duration.toPrecision(3);
     };
@@ -928,7 +942,6 @@ Resolution: ${this.canvas.width}x${this.canvas.height}
 Element size: ${this.canvasWidth}x${this.canvasHeight}
 DPI scale: ${this.dpiScale}`;
 
-    // console.log(performance.getEntriesByType("measure"));
     performance.clearMarks();
     performance.clearMeasures();
 
@@ -986,7 +999,6 @@ DPI scale: ${this.dpiScale}`;
   ///////////////////
   // Scaling
 
-  // TBD
   private scaling = false;
   private scaleStart: number | undefined;
   private scalePivot = 0;
@@ -1019,8 +1031,6 @@ DPI scale: ${this.dpiScale}`;
   };
 
   private renderScaled = (t: number) => {
-    // const scale = (this.scaleSize + this.scaleOffset) / this.scaleSize;
-
     return (t - this.scalePivot) * this.scale + this.scalePivot;
   };
 
@@ -1213,32 +1223,40 @@ DPI scale: ${this.dpiScale}`;
   private handleWheel = (e: WheelEvent) => {
     e.preventDefault();
 
-    console.log({
-      x: e.deltaX, y: e.deltaY, z: e.deltaZ, mode: e.deltaMode, ctrl: e.ctrlKey, dpi: this.dpiScale,
-    });
+    // console.log({
+    //   x: e.deltaX,
+    //   y: e.deltaY,
+    //   z: e.deltaZ,
+    //   mode: e.deltaMode,
+    //   ctrl: e.ctrlKey,
+    //   dpi: this.dpiScale,
+    // });
 
-    if (!e.ctrlKey) {
-      // Regular pan
+    // Very hacky way to detect touchpad: if the delta is "small" it's probably
+    // not a wheel (wheel seems to give values of around 100?)
+    const isTouchpad = Math.max(Math.abs(e.deltaX), Math.abs(e.deltaY)) < 50;
+
+    // On touchpad, ctrlKey is set by the browser when doing a pinch-to-zoom. On
+    // mouse, we zoom by default (no ctrlKey), unless the shift key is held.
+    const zooming = isTouchpad ? e.ctrlKey : !e.shiftKey;
+
+    if (zooming) {
+      const { x, y: _ } = this.getLocalCoordinates(e);
+      const anchorTime = this.absolutePxToTime(x);
+
+      const zoomPerDelta = 0.0005;
+      this.zoom = clamp(this.zoom - e.deltaY * zoomPerDelta, 0, 1);
+
+      const newTime = this.absolutePxToTime(x);
+      this.basePosition = Math.max(this.basePosition + anchorTime - newTime, 0);
+    } else {
+      // If not zooming, then scroll-pan
+      const delta = isTouchpad ? e.deltaX : e.deltaY;
       const pxPerDelta = 1;
-      const offset = (e.deltaX * this.dpiScale) * pxPerDelta / this.pxPerSecond
+      const offset = (delta * pxPerDelta) / this.pxPerSecond;
 
       this.basePosition = Math.max(this.basePosition + offset, 0);
-      this.requestDraw();
-      return;
     }
-
-    const { x, y: _ } = this.getLocalCoordinates(e);
-    const anchorTime = this.absolutePxToTime(x);
-
-    // Actual zoom formula:
-    // If zoom is from 0-1, with 0 being most zoomed out and 1 being most zoomed in, then the formula is
-    // y=10e^{4.60517x}
-    // where y is px per second and x is the "zoom" level
-
-    this.newZoom = clamp(this.newZoom - e.deltaY * 0.0005 * this.dpiScale, 0, 1)
-
-    const newTime = this.absolutePxToTime(x);
-    this.basePosition = Math.max(this.basePosition + anchorTime - newTime, 0);
 
     this.requestDraw();
   };
