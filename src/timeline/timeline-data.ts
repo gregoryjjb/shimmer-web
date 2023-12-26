@@ -150,7 +150,6 @@ const perfEvent = (event: string) => {
 
   return () => {
     const delta = performance.now() - start;
-    console.log('EVENT', event, delta);
   };
 };
 
@@ -190,8 +189,6 @@ class TimelineData {
   };
 
   private takeUndoSnapshot = (action: string) => {
-    console.log('Undo snapshot taken:', action);
-
     const marshaled = JSON.stringify(this.channels);
 
     this.undoHistory.push({
@@ -233,22 +230,18 @@ class TimelineData {
     localPersistence.saveData(snapshot.channels);
     this.channels = JSON.parse(snapshot.channels);
     this.emit(`Undo '${undid.action}'`);
-    console.log(this.undoHistory.debug().map((s) => s?.action));
   };
 
   redo = () => {
     const redone = this.undoHistory.redo();
     if (!redone) {
       this.emit('Nothing to redo');
-      console.log('Nothing to redo');
       return;
     }
 
-    console.log('Redo:', redone.action);
     this.emit(`Redo '${redone.action}'`);
     localPersistence.saveData(redone.channels);
     this.channels = JSON.parse(redone.channels);
-    console.log(this.undoHistory.debug().map((s) => s?.action));
   };
 
   binarySearch = (

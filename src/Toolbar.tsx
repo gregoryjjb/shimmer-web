@@ -186,8 +186,6 @@ const OpenFile: Component = () => {
         type="file"
         ref={inputRef!}
         onChange={(e) => {
-          console.log('File changed', e);
-
           const len = e.target.files?.length || 0;
           if (len !== 1) {
             console.error('Please select exactly one file');
@@ -199,8 +197,6 @@ const OpenFile: Component = () => {
             console.error('No file?');
             return;
           }
-
-          console.log('Selected', file.name);
         }}
       />
     </>

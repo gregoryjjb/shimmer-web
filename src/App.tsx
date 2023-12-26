@@ -119,7 +119,6 @@ function App() {
         //   right: '69px',
         // }}
         ref={(el) => {
-          console.log('Creating new timeline');
           t = new Timeline(el);
           t.on('play', () => setPlaying(true));
           t.on('pause', () => setPlaying(false));

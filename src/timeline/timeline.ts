@@ -286,7 +286,6 @@ class Timeline {
   }
 
   constructor(container: Element, options?: TimelineOptions) {
-    console.log('Constructing timeline');
     const { layout } = this.config;
 
     this.container = container;
@@ -341,7 +340,6 @@ class Timeline {
       const colors = ['red', 'green', 'blue', 'yellow'].sort(
         () => Math.random() - 0.5,
       );
-      console.log('Colors', colors);
       for (let i = 0; i < 4; i++) {
         span.style.setProperty(`--light${i + 1}`, colors[i]);
       }
@@ -359,7 +357,6 @@ class Timeline {
     this.audio = new TimelineAudio(this.emitter);
     this.audio.on('loading', (loading: boolean) => {
       this.requestDraw();
-      console.log('LOADING', loading);
     });
 
     this.persistence = new Persistence();
@@ -385,15 +382,6 @@ class Timeline {
     this.canvas.addEventListener('wheel', this.handleWheel, { passive: false });
 
     this.resizeObserver = new ResizeObserver((entries) => {
-      console.log(
-        'Observed',
-        this.container.clientWidth,
-        this.container.clientHeight,
-        entries[0].contentRect.width,
-        entries[0].contentRect.height,
-      );
-      console.log(entries);
-
       this.resizeCanvas(
         this.container.clientWidth,
         this.container.clientHeight,
@@ -405,8 +393,6 @@ class Timeline {
   }
 
   destroy = () => {
-    console.log('Timeline deconstructing');
-
     this.resizeObserver.disconnect();
     this.container.removeChild(this.root);
 
@@ -428,7 +414,7 @@ class Timeline {
       this.loadData(data);
       await p;
     } finally {
-      console.log('Load took ms:', performance.now() - start);
+      console.log(`Loaded in ${performance.now() - start}ms`);
       this.emitter.emit('loading', false);
     }
 
@@ -496,7 +482,6 @@ class Timeline {
 
   private handleFrameRequest = (time: DOMHighResTimeStamp) => {
     if (time === this.lastFrameTimestamp) {
-      console.log('Skipping double draw');
       return;
     }
     this.lastFrameTimestamp = time;
@@ -1084,7 +1069,6 @@ DPI scale: ${this.dpiScale}`;
     // e.stopPropagation();
 
     const { x, y } = this.getLocalCoordinates(e);
-    console.log('Clicked coordinates', x, y);
 
     const { waveformHeight, timelineHeight } = this.config.layout;
 
@@ -1098,7 +1082,6 @@ DPI scale: ${this.dpiScale}`;
       } else if (y < waveformHeight + timelineHeight) {
         // Seek
         if (time > 0) {
-          console.log('TIME', time);
           this.seeking = true;
           this.audio.currentTime = time;
           this.requestDraw();
@@ -1252,15 +1235,6 @@ DPI scale: ${this.dpiScale}`;
 
   private handleWheel = (e: WheelEvent) => {
     e.preventDefault();
-
-    // console.log({
-    //   x: e.deltaX,
-    //   y: e.deltaY,
-    //   z: e.deltaZ,
-    //   mode: e.deltaMode,
-    //   ctrl: e.ctrlKey,
-    //   dpi: this.dpiScale,
-    // });
 
     // Very hacky way to detect touchpad: if the delta is "small" it's probably
     // not a wheel (wheel seems to give values of around 100?)

@@ -9,7 +9,6 @@ type Peaks = {
 };
 
 const newPeaks = (count: number): Peaks => {
-  console.log('Allocating new peaks of count', count);
   return { mins: new Float32Array(count), maxes: new Float32Array(count) };
 };
 
@@ -66,13 +65,6 @@ const getPeaks = (
   const endPos = Math.ceil((start + duration) * sampleRate);
   const samplesPerPeak = (endPos - startPos) / peaksCount;
 
-  console.log('Computing peaks', {
-    startPos,
-    endPos,
-    samplesPerPeak,
-    peaksCount,
-  });
-
   // Get min/max of each peak
   const peaks = newPeaks(peaksCount);
   for (let i = 0; i < peaksCount; i++) {
@@ -115,14 +107,6 @@ const downsamplePeaks = (
   const startPos = Math.floor(start * sourceRate);
   const endPos = Math.ceil((start + duration) * sourceRate);
   const samplesPerPeak = (endPos - startPos) / peaksCount;
-
-  // console.log("Downsampling peaks", {
-  //   startPos,
-  //   endPos,
-  //   samplesPerPeak,
-  //   peaksCount,
-  //   iterations: peaksCount * Math.ceil(samplesPerPeak),
-  // });
 
   const peaks = options.preallocatedPeaks || newPeaks(peaksCount);
   for (let i = 0; i < peaksCount; i++) {
@@ -286,18 +270,15 @@ export default class TimelineAudio extends Emitter<{
       const abs = Math.abs(sample);
       if (abs > max) {
         max = abs;
-        // console.log("New max", max);
       }
     }
     const scaler = 1 / max;
-    // console.log('Scaler:', scaler);
     this.normalizedBuffer = new Float32Array(raw.length);
     for (let i = 0; i < raw.length; i++) {
       this.normalizedBuffer[i] = raw[i] * scaler;
     }
 
     // Precompute
-    // console.log('Precomputing peaks');
     const peaks1000 = getPeaks(this.normalizedBuffer, this.buffer.duration, {
       peaksPerSecond: 1000,
     });
@@ -312,7 +293,6 @@ export default class TimelineAudio extends Emitter<{
       100: peaks100,
       10: peaks10,
     };
-    // console.log('Precompute complete');
     this.cachedPeaks = undefined;
     this.cacheKey = undefined;
 
