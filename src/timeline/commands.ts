@@ -10,6 +10,7 @@ export type SimpleCommand =
   | 'grab'
   | 'scale'
   | 'align'
+  | 'equallySpace'
   | 'duplicate'
   | 'delete'
   | 'dedup'
@@ -33,6 +34,7 @@ export const keybinds: Record<string, SimpleCommand> = {
   escape: 'cancel',
   ctrl_a: 'selectAll',
   a: 'align',
+  e: 'equallySpace',
 };
 
 export type CommandsWithArgs = {

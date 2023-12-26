@@ -585,6 +585,52 @@ class TimelineData {
     }
   };
 
+  equallySpaceSelected = () => {
+    const keyframes = this.channels.flatMap((track) =>
+      track.keyframes.filter((kf) => kf.selected),
+    );
+
+    if (keyframes.length < 2) {
+      this.emit('Must select 2+ keyframes');
+      return;
+    }
+
+    keyframes.sort(compareKeyframes);
+
+    const batched: Keyframe[][] = [];
+    const threshold = 0.001;
+
+    keyframes.forEach((kf, i) => {
+      const prev = keyframes[i - 1];
+
+      const currentBatch = batched[batched.length - 1];
+      const lastKeyframe = currentBatch
+        ? currentBatch[currentBatch.length - 1]
+        : undefined;
+
+      if (lastKeyframe && kf.timestamp - lastKeyframe.timestamp < threshold) {
+        currentBatch.push(kf);
+      } else {
+        batched.push([kf]);
+      }
+    });
+
+    if (batched.length < 2) {
+      this.emit('Keyframes cannot be spaced');
+      return;
+    }
+
+    const start = keyframes[0].timestamp;
+    const end = keyframes[keyframes.length - 1].timestamp;
+    const increment = (end - start) / (batched.length - 1);
+
+    batched.forEach((batch, i) => {
+      batch.forEach((kf) => (kf.timestamp = start + increment * i));
+    });
+
+    this.markEdit(`Spaced ${keyframes.length} keyframes`);
+  };
+
   dedup = () => {
     // Keyframes closer than this (in seconds) are merged
     const threshold = 0.001; // 1ms

@@ -1374,6 +1374,7 @@ DPI scale: ${this.dpiScale}`;
     grab: this.startGrab,
     scale: this.startScale,
     align: () => this.data?.alignSelected(),
+    equallySpace: () => this.data?.equallySpaceSelected(),
     duplicate: () => {
       this.data?.duplicateSelected();
       this.startGrab();

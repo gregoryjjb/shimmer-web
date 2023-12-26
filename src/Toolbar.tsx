@@ -13,6 +13,7 @@ import {
   handRaised,
   musicalNote,
   arrowDownTray,
+  bars_3,
 } from 'solid-heroicons/solid-mini';
 import {
   ArgOf,
@@ -23,6 +24,7 @@ import {
 import VolumeSlider from './VolumeSlider/VolumeSlider';
 
 const ToolbarButton: ParentComponent<{
+  class?: string;
   tooltip?: string;
   grouped?: boolean;
   disabled?: boolean;
@@ -31,7 +33,7 @@ const ToolbarButton: ParentComponent<{
 }> = (props) => {
   return (
     <button
-      class="p-2"
+      class={"p-2 " + props.class}
       classList={{
         'rounded-lg': !props.grouped,
         'first:rounded-tl-lg first:rounded-bl-lg last:rounded-tr-lg last:rounded-br-lg':
@@ -121,6 +123,13 @@ const Toolbar: Component<{
         disabled={nothingSelected()}
         tooltip="Invert"
         path={lightBulb}
+      />
+      <ToolbarButton
+        onClick={createOnClick('equallySpace')}
+        disabled={nothingSelected()}
+        tooltip="Equally space"
+        path={bars_3}
+        class="rotate-90"
       />
       <ToolbarButtonGroup>
         <ToolbarButton
