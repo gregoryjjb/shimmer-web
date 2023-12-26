@@ -1,6 +1,8 @@
 import { Component, Show, createMemo, createSignal } from 'solid-js';
 
 const FileInput: Component<{
+  label?: string;
+  accept?: string;
   onChange?: (f: File | undefined) => void;
 }> = (props) => {
   let inputRef: HTMLInputElement;
@@ -10,11 +12,12 @@ const FileInput: Component<{
   return (
     <div class="relative h-32 w-full">
       <div class="absolute inset-0 flex flex-col items-center justify-center rounded-lg border-2 border-dashed">
-        <p>{file()?.name || 'Choose a file'}</p>
+        <p>{file()?.name || props.label || 'Choose a file'}</p>
         {file() && <p>{((file()?.size || 0) / 1024 / 1024).toFixed(1)} MiB</p>}
       </div>
       <input
         type="file"
+        accept={props.accept}
         ref={inputRef!}
         class="absolute inset-0 h-full w-full opacity-0"
         onChange={(e) => {
