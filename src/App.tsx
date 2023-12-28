@@ -11,6 +11,7 @@ import { LocalPersistence } from './timeline/persistence';
 import Timeline from './timeline/timeline';
 import { newTracks } from './timeline/timeline-data';
 import { ShowDataJSON } from './timeline/types';
+import { setShowHelp, showHelp, volume } from './global';
 
 const show: ShowDataJSON = {
   tracks: [
@@ -35,10 +36,6 @@ function App() {
   >([]);
   const [selectedCount, setSelectedCount] = createSignal(0);
   const [prompt, setPrompt] = createSignal('');
-
-  const [volume] = createStoredSignal('volume', 0.5);
-
-  const [showHelp, setShowHelp] = createStoredSignal('showHelp', false);
 
   const handleCommand = (c: Command) => {
     t.execute(c);

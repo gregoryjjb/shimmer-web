@@ -1,27 +1,33 @@
-import { Component, JSX, ParentComponent } from 'solid-js';
+import {
+  Component,
+  ParentComponent,
+  createEffect,
+  createSignal,
+  onCleanup
+} from 'solid-js';
 
 import { Icon } from 'solid-heroicons';
 import {
-  play,
-  pause,
-  lightBulb,
-  chevronDoubleUp,
-  chevronDoubleDown,
+  arrowDownTray,
   arrowUturnLeft,
   arrowUturnRight,
-  trash,
-  handRaised,
-  musicalNote,
-  arrowDownTray,
   bars_3,
+  chevronDoubleDown,
+  chevronDoubleUp,
+  handRaised,
+  lightBulb,
+  musicalNote,
+  pause,
+  play,
+  trash,
 } from 'solid-heroicons/solid-mini';
-import {
-  ArgOf,
-  Command,
-  ComplexCommand,
-  ComplexCommandHandler,
-} from './timeline/commands';
 import VolumeSlider from './VolumeSlider/VolumeSlider';
+import { setVolume, volume } from './global';
+import {
+  Command,
+  ComplexCommandHandler
+} from './timeline/commands';
+import { clamp } from './timeline/utils';
 
 const ToolbarButton: ParentComponent<{
   class?: string;
@@ -33,7 +39,7 @@ const ToolbarButton: ParentComponent<{
 }> = (props) => {
   return (
     <button
-      class={"p-2 " + props.class}
+      class={'p-2 ' + props.class}
       classList={{
         'rounded-lg': !props.grouped,
         'first:rounded-tl-lg first:rounded-bl-lg last:rounded-tr-lg last:rounded-br-lg':
@@ -59,6 +65,8 @@ const Bar: Component = () => {
   return <div class="mx-2 h-6 w-px bg-zinc-400" />;
 };
 
+const playbackRates = ['0.5', '0.75', '1', '1.25', '1.5'];
+
 const Toolbar: Component<{
   playing?: boolean;
   selectedCount: number;
@@ -73,6 +81,36 @@ const Toolbar: Component<{
 
   const createOnClick = (c: Command) => () => props.onCommand(c);
 
+  const [playbackRate, setPlaybackRate] = createSignal('1');
+
+  // Hacky: this should be with the other keyboard handlers, but in order to do
+  // that we need to get the keyboard handler out of the Timeline and into the
+  // rest of the app so the dropdown can react accordingly
+  const handlePlaybackRateHotkey = (e: KeyboardEvent) => {
+    if (!e.shiftKey) return;
+    if (!(e.key === '>' || e.key === '<')) return;
+
+    const currentIndex = playbackRates.indexOf(playbackRate());
+    const direction = e.key === '>' ? 1 : -1;
+
+    const newIndex = clamp(
+      currentIndex + direction,
+      0,
+      playbackRates.length - 1,
+    );
+    const newRate = playbackRates[newIndex];
+
+    setPlaybackRate(newRate);
+  };
+  window.addEventListener('keydown', handlePlaybackRateHotkey);
+  onCleanup(() =>
+    window.removeEventListener('keydown', handlePlaybackRateHotkey),
+  );
+
+  createEffect(() => {
+    props.onPlaybackRateChange?.(parseFloat(playbackRate()));
+  });
+
   return (
     <div class="flex flex-row items-center gap-2">
       <button
@@ -83,19 +121,22 @@ const Toolbar: Component<{
       </button>
       <select
         class="h-9 rounded-lg bg-zinc-700 px-2 text-zinc-100 hover:bg-zinc-600"
-        onChange={(e) =>
-          props.onPlaybackRateChange?.(parseFloat(e.target.value))
-        }
+        value={playbackRate()}
+        onChange={(e) => setPlaybackRate(e.target.value)}
       >
         <option value="0.5">0.5x</option>
         <option value="0.75">0.75x</option>
-        <option selected value="1">
-          1x
-        </option>
+        <option value="1">1x</option>
         <option value="1.25">1.25x</option>
         <option value="1.5">1.5x</option>
       </select>
-      <VolumeSlider onChange={(n) => props.onComplexCommand('setVolume', n)} />
+      <VolumeSlider
+        value={volume()}
+        onChange={(n) => {
+          setVolume(n);
+          props.onComplexCommand('setVolume', n);
+        }}
+      />
       <Bar />
       <ToolbarButtonGroup>
         <ToolbarButton
