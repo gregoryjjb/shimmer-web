@@ -28,7 +28,7 @@ export const keybinds: Record<string, SimpleCommand> = {
   arrowdown: 'shiftDown',
   g: 'grab',
   s: 'scale',
-  ctrl_d: 'duplicate',
+  d: 'duplicate',
   delete: 'delete',
   w: 'dedup',
   escape: 'cancel',

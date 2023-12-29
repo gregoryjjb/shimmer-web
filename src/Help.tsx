@@ -52,7 +52,7 @@ const Help: Component<{
         <Keybind action="Move up/down" key="Up/down arrows" />
         <Keybind action="Grab & move" key="G" />
         <Keybind action="Scale" key="S" />
-        <Keybind action="Duplicate" ctrl key="D" />
+        <Keybind action="Duplicate" key="D" />
         <Keybind action="Delete" key="DEL" />
         <Keybind action="Remove duplicates" key="W" />
         <Keybind action="Align/squish" key="A" />
