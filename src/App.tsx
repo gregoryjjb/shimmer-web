@@ -12,6 +12,7 @@ import Timeline from './timeline/timeline';
 import { newTracks } from './timeline/timeline-data';
 import { ShowDataJSON } from './timeline/types';
 import { setShowHelp, showHelp, volume } from './global';
+import OpenProjectForm from './OpenProjectForm';
 
 const show: ShowDataJSON = {
   tracks: [
@@ -42,6 +43,7 @@ function App() {
   };
 
   const [NewProjectModal, modal] = createModal();
+  const [OpenProjectModal, openModal] = createModal();
 
   const importLegacy = () => {
     const input = document.createElement('input');
@@ -75,7 +77,7 @@ function App() {
       <MenuBar>
         <Menu name="File">
           <MenuItem name="New project" onClick={() => modal.show()} />
-          <MenuItem name="Open" />
+          <MenuItem name="Open" onClick={() => openModal.show()} />
           <MenuItem name="Download" />
           <MenuItem name="Import legacy JSON" onClick={importLegacy} />
         </Menu>
@@ -174,6 +176,16 @@ function App() {
           }}
         />
       </NewProjectModal>
+
+      <OpenProjectModal>
+        <ModalTitle>Open project</ModalTitle>
+        <OpenProjectForm
+          onSubmit={(payload) => {
+            openModal.hide();
+            t.load(payload.tracks, payload.audio);
+          }}
+        />
+      </OpenProjectModal>
     </div>
   );
 }
