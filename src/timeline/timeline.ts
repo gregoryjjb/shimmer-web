@@ -817,11 +817,12 @@ class Timeline {
 
           const x = this.absoluteTimeToPx(t) - layout.sidebarWidth;
 
-          const next = channel.keyframes[i + 1];
-
-          const playing =
-            kf.timestamp <= this.audio.currentTime &&
-            (!next || next.timestamp > this.audio.currentTime);
+          
+          // const next = channel.keyframes[i + 1];
+          // const playing =
+          //   kf.timestamp <= this.audio.currentTime &&
+          //   (!next || next.timestamp > this.audio.currentTime);
+          const playing = false;
 
           const selected =
             kf.selected ||
@@ -831,15 +832,15 @@ class Timeline {
 
           const source =
             kf.value === 0
-              ? playing
-                ? this.diamondCache!.keyframeOffPlaying
-                : selected
-                  ? this.diamondCache!.keyframeOffSelected
+              ? selected
+                ? this.diamondCache!.keyframeOffSelected
+                : playing
+                  ? this.diamondCache!.keyframeOffPlaying
                   : this.diamondCache!.keyframeOff
-              : playing
-                ? this.diamondCache!.keyframeOnPlaying
-                : selected
-                  ? this.diamondCache!.keyframeOnSelected
+              : selected
+                ? this.diamondCache!.keyframeOnSelected
+                : playing
+                  ? this.diamondCache!.keyframeOnPlaying
                   : this.diamondCache!.keyframeOn;
 
           ctx.drawImage(
