@@ -3,7 +3,7 @@ import {
   ParentComponent,
   createEffect,
   createSignal,
-  onCleanup
+  onCleanup,
 } from 'solid-js';
 
 import { Icon } from 'solid-heroicons';
@@ -14,6 +14,7 @@ import {
   bars_3,
   chevronDoubleDown,
   chevronDoubleUp,
+  chevronUpDown,
   handRaised,
   lightBulb,
   musicalNote,
@@ -23,10 +24,7 @@ import {
 } from 'solid-heroicons/solid-mini';
 import VolumeSlider from './VolumeSlider/VolumeSlider';
 import { setVolume, volume } from './global';
-import {
-  Command,
-  ComplexCommandHandler
-} from './timeline/commands';
+import { Command, ComplexCommandHandler } from './timeline/commands';
 import { clamp } from './timeline/utils';
 
 const ToolbarButton: ParentComponent<{
@@ -186,6 +184,13 @@ const Toolbar: Component<{
           grouped
           tooltip="Shift down"
           path={chevronDoubleDown}
+        />
+        <ToolbarButton
+          onClick={createOnClick('flipVertically')}
+          disabled={nothingSelected()}
+          grouped
+          tooltip="Flip vertically"
+          path={chevronUpDown}
         />
       </ToolbarButtonGroup>
       <ToolbarButton

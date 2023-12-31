@@ -1346,6 +1346,7 @@ DPI scale: ${this.dpiScale}`;
     invert: () => this.data?.invertSelected(),
     shiftUp: () => this.data?.shiftSelected('up'),
     shiftDown: () => this.data?.shiftSelected('down'),
+    flipVertically: () => this.data?.flipSelected(),
     grab: this.startGrab,
     scale: this.startScale,
     align: () => this.data?.alignSelected(),

@@ -7,6 +7,7 @@ export type SimpleCommand =
   | 'invert'
   | 'shiftUp'
   | 'shiftDown'
+  | 'flipVertically'
   | 'grab'
   | 'scale'
   | 'align'
@@ -26,6 +27,7 @@ export const keybinds: Record<string, SimpleCommand> = {
   i: 'invert',
   arrowup: 'shiftUp',
   arrowdown: 'shiftDown',
+  f: 'flipVertically',
   g: 'grab',
   s: 'scale',
   d: 'duplicate',

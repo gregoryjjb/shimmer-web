@@ -200,6 +200,7 @@ class TimelineData {
   };
 
   private emit = (action: string) => {
+    console.log('data emit:', action);
     this.emitter.emit('edit', action);
     this.emitSelected();
   };
@@ -465,6 +466,36 @@ class TimelineData {
     });
 
     this.markEdit(`Shifted keyframes ${direction}`);
+  };
+
+  /**
+   * Flip selected keyframes vertically across channels
+   */
+  flipSelected = () => {
+    const selected = this.channels.map((track) =>
+      track.keyframes.filter((kf) => kf.selected),
+    );
+
+    const startIndex = selected.findIndex((kfs) => kfs.length > 0);
+    const toFlip = selected.filter((kfs) => kfs.length > 0);
+
+    if (toFlip.length < 2) {
+      this.emit('Must have 2 or more channels of keyframes selected to flip');
+      return;
+    }
+
+    // Delete selected
+    for (const track of this.channels) {
+      track.keyframes = track.keyframes.filter((k) => !k.selected);
+    }
+
+    toFlip.reverse().forEach((keyframes, i) => {
+      const channel = i + startIndex;
+      this.channels[channel].keyframes.push(...keyframes);
+      this.channels[channel].keyframes.sort(compareKeyframes);
+    });
+
+    this.markEdit('Flipped keyframes');
   };
 
   /**
