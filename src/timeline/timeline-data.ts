@@ -257,6 +257,29 @@ class TimelineData {
   };
 
   /**
+   * Returns the keyframe closest to the provided time across all channels.
+   * Returns undefined if none found.
+   */
+  findNearest = (time: number): Keyframe | undefined => {
+    let found: Keyframe | undefined;
+
+    this.channels.forEach((channel) => {
+      const index = binarySearch(channel.keyframes, time);
+      if (index === undefined) return;
+      const kf = channel.keyframes[index];
+
+      if (
+        !found ||
+        Math.abs(kf.timestamp - time) < Math.abs(found.timestamp - time)
+      ) {
+        found = kf;
+      }
+    });
+
+    return found;
+  };
+
+  /**
    * @returns the timestamps of the first and last selected keyframes
    */
   firstLastSelected = () => {

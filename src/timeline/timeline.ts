@@ -817,7 +817,6 @@ class Timeline {
 
           const x = this.absoluteTimeToPx(t) - layout.sidebarWidth;
 
-          
           // const next = channel.keyframes[i + 1];
           // const playing =
           //   kf.timestamp <= this.audio.currentTime &&
@@ -983,6 +982,21 @@ DPI scale: ${this.dpiScale}`;
   };
 
   ///////////////////
+  // Seeking
+
+  private seek = (time: number, snapping: boolean) => {
+    if (snapping) {
+      const nearest = this.data?.findNearest(time);
+      if (nearest) {
+        time = nearest.timestamp;
+      }
+    }
+
+    this.audio.currentTime = Math.max(time, 0);
+    this.requestDraw();
+  };
+
+  ///////////////////
   // Grabbing
 
   private grabbing = false;
@@ -1066,9 +1080,6 @@ DPI scale: ${this.dpiScale}`;
   // Event handlers
 
   private handleMouseDown = (e: MouseEvent) => {
-    // e.preventDefault();
-    // e.stopPropagation();
-
     const { x, y } = this.getLocalCoordinates(e);
 
     const { waveformHeight, timelineHeight } = this.config.layout;
@@ -1084,7 +1095,7 @@ DPI scale: ${this.dpiScale}`;
         // Seek
         if (time > 0) {
           this.seeking = true;
-          this.audio.currentTime = time;
+          this.seek(time, e.ctrlKey);
           this.requestDraw();
         }
       } else {
@@ -1186,10 +1197,7 @@ DPI scale: ${this.dpiScale}`;
         this.canvasWidth,
       );
       const time = this.absolutePxToTime(clamped);
-      if (time >= 0) {
-        this.audio.currentTime = time;
-        this.requestDraw();
-      }
+      this.seek(time, e.ctrlKey);
     }
 
     if (this.boxSelection) {
