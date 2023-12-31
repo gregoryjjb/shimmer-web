@@ -11,6 +11,7 @@ export type SimpleCommand =
   | 'grab'
   | 'scale'
   | 'align'
+  | 'snapToCursor'
   | 'equallySpace'
   | 'duplicate'
   | 'delete'
@@ -36,8 +37,41 @@ export const keybinds: Record<string, SimpleCommand> = {
   escape: 'cancel',
   ctrl_a: 'selectAll',
   a: 'align',
+  shift_s: 'snapToCursor',
   e: 'equallySpace',
 };
+
+const formattedKeybinds: Partial<Record<SimpleCommand, string>> = {};
+Object.entries(keybinds).forEach(([keybind, command]) => {
+  formattedKeybinds[command] = keybind;
+});
+export const keybindFor = (command: SimpleCommand): string =>
+  formattedKeybinds[command] || '';
+
+const commandNames: Record<SimpleCommand, string> = {
+  play: 'Play',
+  pause: 'Pause',
+  playtoggle: 'Play/pause',
+  undo: 'Undo',
+  redo: 'Redo',
+  invert: 'Invert values',
+  shiftUp: 'Shift one channel up',
+  shiftDown: 'Shift one channel down',
+  flipVertically: 'Flip vertically',
+  grab: 'Grab',
+  scale: 'Scale',
+  align: 'Align',
+  snapToCursor: 'Snap to cursor',
+  equallySpace: 'Space evenly',
+  duplicate: 'Duplicate',
+  delete: 'Delete',
+  dedup: 'Deduplicate',
+  cancel: 'Cancel',
+  pickAudioFile: 'Pick audio file',
+  selectAll: 'Select all',
+  downloadLegacy: 'Download legacy',
+};
+export const nameFor = (command: SimpleCommand) => commandNames[command];
 
 export type CommandsWithArgs = {
   setVolume: number;

@@ -24,8 +24,23 @@ import {
 } from 'solid-heroicons/solid-mini';
 import VolumeSlider from './VolumeSlider/VolumeSlider';
 import { setVolume, volume } from './global';
-import { Command, ComplexCommandHandler } from './timeline/commands';
+import {
+  Command,
+  ComplexCommandHandler,
+  SimpleCommand,
+  keybindFor,
+  nameFor,
+} from './timeline/commands';
 import { clamp } from './timeline/utils';
+
+const tooltip = (command: SimpleCommand) => {
+  const name = nameFor(command);
+  const key = keybindFor(command);
+
+  if (!key) return name;
+
+  return `${name} (${key})`;
+};
 
 const ToolbarButton: ParentComponent<{
   class?: string;
@@ -140,13 +155,13 @@ const Toolbar: Component<{
         <ToolbarButton
           onClick={createOnClick('undo')}
           grouped
-          tooltip="Undo"
+          tooltip={tooltip('undo')}
           path={arrowUturnLeft}
         />
         <ToolbarButton
           onClick={createOnClick('redo')}
           grouped
-          tooltip="Redo"
+          tooltip={tooltip('redo')}
           path={arrowUturnRight}
         />
       </ToolbarButtonGroup>
@@ -154,19 +169,19 @@ const Toolbar: Component<{
       <ToolbarButton
         onClick={createOnClick('grab')}
         disabled={nothingSelected()}
-        tooltip="Invert"
+        tooltip={tooltip('grab')}
         path={handRaised}
       />
       <ToolbarButton
         onClick={createOnClick('invert')}
         disabled={nothingSelected()}
-        tooltip="Invert"
+        tooltip={tooltip('invert')}
         path={lightBulb}
       />
       <ToolbarButton
         onClick={createOnClick('equallySpace')}
         disabled={nothingSelected()}
-        tooltip="Equally space"
+        tooltip={tooltip('equallySpace')}
         path={bars_3}
         class="rotate-90"
       />
@@ -175,28 +190,28 @@ const Toolbar: Component<{
           onClick={createOnClick('shiftUp')}
           disabled={nothingSelected()}
           grouped
-          tooltip="Shift up"
+          tooltip={tooltip('shiftUp')}
           path={chevronDoubleUp}
         />
         <ToolbarButton
           onClick={createOnClick('shiftDown')}
           disabled={nothingSelected()}
           grouped
-          tooltip="Shift down"
+          tooltip={tooltip('shiftDown')}
           path={chevronDoubleDown}
         />
         <ToolbarButton
           onClick={createOnClick('flipVertically')}
           disabled={nothingSelected()}
           grouped
-          tooltip="Flip vertically"
+          tooltip={tooltip('flipVertically')}
           path={chevronUpDown}
         />
       </ToolbarButtonGroup>
       <ToolbarButton
         onClick={createOnClick('delete')}
         disabled={nothingSelected()}
-        tooltip="Delete keyframes"
+        tooltip={tooltip('delete')}
         path={trash}
       />
       <Bar />

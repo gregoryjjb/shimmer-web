@@ -17,6 +17,7 @@ import {
   pointsToRect,
   rangeEnd,
   rangeStart,
+  stringifyTime,
 } from './utils';
 
 import lightsSVG from '../assets/lights-colored.svg?raw';
@@ -154,47 +155,6 @@ interface RenderedBoxSelection extends BoxSelection {
   start: Point;
   end: Point;
 }
-
-const timeResolutions = {
-  minutes: 0,
-  seconds: 1,
-  milliseconds: 2,
-};
-
-type TimestampResolution = keyof typeof timeResolutions;
-
-const stringifyTime = (
-  time: number,
-  resolution: TimestampResolution,
-): string => {
-  const res = timeResolutions[resolution];
-
-  let t = '';
-
-  if (res >= timeResolutions.minutes) {
-    t = Math.floor(time / 60)
-      .toString()
-      .padStart(2, '0');
-  }
-
-  if (res >= timeResolutions.seconds) {
-    t +=
-      ':' +
-      Math.floor(time % 60)
-        .toString()
-        .padStart(2, '0');
-  }
-
-  if (res >= timeResolutions.milliseconds) {
-    t +=
-      ':' +
-      Math.floor((time * 1000) % 1000)
-        .toString()
-        .padStart(3, '0');
-  }
-
-  return t;
-};
 
 class Timeline {
   private container: Element; // Outer container provided to us
@@ -1358,6 +1318,7 @@ DPI scale: ${this.dpiScale}`;
     grab: this.startGrab,
     scale: this.startScale,
     align: () => this.data?.alignSelected(),
+    snapToCursor: () => this.data?.snapTo(this.audio.currentTime),
     equallySpace: () => this.data?.equallySpaceSelected(),
     duplicate: () => {
       this.data?.duplicateSelected();

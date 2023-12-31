@@ -1,4 +1,4 @@
-import { createSignal, onCleanup } from 'solid-js';
+import { Component, createSignal, onCleanup } from 'solid-js';
 import './App.css';
 import Help from './Help';
 import { Menu, MenuBar, MenuItem, MenuItemSpacer } from './MenuBar';
@@ -6,7 +6,7 @@ import NewProjectForm from './NewProjectForm';
 import Toolbar from './Toolbar';
 import { ModalTitle, createModal } from './components/Modal';
 import { createStoredSignal } from './hooks/createStorageSignal';
-import { Command } from './timeline/commands';
+import { Command, SimpleCommand, nameFor } from './timeline/commands';
 import { LocalPersistence } from './timeline/persistence';
 import Timeline from './timeline/timeline';
 import { newTracks } from './timeline/timeline-data';
@@ -72,6 +72,15 @@ function App() {
     });
   };
 
+  const CommandMenuItem: Component<{ command: SimpleCommand }> = (props) => {
+    return (
+      <MenuItem
+        name={nameFor(props.command)}
+        onClick={() => handleCommand(props.command)}
+      />
+    );
+  };
+
   return (
     <div class="flex h-screen flex-col">
       <MenuBar>
@@ -82,16 +91,20 @@ function App() {
           <MenuItem name="Import legacy JSON" onClick={importLegacy} />
         </Menu>
         <Menu name="Edit">
-          <MenuItem name="Undo" />
-          <MenuItem name="Redo" />
+          <CommandMenuItem command="undo" />
+          <CommandMenuItem command="redo" />
           <MenuItemSpacer />
-          <MenuItem name="Invert" />
-          <MenuItem name="Shift up" />
-          <MenuItem name="Shift down" />
+          <CommandMenuItem command="invert" />
+          <CommandMenuItem command="align" />
+          <CommandMenuItem command="snapToCursor" />
+          <CommandMenuItem command="equallySpace" />
+          <CommandMenuItem command="duplicate" />
+          <CommandMenuItem command="delete" />
           <MenuItemSpacer />
-          <MenuItem name="Align" />
-          <MenuItem name="Dedup" />
-          <MenuItem name="Delete" />
+          <CommandMenuItem command="dedup" />
+          <CommandMenuItem command="shiftUp" />
+          <CommandMenuItem command="shiftDown" />
+          <CommandMenuItem command="flipVertically" />
         </Menu>
         <Menu name="Help">
           <MenuItem name="Show help" onClick={() => setShowHelp(true)} />

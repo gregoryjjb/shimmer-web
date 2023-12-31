@@ -69,3 +69,50 @@ export const abs = (p: Point): Point => {
     y: Math.abs(p.y),
   };
 };
+
+const timeResolutions = {
+  minutes: 0,
+  seconds: 1,
+  milliseconds: 2,
+};
+
+export type TimestampResolution = keyof typeof timeResolutions;
+
+/**
+ * Convert a timestamp into a nice digital clock style string (12:34:567)
+ * @param time The timestamp in seconds
+ * @param resolution What to round to
+ * @returns stringified time
+ */
+export const stringifyTime = (
+  time: number,
+  resolution: TimestampResolution,
+): string => {
+  const res = timeResolutions[resolution];
+
+  let t = '';
+
+  if (res >= timeResolutions.minutes) {
+    t = Math.floor(time / 60)
+      .toString()
+      .padStart(2, '0');
+  }
+
+  if (res >= timeResolutions.seconds) {
+    t +=
+      ':' +
+      Math.floor(time % 60)
+        .toString()
+        .padStart(2, '0');
+  }
+
+  if (res >= timeResolutions.milliseconds) {
+    t +=
+      ':' +
+      Math.floor((time * 1000) % 1000)
+        .toString()
+        .padStart(3, '0');
+  }
+
+  return t;
+};

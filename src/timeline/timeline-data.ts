@@ -2,7 +2,7 @@ import { TimelineEmitter } from './events';
 import { localPersistence } from './persistence';
 import { ShowDataJSON } from './types';
 import { UndoHistory } from './undo';
-import { clamp } from './utils';
+import { clamp, stringifyTime } from './utils';
 
 export type Track = {
   name: string;
@@ -627,6 +627,35 @@ class TimelineData {
 
     if (count) {
       this.markEdit(`Aligned ${count} keyframes`);
+    } else {
+      this.emit('No keyframes selected');
+    }
+  };
+
+  /**
+   * Set all selected keyframes to this time
+   */
+  snapTo = (time: number) => {
+    let count = 0;
+    this.channels.forEach((track) => {
+      let tcount = 0;
+      track.keyframes.forEach((kf) => {
+        if (kf.selected) {
+          kf.timestamp = time;
+          tcount++;
+        }
+      });
+
+      if (tcount > 0) {
+        track.keyframes.sort(compareKeyframes);
+      }
+      count += tcount;
+    });
+
+    if (count > 0) {
+      this.markEdit(
+        `Snapped ${count} keyframes to ${stringifyTime(time, 'milliseconds')}`,
+      );
     } else {
       this.emit('No keyframes selected');
     }
