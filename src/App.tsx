@@ -6,7 +6,12 @@ import NewProjectForm from './NewProjectForm';
 import Toolbar from './Toolbar';
 import { ModalTitle, createModal } from './components/Modal';
 import { createStoredSignal } from './hooks/createStorageSignal';
-import { Command, SimpleCommand, nameFor } from './timeline/commands';
+import {
+  Command,
+  SimpleCommand,
+  keybindFor,
+  nameFor,
+} from './timeline/commands';
 import { LocalPersistence } from './timeline/persistence';
 import Timeline from './timeline/timeline';
 import { newTracks } from './timeline/timeline-data';
@@ -72,11 +77,16 @@ function App() {
     });
   };
 
-  const CommandMenuItem: Component<{ command: SimpleCommand }> = (props) => {
+  const CommandMenuItem: Component<{
+    command: SimpleCommand;
+    requireSelected?: boolean;
+  }> = (props) => {
     return (
       <MenuItem
         name={nameFor(props.command)}
+        keybind={keybindFor(props.command)}
         onClick={() => handleCommand(props.command)}
+        disabled={props.requireSelected && selectedCount() === 0}
       />
     );
   };
@@ -94,17 +104,17 @@ function App() {
           <CommandMenuItem command="undo" />
           <CommandMenuItem command="redo" />
           <MenuItemSpacer />
-          <CommandMenuItem command="invert" />
-          <CommandMenuItem command="align" />
-          <CommandMenuItem command="snapToCursor" />
-          <CommandMenuItem command="equallySpace" />
-          <CommandMenuItem command="duplicate" />
-          <CommandMenuItem command="delete" />
+          <CommandMenuItem requireSelected command="invert" />
+          <CommandMenuItem requireSelected command="align" />
+          <CommandMenuItem requireSelected command="snapToCursor" />
+          <CommandMenuItem requireSelected command="equallySpace" />
+          <CommandMenuItem requireSelected command="duplicate" />
+          <CommandMenuItem requireSelected command="delete" />
           <MenuItemSpacer />
-          <CommandMenuItem command="dedup" />
-          <CommandMenuItem command="shiftUp" />
-          <CommandMenuItem command="shiftDown" />
-          <CommandMenuItem command="flipVertically" />
+          <CommandMenuItem requireSelected command="dedup" />
+          <CommandMenuItem requireSelected command="shiftUp" />
+          <CommandMenuItem requireSelected command="shiftDown" />
+          <CommandMenuItem requireSelected command="flipVertically" />
         </Menu>
         <Menu name="Help">
           <MenuItem name="Show help" onClick={() => setShowHelp(true)} />

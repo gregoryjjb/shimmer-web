@@ -27,24 +27,6 @@ const makeContext = () => {
 
 const MenuContext = createContext<ReturnType<typeof makeContext>>();
 
-const MenuProvider: ParentComponent = (props) => {
-  // const [open, setOpen] = createSignal<string | null>(null);
-  // const opener = [
-  //   open,
-  //   {
-  //     setOpen(key: string) {
-  //       setOpen(key);
-  //     },
-  //   },
-  // ];
-
-  const value = makeContext();
-
-  return (
-    <MenuContext.Provider value={value}>{props.children}</MenuContext.Provider>
-  );
-};
-
 const useMenu = () => {
   return useContext(MenuContext);
 };
@@ -109,6 +91,7 @@ export const Menu: ParentComponent<{
 
 interface MenuItemProps {
   name: string;
+  keybind?: string;
   disabled?: boolean;
   onClick?: () => void;
 }
@@ -118,7 +101,11 @@ export const MenuItem: Component<MenuItemProps> = (props) => {
 
   return (
     <button
-      class="rounded px-2 py-1 text-left text-sm text-white hover:bg-zinc-600 focus:bg-zinc-600"
+      class="rounded px-2 py-1 text-left text-sm "
+      classList={{
+        'text-white hover:bg-zinc-600 focus:bg-zinc-600': !props.disabled,
+        'text-zinc-400': props.disabled,
+      }}
       onClick={() => {
         ctx?.setOpen(null);
         props.onClick && props.onClick();
@@ -126,6 +113,7 @@ export const MenuItem: Component<MenuItemProps> = (props) => {
       disabled={props.disabled}
     >
       {props.name}
+      {props.keybind && <span class="float-right">{props.keybind}</span>}
     </button>
   );
 };
