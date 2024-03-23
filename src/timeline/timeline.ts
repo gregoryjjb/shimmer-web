@@ -162,6 +162,7 @@ class Timeline {
   private canvas: HTMLCanvasElement;
   private debugDisplay: HTMLPreElement;
   private lights: HTMLDivElement[] = [];
+  private currentTimeDisplay: HTMLDivElement;
 
   private resizeObserver: ResizeObserver;
 
@@ -265,6 +266,15 @@ class Timeline {
       return false;
     };
     this.root.appendChild(this.canvas);
+
+    this.currentTimeDisplay = document.createElement('div');
+    this.currentTimeDisplay.className = 'absolute top-0 left-3 px-1 py-0.5 rounded-sm text-sm border'
+    // this.currentTimeDisplay.style.position = 'absolute';
+    // this.currentTimeDisplay.style.top = '4px';
+    // this.currentTimeDisplay.style.left = '4px';
+    // this.currentTimeDisplay.style.padding = '4px';
+    // this.currentTimeDisplay.style.fontSize = '12px';
+    this.root.appendChild(this.currentTimeDisplay);
 
     this.debugDisplay = document.createElement('pre');
     this.debugDisplay.innerText = 'Foo\nBar';
@@ -862,13 +872,15 @@ class Timeline {
 
     // Current time
     const timeString = stringifyTime(this.audio.currentTime, 'milliseconds');
-    ctx.font = '16px Courier New,monospace';
-    ctx.fillStyle = theme.ticks;
-    ctx.fillText(timeString, 4, 20);
+    this.currentTimeDisplay.innerHTML = timeString;
 
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = 'white';
-    ctx.strokeRect(4, 2, 90, 22);
+    // ctx.font = '16px Courier New,monospace';
+    // ctx.fillStyle = theme.ticks;
+    // ctx.fillText(timeString, 4, 20);
+
+    // ctx.lineWidth = 1;
+    // ctx.strokeStyle = 'white';
+    // ctx.strokeRect(4, 2, 90, 22);
 
     // Turn the lights on or off
     this.lights.forEach((light, i) => {

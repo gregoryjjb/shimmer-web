@@ -185,7 +185,7 @@ function App() {
           });
         }}
       />
-      <div class="border-t border-zinc-400 bg-zinc-800 px-2 py-1">
+      <div class="border-t border-zinc-400 bg-zinc-800 px-2 py-1 text-sm">
         <p>{prompt() || `${selectedCount()} keyframes selected`}</p>
       </div>
       {showHelp() && <Help onClose={() => setShowHelp(false)} />}
