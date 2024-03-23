@@ -12,12 +12,14 @@ import {
   keybindFor,
   nameFor,
 } from './timeline/commands';
-import { LocalPersistence } from './timeline/persistence';
+import { LocalPersistence, localPersistence } from './timeline/persistence';
 import Timeline from './timeline/timeline';
 import { newTracks } from './timeline/timeline-data';
 import { ShowDataJSON } from './timeline/types';
 import { setShowHelp, showHelp, volume } from './global';
 import OpenProjectForm from './OpenProjectForm';
+import JSZip from 'jszip';
+import { downloadFile } from './timeline/export';
 
 const show: ShowDataJSON = {
   tracks: [
@@ -77,6 +79,13 @@ function App() {
     });
   };
 
+  const exportZip = async () => {
+    const zip = new JSZip();
+    zip.file('foo.json', JSON.stringify({ hello: 'world' }));
+    const content = await zip.generateAsync({ type: 'blob' });
+    downloadFile('show.zip', content);
+  };
+
   const CommandMenuItem: Component<{
     command: SimpleCommand;
     requireSelected?: boolean;
@@ -97,7 +106,7 @@ function App() {
         <Menu name="File">
           <MenuItem name="New project" onClick={() => modal.show()} />
           <MenuItem name="Open" onClick={() => openModal.show()} />
-          <MenuItem name="Download" />
+          <MenuItem name="Download" onClick={exportZip} />
           <MenuItem name="Import legacy JSON" onClick={importLegacy} />
         </Menu>
         <Menu name="Edit">
@@ -162,7 +171,10 @@ function App() {
 
           LocalPersistence.loadExisting().then((lp) => {
             if (lp) {
+              console.log('Loading local data');
               t.loadPersistence(lp);
+            } else {
+              console.log('No data found locally');
             }
           });
 
@@ -191,11 +203,19 @@ function App() {
       <NewProjectModal>
         <ModalTitle>New project</ModalTitle>
         <NewProjectForm
-          onSubmit={(project) => {
+          onSubmit={async (project) => {
             const blankData = newTracks(project.channelCount);
             modal.hide();
 
-            t.load(blankData, project.file);
+            const lp = await LocalPersistence.new({
+              metadata: {
+                name: project.name,
+              },
+              tracks: JSON.stringify(blankData),
+              audio: project.file,
+            });
+
+            t.loadPersistence(lp);
           }}
         />
       </NewProjectModal>
@@ -203,9 +223,18 @@ function App() {
       <OpenProjectModal>
         <ModalTitle>Open project</ModalTitle>
         <OpenProjectForm
-          onSubmit={(payload) => {
+          onSubmit={async (payload) => {
             openModal.hide();
-            t.load(payload.tracks, payload.audio);
+
+            const lp = await LocalPersistence.new({
+              metadata: {
+                name: '(Replace me)',
+              },
+              tracks: JSON.stringify(payload.tracks),
+              audio: payload.audio,
+            });
+
+            t.loadPersistence(lp);
           }}
         />
       </OpenProjectModal>

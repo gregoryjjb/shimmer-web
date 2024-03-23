@@ -16,7 +16,7 @@ export const toLegacyFormat = (tracks: Track[]) => {
   };
 };
 
-export const downloadFile = (name: string, contents: string) => {
+export const downloadFile = (name: string, contents: string | Blob) => {
   const file = new File([contents], name, { type: 'text/json' });
   const url = URL.createObjectURL(file);
 

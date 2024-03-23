@@ -1305,6 +1305,10 @@ DPI scale: ${this.dpiScale}`;
     downloadFile('My show.json', marshaled);
   };
 
+  export = () => {
+    
+  }
+
   private commandHandlers: Record<Command, () => void> = {
     play: this.play,
     pause: this.pause,

@@ -125,7 +125,7 @@ const Toolbar: Component<{
   });
 
   return (
-    <div class="flex flex-row items-center gap-2">
+    <div class="flex flex-row flex-wrap items-center gap-2">
       <button
         class={`rounded-full bg-emerald-500 p-2 text-emerald-950 hover:bg-emerald-400`}
         onClick={createOnClick('playtoggle')}

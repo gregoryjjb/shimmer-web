@@ -43,16 +43,24 @@ export class LocalPersistence {
     p.project = project;
 
     await Promise.all([p.saveData(project.tracks), p.saveAudio(project.audio)]);
+
+    return p;
   };
 
   static loadExisting = async (): Promise<LocalPersistence | null> => {
     const lp = new LocalPersistence();
 
     const tracks = await lp.getData();
-    if (!tracks) return null;
+    if (!tracks) {
+      console.log('[LocalPersistence] No tracks');
+      return null;
+    }
 
     const audio = await lp.getAudio();
-    if (!audio || !(audio instanceof Blob)) return null;
+    if (!audio || !(audio instanceof Blob)) {
+      console.log('[LocalPersistence] No audio');
+      return null;
+    }
 
     const metadata = {
       name: 'Replace this with something',

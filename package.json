@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "audiobuffer-to-wav": "^1.0.0",
+    "jszip": "^3.10.1",
     "localforage": "^1.10.0",
     "solid-heroicons": "^3.2.4",
     "solid-js": "^1.7.8"
