@@ -22,7 +22,7 @@ import {
 
 import lightsSVG from '../assets/lights-colored.svg?raw';
 import { downloadFile, toLegacyFormat } from './export';
-import { IPersistence, Persistence } from './persistence';
+import { IPersistence, Persistence, localPersistence } from './persistence';
 
 const LEFT_MOUSE_BUTTON = 0;
 const MIDDLE_MOUSE_BUTTON = 1;
@@ -1305,9 +1305,12 @@ DPI scale: ${this.dpiScale}`;
     downloadFile('My show.json', marshaled);
   };
 
-  export = () => {
-    
-  }
+  export = async () => {
+    return {
+      tracks: JSON.stringify(this.data?.channels),
+      audio: await localPersistence.getAudio(),
+    };
+  };
 
   private commandHandlers: Record<Command, () => void> = {
     play: this.play,

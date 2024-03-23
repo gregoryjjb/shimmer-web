@@ -81,7 +81,9 @@ function App() {
 
   const exportZip = async () => {
     const zip = new JSZip();
-    zip.file('foo.json', JSON.stringify({ hello: 'world' }));
+    const dump = await t.export();
+    zip.file('keyframes.json', dump.tracks);
+    zip.file('audio.mp3', dump.audio);
     const content = await zip.generateAsync({ type: 'blob' });
     downloadFile('show.zip', content);
   };
