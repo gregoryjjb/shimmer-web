@@ -41,9 +41,34 @@ export const keybinds: Record<string, SimpleCommand> = {
   e: 'equallySpace',
 };
 
+let _apple: boolean | undefined;
+/**
+ * @returns true if running on a Mac
+ */
+export const apple = (): boolean => {
+  if (_apple !== undefined) return _apple;
+
+  _apple = window.navigator.userAgent.indexOf('Mac') != -1;
+  return _apple;
+};
+
 const formattedKeybinds: Partial<Record<SimpleCommand, string>> = {};
 Object.entries(keybinds).forEach(([keybind, command]) => {
-  formattedKeybinds[command] = keybind;
+  formattedKeybinds[command] = keybind
+    .split('_')
+    .map((part) => {
+      if (part === 'ctrl') return apple() ? '⌘' : 'Ctrl';
+      if (part === 'shift') return '⇧';
+      if (part === 'alt') return apple() ? '⌥' : 'Alt';
+
+      if (part === 'arrowup') return '↑';
+      if (part === 'arrowdown') return '↓';
+      if (part === 'arrowleft') return '←';
+      if (part === 'arrowright') return '→';
+
+      return part;
+    })
+    .join(' ');
 });
 export const keybindFor = (command: SimpleCommand): string =>
   formattedKeybinds[command] || '';

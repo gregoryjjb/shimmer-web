@@ -6,7 +6,7 @@ import TimelineData, {
 } from './timeline-data';
 
 import colors from './colors';
-import { ArgOf, Command, ComplexCommand, keybinds } from './commands';
+import { ArgOf, Command, ComplexCommand, apple, keybinds } from './commands';
 import { TimelineEmitter } from './events';
 import * as mouse from './mouse';
 import { ShowDataJSON } from './types';
@@ -1263,7 +1263,7 @@ DPI scale: ${this.dpiScale}`;
     }
 
     let combo = '';
-    if (e.ctrlKey) combo += 'ctrl_';
+    if (apple() ? e.metaKey : e.ctrlKey) combo += 'ctrl_';
     if (e.shiftKey) combo += 'shift_';
     combo += normalizedKey;
 
