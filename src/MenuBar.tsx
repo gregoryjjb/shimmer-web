@@ -81,7 +81,7 @@ export const Menu: ParentComponent<{
         {props.name}
       </button>
       {isOpen() && (
-        <div class="absolute z-10 flex min-w-[300px] flex-col rounded bg-zinc-800 px-1 py-2 shadow-md">
+        <div class="absolute z-10 flex flex-col rounded bg-zinc-800 px-1 py-2 shadow-md">
           {props.children}
         </div>
       )}
@@ -101,7 +101,7 @@ export const MenuItem: Component<MenuItemProps> = (props) => {
 
   return (
     <button
-      class="rounded px-2 py-1 text-left text-sm "
+      class="flex items-center whitespace-nowrap rounded px-2 py-1 text-left text-sm"
       classList={{
         'text-white hover:bg-zinc-600 focus:bg-zinc-600': !props.disabled,
         'text-zinc-400': props.disabled,
@@ -112,8 +112,8 @@ export const MenuItem: Component<MenuItemProps> = (props) => {
       }}
       disabled={props.disabled}
     >
-      {props.name}
-      {props.keybind && <span class="float-right">{props.keybind}</span>}
+      <span class="flex-1 mr-6">{props.name}</span>
+      {props.keybind && <span class="text-xs opacity-50">{props.keybind}</span>}
     </button>
   );
 };

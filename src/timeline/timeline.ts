@@ -922,9 +922,9 @@ class Timeline {
 
     this.debugDisplay.style.color = theme.debugText;
     this.debugDisplay.innerText = `Frametime: ${getPerfMS('draw full')}ms
-    waveform: ${getPerfMS('draw waveform')}ms
-    diamonds: ${getPerfMS('diamonds')}ms
-    keyframes: ${getPerfMS('keyframes')}ms
+  waveform: ${getPerfMS('draw waveform')}ms
+  diamonds: ${getPerfMS('diamonds')}ms
+  keyframes: ${getPerfMS('keyframes')}ms
 Resolution: ${this.canvas.width}x${this.canvas.height}
 Element size: ${this.canvasWidth}x${this.canvasHeight}
 DPI scale: ${this.dpiScale}`;

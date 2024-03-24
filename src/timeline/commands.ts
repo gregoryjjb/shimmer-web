@@ -41,6 +41,10 @@ export const keybinds: Record<string, SimpleCommand> = {
   e: 'equallySpace',
 };
 
+const capitalize = (s: string): string => {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 let _apple: boolean | undefined;
 /**
  * @returns true if running on a Mac
@@ -66,7 +70,7 @@ Object.entries(keybinds).forEach(([keybind, command]) => {
       if (part === 'arrowleft') return '←';
       if (part === 'arrowright') return '→';
 
-      return part;
+      return capitalize(part);
     })
     .join(' ');
 });
