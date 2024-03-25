@@ -16,7 +16,13 @@ import { LocalPersistence, localPersistence } from './timeline/persistence';
 import Timeline from './timeline/timeline';
 import { newTracks } from './timeline/timeline-data';
 import { ShowDataJSON } from './timeline/types';
-import { setShowHelp, showHelp, volume } from './global';
+import {
+  projectName,
+  setProjectName,
+  setShowHelp,
+  showHelp,
+  volume,
+} from './global';
 import OpenProjectForm from './OpenProjectForm';
 import JSZip from 'jszip';
 import { downloadFile } from './timeline/export';
@@ -85,7 +91,8 @@ function App() {
     zip.file('keyframes.json', dump.tracks);
     zip.file('audio.mp3', dump.audio);
     const content = await zip.generateAsync({ type: 'blob' });
-    downloadFile('show.zip', content);
+    const filename = `${projectName() || 'Untitled project'}.zip`;
+    downloadFile(filename, content);
   };
 
   const CommandMenuItem: Component<{
@@ -132,7 +139,11 @@ function App() {
         </Menu>
       </MenuBar>
       <div class="flex flex-col gap-3 p-3">
-        <input class="bg-transparent p-0 text-white" value="Untitled show" />
+        <input
+          class="bg-transparent p-0 text-white"
+          value={projectName()}
+          onChange={(e) => setProjectName(e.target.value)}
+        />
         <Toolbar
           selectedCount={selectedCount()}
           playing={playing()}
@@ -216,6 +227,7 @@ function App() {
               tracks: JSON.stringify(blankData),
               audio: project.file,
             });
+            setProjectName(project.name);
 
             t.loadPersistence(lp);
           }}
@@ -235,6 +247,7 @@ function App() {
               tracks: JSON.stringify(payload.tracks),
               audio: payload.audio,
             });
+            setProjectName(payload.name);
 
             t.loadPersistence(lp);
           }}

@@ -268,7 +268,8 @@ class Timeline {
     this.root.appendChild(this.canvas);
 
     this.currentTimeDisplay = document.createElement('div');
-    this.currentTimeDisplay.className = 'absolute top-0 left-3 px-1 py-0.5 rounded-sm text-sm border'
+    this.currentTimeDisplay.className =
+      'absolute top-0 left-3 px-1 py-0.5 rounded-sm text-sm border';
     // this.currentTimeDisplay.style.position = 'absolute';
     // this.currentTimeDisplay.style.top = '4px';
     // this.currentTimeDisplay.style.left = '4px';
@@ -1219,7 +1220,7 @@ DPI scale: ${this.dpiScale}`;
 
     // Very hacky way to detect touchpad: if the delta is "small" it's probably
     // not a wheel (wheel seems to give values of around 100?)
-    const isTouchpad = Math.max(Math.abs(e.deltaX), Math.abs(e.deltaY)) < 50;
+    const isTouchpad = true; // Math.max(Math.abs(e.deltaX), Math.abs(e.deltaY)) < 50;
 
     // On touchpad, ctrlKey is set by the browser when doing a pinch-to-zoom. On
     // mouse, we zoom by default (no ctrlKey), unless the shift key is held.

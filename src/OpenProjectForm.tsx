@@ -29,7 +29,7 @@ const parseShowFile = async (f: File): Promise<Track[]> => {
           throw new Error('Show is missing tracks');
         }
 
-        const tracks = mapJSONToMemory(parsed)
+        const tracks = mapJSONToMemory(parsed);
 
         // TODO: more validations on the shape of the tracks and keyframes
         resolve(tracks);
@@ -48,12 +48,14 @@ const parseShowFile = async (f: File): Promise<Track[]> => {
 };
 
 const OpenProjectForm: Component<{
-  onSubmit?: (result: { audio: File; tracks: Track[] }) => void;
+  onSubmit?: (result: { name: string; audio: File; tracks: Track[] }) => void;
 }> = (props) => {
   const [tracksErr, setTracksErr] = createSignal('');
   const [tracks, setTracks] = createSignal<Track[]>();
 
   const [audioFile, setAudioFile] = createSignal<File>();
+
+  const [name, setName] = createSignal<string>('');
 
   return (
     <form
@@ -70,6 +72,7 @@ const OpenProjectForm: Component<{
         if (!a) return;
 
         props.onSubmit?.({
+          name: name(),
           audio: a,
           tracks: t,
         });
@@ -85,6 +88,7 @@ const OpenProjectForm: Component<{
             const tracks = await parseShowFile(f);
             setTracks(tracks);
             setTracksErr('');
+            setName(f.name.replace('.json', ''));
           } catch (err) {
             setTracksErr(String(err));
           }
