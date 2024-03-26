@@ -1,7 +1,7 @@
 import { expect, test, describe } from 'vitest';
 
 import { binarySearch } from './timeline-data';
-import { Keyframe } from './timeline-data';
+import { Keyframe } from './types';
 
 const keyframes = [0, 10, 20, 30, 40, 50, 60, 70].map<Keyframe>((n) => ({
   selected: false,

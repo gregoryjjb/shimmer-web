@@ -23,6 +23,7 @@ export class TimelineEmitter extends Emitter<{
   selected: number;
   render: void;
   loading: boolean;
+  autosave: string;
 }> {
   // constructor() {
   //   super();

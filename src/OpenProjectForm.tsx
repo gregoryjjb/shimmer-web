@@ -1,6 +1,8 @@
 import { Component, createSignal } from 'solid-js';
-import { Track, mapJSONToMemory } from './timeline/timeline-data';
+import { mapJSONToMemory } from './timeline/timeline-data';
+import { Track } from './timeline/types';
 import FileInput from './components/FileInput';
+import { Project } from './timeline/types';
 
 const parseShowFile = async (f: File): Promise<Track[]> => {
   return new Promise((resolve, reject) => {
@@ -48,7 +50,7 @@ const parseShowFile = async (f: File): Promise<Track[]> => {
 };
 
 const OpenProjectForm: Component<{
-  onSubmit?: (result: { name: string; audio: File; tracks: Track[] }) => void;
+  onSubmit?: (result: Project) => void;
 }> = (props) => {
   const [tracksErr, setTracksErr] = createSignal('');
   const [tracks, setTracks] = createSignal<Track[]>();

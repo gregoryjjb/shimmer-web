@@ -1,6 +1,6 @@
 import localforage from 'localforage';
 import { Emitter } from './events';
-import { Track } from './timeline-data';
+import { Track } from './types';
 
 localforage.config({
   driver: localforage.INDEXEDDB,
@@ -23,7 +23,7 @@ export interface IPersistence {
 
   getAudio: () => Promise<Blob>;
 
-  get: <T extends keyof Project>(key: T) => Promise<Project[T]>;
+  get: <T extends keyof Project>(key: T) => Project[T];
   set: <T extends keyof Project>(key: T, value: Project[T]) => Promise<void>;
 
   // onChange: <T extends keyof Project>(
@@ -75,7 +75,7 @@ export class LocalPersistence {
     return lp;
   };
 
-  get = async <T extends keyof Project>(key: T): Promise<Project[T]> => {
+  get = <T extends keyof Project>(key: T): Project[T] => {
     if (!this.project) {
       throw new Error();
     }

@@ -1,58 +1,29 @@
-import { Component, createSignal, onCleanup } from 'solid-js';
+import JSZip from 'jszip';
+import { Component, onMount } from 'solid-js';
 import './App.css';
 import Help from './Help';
 import { Menu, MenuBar, MenuItem, MenuItemSpacer } from './MenuBar';
 import NewProjectForm from './NewProjectForm';
+import OpenProjectForm from './OpenProjectForm';
+import { useTimeline } from './TimelineContext';
 import Toolbar from './Toolbar';
 import { ModalTitle, createModal } from './components/Modal';
-import { createStoredSignal } from './hooks/createStorageSignal';
+import { projectName, setProjectName, setShowHelp, showHelp } from './global';
 import {
   Command,
   SimpleCommand,
   keybindFor,
   nameFor,
 } from './timeline/commands';
-import { LocalPersistence, localPersistence } from './timeline/persistence';
-import Timeline from './timeline/timeline';
+import { LocalPersistence } from './timeline/persistence';
 import { newTracks } from './timeline/timeline-data';
-import { ShowDataJSON } from './timeline/types';
-import {
-  projectName,
-  setProjectName,
-  setShowHelp,
-  showHelp,
-  volume,
-} from './global';
-import OpenProjectForm from './OpenProjectForm';
-import JSZip from 'jszip';
 import { downloadFile } from './timeline/export';
 
-const show: ShowDataJSON = {
-  tracks: [
-    { id: 'Channel 1', keyframes: [] },
-    { id: 'Channel 2', keyframes: [] },
-    { id: 'Channel 3', keyframes: [] },
-    { id: 'Channel 4', keyframes: [] },
-    { id: 'Channel 5', keyframes: [] },
-    { id: 'Channel 6', keyframes: [] },
-    { id: 'Channel 7', keyframes: [] },
-    { id: 'Channel 8', keyframes: [] },
-  ],
-};
-
 function App() {
-  let t: Timeline;
-
-  const [playing, setPlaying] = createSignal(false);
-  const [loading, setLoading] = createSignal(false);
-  const [editLog, setEditLog] = createSignal<
-    { time: number; message: string }[]
-  >([]);
-  const [selectedCount, setSelectedCount] = createSignal(0);
-  const [prompt, setPrompt] = createSignal('');
+  const ctx = useTimeline();
 
   const handleCommand = (c: Command) => {
-    t.execute(c);
+    ctx.timeline.execute(c);
   };
 
   const [NewProjectModal, modal] = createModal();
@@ -80,14 +51,14 @@ function App() {
           throw new Error('Got non-string');
         }
 
-        t.loadLegacyJSON(JSON.parse(raw));
+        ctx.timeline.loadLegacyJSON(JSON.parse(raw));
       };
     });
   };
 
   const exportZip = async () => {
     const zip = new JSZip();
-    const dump = await t.export();
+    const dump = await ctx.timeline.export();
     zip.file('keyframes.json', dump.tracks);
     zip.file('audio.mp3', dump.audio);
     const content = await zip.generateAsync({ type: 'blob' });
@@ -104,10 +75,26 @@ function App() {
         name={nameFor(props.command)}
         keybind={keybindFor(props.command)}
         onClick={() => handleCommand(props.command)}
-        disabled={props.requireSelected && selectedCount() === 0}
+        disabled={props.requireSelected && ctx.selectedCount() === 0}
       />
     );
   };
+
+  onMount(() => {
+    LocalPersistence.loadExisting().then((lp) => {
+      if (lp) {
+        console.log('Loading local data');
+
+        ctx.timeline.load({
+          name: 'What',
+          audio: lp.get('audio'),
+          tracks: JSON.parse(lp.get('tracks')),
+        });
+      } else {
+        console.log('No data found locally');
+      }
+    });
+  });
 
   return (
     <div class="flex h-screen flex-col">
@@ -144,71 +131,19 @@ function App() {
           value={projectName()}
           onChange={(e) => setProjectName(e.target.value)}
         />
-        <Toolbar
-          selectedCount={selectedCount()}
-          playing={playing()}
-          onCommand={handleCommand}
-          onComplexCommand={(c, a) => {
-            t?.executeWithArgs(c, a);
-          }}
-          onPlaybackRateChange={(rate) => t?.setPlaybackRate(rate)}
-        />
+        <Toolbar />
       </div>
       <div
         class="min-h-0 flex-1"
-        // style={{
-        //   position: 'absolute',
-        //   top: '78px',
-        //   left: '33px',
-        //   right: '69px',
-        // }}
         ref={(el) => {
-          t = new Timeline(el);
-          t.on('play', () => setPlaying(true));
-          t.on('pause', () => setPlaying(false));
-          t.on('edit', (action) =>
-            setEditLog((a) => [{ time: Date.now(), message: action }, ...a]),
-          );
-          t.on('selected', (n) => setSelectedCount(n));
-          t.on('render', () => setPrompt(t.getPrompt()));
-          t.on('loading', (l) => setLoading(l));
-
-          t.executeWithArgs('setVolume', volume());
-
-          // fetch('/queen_of_the_winter_night.json')
-          //   .then((res) => res.json())
-          //   .then((json) => {
-          //     // t.load(json, '/halloween_1978_pT4FY3NrhGg.opus');
-          //     t.load(json, '/queen_of_the_winter_night.mp3');
-          //   });
-
-          LocalPersistence.loadExisting().then((lp) => {
-            if (lp) {
-              console.log('Loading local data');
-              t.loadPersistence(lp);
-            } else {
-              console.log('No data found locally');
-            }
-          });
-
-          onCleanup(() => {
-            t.destroy();
-          });
+          ctx.timeline.attach(el);
         }}
       />
       <div class="border-t border-zinc-400 bg-zinc-800 px-2 py-1 text-sm">
-        <p>{prompt() || `${selectedCount()} keyframes selected`}</p>
+        <p>{ctx.prompt() || `${ctx.selectedCount()} keyframes selected`}</p>
       </div>
       {showHelp() && <Help onClose={() => setShowHelp(false)} />}
-      {/* <p>{selectedCount()} keyframes selected</p>
-      <ul class="fixed bottom-0 left-0 flex flex-col-reverse font-mono text-white">
-        {editLog().map((a) => (
-          <li>
-            {new Date(a.time).toLocaleTimeString()} {a.message}
-          </li>
-        ))}
-      </ul> */}
-      {loading() && (
+      {ctx.loading() && (
         <div class="fixed inset-0 flex items-center justify-center bg-black/25">
           <p class="text-3xl text-white">LOADING...</p>
         </div>
@@ -220,16 +155,11 @@ function App() {
             const blankData = newTracks(project.channelCount);
             modal.hide();
 
-            const lp = await LocalPersistence.new({
-              metadata: {
-                name: project.name,
-              },
-              tracks: JSON.stringify(blankData),
+            ctx.timeline.load({
+              name: project.name,
+              tracks: blankData,
               audio: project.file,
             });
-            setProjectName(project.name);
-
-            t.loadPersistence(lp);
           }}
         />
       </NewProjectModal>
@@ -239,17 +169,8 @@ function App() {
         <OpenProjectForm
           onSubmit={async (payload) => {
             openModal.hide();
-
-            const lp = await LocalPersistence.new({
-              metadata: {
-                name: '(Replace me)',
-              },
-              tracks: JSON.stringify(payload.tracks),
-              audio: payload.audio,
-            });
-            setProjectName(payload.name);
-
-            t.loadPersistence(lp);
+            
+            ctx.timeline.load(payload);
           }}
         />
       </OpenProjectModal>

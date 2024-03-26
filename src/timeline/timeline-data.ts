@@ -1,19 +1,7 @@
 import { TimelineEmitter } from './events';
-import { localPersistence } from './persistence';
-import { ShowDataJSON } from './types';
+import { Keyframe, ShowDataJSON, Track } from './types';
 import { UndoHistory } from './undo';
-import { clamp, stringifyTime } from './utils';
-
-export type Track = {
-  name: string;
-  keyframes: Keyframe[];
-};
-
-export type Keyframe = {
-  timestamp: number;
-  value: number;
-  selected: boolean;
-};
+import { stringifyTime } from './utils';
 
 export const newTracks = (count: number): Track[] => {
   return Array.from(Array(count).keys()).map((n) => ({
@@ -196,7 +184,7 @@ class TimelineData {
       channels: marshaled,
     });
 
-    localPersistence.saveData(marshaled);
+    this.emitter.emit('autosave', marshaled);
   };
 
   private emit = (action: string) => {
@@ -228,7 +216,7 @@ class TimelineData {
       return;
     }
 
-    localPersistence.saveData(snapshot.channels);
+    this.emitter.emit('autosave', snapshot.channels);
     this.channels = JSON.parse(snapshot.channels);
     this.emit(`Undo '${undid.action}'`);
   };
@@ -241,7 +229,7 @@ class TimelineData {
     }
 
     this.emit(`Redo '${redone.action}'`);
-    localPersistence.saveData(redone.channels);
+    this.emitter.emit('autosave', redone.channels);
     this.channels = JSON.parse(redone.channels);
   };
 

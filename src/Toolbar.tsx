@@ -23,7 +23,6 @@ import {
   trash,
 } from 'solid-heroicons/solid-mini';
 import VolumeSlider from './VolumeSlider/VolumeSlider';
-import { setVolume, volume } from './global';
 import {
   Command,
   ComplexCommandHandler,
@@ -32,6 +31,7 @@ import {
   nameFor,
 } from './timeline/commands';
 import { clamp } from './timeline/utils';
+import { useTimeline } from './TimelineContext';
 
 const tooltip = (command: SimpleCommand) => {
   const name = nameFor(command);
@@ -81,18 +81,15 @@ const Bar: Component = () => {
 const playbackRates = ['0.5', '0.75', '1', '1.25', '1.5'];
 
 const Toolbar: Component<{
-  playing?: boolean;
-  selectedCount: number;
-  onPlay?: () => void;
-  onCommand: (c: Command) => void;
-  onComplexCommand: ComplexCommandHandler;
   onPlaybackRateChange?: (rate: number) => void;
 }> = (props) => {
+  const ctx = useTimeline();
+
   const buttonClass = 'rounded-lg p-2 text-zinc-100 hover:bg-zinc-800';
 
-  const nothingSelected = () => props.selectedCount === 0;
+  const nothingSelected = () => ctx.selectedCount() === 0;
 
-  const createOnClick = (c: Command) => () => props.onCommand(c);
+  const createOnClick = (c: Command) => () => ctx.timeline.execute(c);
 
   const [playbackRate, setPlaybackRate] = createSignal('1');
 
@@ -121,18 +118,20 @@ const Toolbar: Component<{
   );
 
   createEffect(() => {
-    props.onPlaybackRateChange?.(parseFloat(playbackRate()));
+    ctx.timeline.setPlaybackRate(parseFloat(playbackRate()));
   });
 
   return (
     <div class="flex flex-row flex-wrap items-center gap-2">
       <button
+        title={tooltip('playtoggle')}
         class={`rounded-full bg-emerald-500 p-2 text-emerald-950 hover:bg-emerald-400`}
         onClick={createOnClick('playtoggle')}
       >
-        <Icon path={props.playing ? pause : play} class="h-6 w-6" />
+        <Icon path={ctx.playing() ? pause : play} class="h-6 w-6" />
       </button>
       <select
+        title="Playback speed"
         class="h-9 rounded-lg bg-zinc-700 px-2 text-zinc-100 hover:bg-zinc-600"
         value={playbackRate()}
         onChange={(e) => setPlaybackRate(e.target.value)}
@@ -143,13 +142,7 @@ const Toolbar: Component<{
         <option value="1.25">1.25x</option>
         <option value="1.5">1.5x</option>
       </select>
-      <VolumeSlider
-        value={volume()}
-        onChange={(n) => {
-          setVolume(n);
-          props.onComplexCommand('setVolume', n);
-        }}
-      />
+      <VolumeSlider value={ctx.volume()} onChange={(n) => ctx.setVolume(n)} />
       <Bar />
       <ToolbarButtonGroup>
         <ToolbarButton

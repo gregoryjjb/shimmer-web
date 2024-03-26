@@ -33,6 +33,7 @@ export const keybinds: Record<string, SimpleCommand> = {
   s: 'scale',
   d: 'duplicate',
   delete: 'delete',
+  backspace: 'delete',
   w: 'dedup',
   escape: 'cancel',
   ctrl_a: 'selectAll',
@@ -43,7 +44,7 @@ export const keybinds: Record<string, SimpleCommand> = {
 
 const capitalize = (s: string): string => {
   return s.charAt(0).toUpperCase() + s.slice(1);
-}
+};
 
 let _apple: boolean | undefined;
 /**
@@ -69,6 +70,8 @@ Object.entries(keybinds).forEach(([keybind, command]) => {
       if (part === 'arrowdown') return '↓';
       if (part === 'arrowleft') return '←';
       if (part === 'arrowright') return '→';
+
+      if (part === ' ') return 'Spacebar';
 
       return capitalize(part);
     })

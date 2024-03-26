@@ -1,9 +1,6 @@
 import TimelineAudio from './timeline-audio';
-import TimelineData, {
-  BoxSelection,
-  Track,
-  mapJSONToMemory,
-} from './timeline-data';
+import TimelineData, { BoxSelection, mapJSONToMemory } from './timeline-data';
+import { Track } from './types';
 
 import colors from './colors';
 import { ArgOf, Command, ComplexCommand, apple, keybinds } from './commands';
@@ -23,6 +20,7 @@ import {
 import lightsSVG from '../assets/lights-colored.svg?raw';
 import { downloadFile, toLegacyFormat } from './export';
 import { IPersistence, Persistence, localPersistence } from './persistence';
+import { Project } from './types';
 
 const LEFT_MOUSE_BUTTON = 0;
 const MIDDLE_MOUSE_BUTTON = 1;
@@ -157,14 +155,14 @@ interface RenderedBoxSelection extends BoxSelection {
 }
 
 class Timeline {
-  private container: Element; // Outer container provided to us
+  private container: Element | undefined; // Outer container provided to us
   private root: HTMLDivElement; // Element we add to the container
   private canvas: HTMLCanvasElement;
   private debugDisplay: HTMLPreElement;
   private lights: HTMLDivElement[] = [];
   private currentTimeDisplay: HTMLDivElement;
 
-  private resizeObserver: ResizeObserver;
+  private resizeObserver?: ResizeObserver;
 
   private audio: TimelineAudio;
   private data?: TimelineData;
@@ -246,14 +244,11 @@ class Timeline {
     return this.canvas.height / this.dpiScale;
   }
 
-  constructor(container: Element, options?: TimelineOptions) {
+  constructor(options?: TimelineOptions) {
     const { layout } = this.config;
-
-    this.container = container;
 
     this.root = document.createElement('div');
     this.root.style.position = 'relative';
-    this.container.appendChild(this.root);
 
     this.canvas = document.createElement('canvas');
     // this.canvas.style.position = 'absolute';
@@ -351,8 +346,20 @@ class Timeline {
     this.canvas.addEventListener('mousedown', this.handleMouseDown);
     this.canvas.addEventListener('mouseup', this.handleMouseUp);
     this.canvas.addEventListener('wheel', this.handleWheel, { passive: false });
+  }
 
+  /**
+   * Attaches the timeline to the provided container element; the timeline
+   * will be rendered there
+   */
+  attach = (container: Element) => {
+    this.container = container;
+    this.container.appendChild(this.root);
+
+    this.resizeObserver?.disconnect();
     this.resizeObserver = new ResizeObserver((entries) => {
+      if (!this.container) return;
+
       this.resizeCanvas(
         this.container.clientWidth,
         this.container.clientHeight,
@@ -361,11 +368,11 @@ class Timeline {
     this.resizeObserver.observe(this.container);
 
     this.resizeCanvas(this.container.clientWidth, this.container.clientHeight);
-  }
+  };
 
   destroy = () => {
-    this.resizeObserver.disconnect();
-    this.container.removeChild(this.root);
+    this.resizeObserver?.disconnect();
+    this.container?.removeChild(this.root);
 
     this.audio.destroy();
 
@@ -375,14 +382,14 @@ class Timeline {
     this.destroyed = true;
   };
 
-  load = async (data: Track[], audio: Blob) => {
+  load = async (project: Project) => {
     const start = performance.now();
 
     this.emitter.emit('loading', true);
 
     try {
-      const p = this.audio.load(audio);
-      this.loadData(data);
+      const p = this.audio.load(project.audio);
+      this.loadData(project.tracks);
       await p;
     } finally {
       console.log(`Loaded in ${performance.now() - start}ms`);
@@ -417,7 +424,7 @@ class Timeline {
     if (data && audio) {
       const parsedData = JSON.parse(data);
 
-      await this.load(parsedData, audio);
+      await this.load({ name: '', tracks: parsedData, audio });
     }
 
     this.requestDraw();

@@ -1,4 +1,4 @@
-import { Track } from './timeline-data';
+import { Track } from './types';
 
 export const toLegacyFormat = (tracks: Track[]) => {
   return {
