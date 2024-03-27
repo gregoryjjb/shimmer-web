@@ -1,3 +1,4 @@
+import clsx from 'clsx';
 import {
   Accessor,
   Component,
@@ -15,7 +16,15 @@ export const ModalTitle: ParentComponent = (props) => {
   return (
     <div class="mb-6 flex flex-row">
       <h1 class="flex-1 text-lg font-bold">{props.children}</h1>
-      <button onClick={() => modal?.hide()}>X</button>
+      <button
+        onClick={() => modal?.hide()}
+        class={clsx(
+          'h-6 w-6 rounded-full',
+          'hover:bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600',
+        )}
+      >
+        &#x2715;
+      </button>
     </div>
   );
 };

@@ -8,7 +8,7 @@ import OpenProjectForm from './OpenProjectForm';
 import { useTimeline } from './TimelineContext';
 import Toolbar from './Toolbar';
 import { ModalTitle, createModal } from './components/Modal';
-import { projectName, setProjectName, setShowHelp, showHelp } from './global';
+import { setShowHelp, showHelp } from './global';
 import {
   Command,
   SimpleCommand,
@@ -59,10 +59,10 @@ function App() {
   const exportZip = async () => {
     const zip = new JSZip();
     const dump = await ctx.timeline.export();
-    zip.file('keyframes.json', dump.tracks);
+    zip.file('data.json', dump.tracks);
     zip.file('audio.mp3', dump.audio);
     const content = await zip.generateAsync({ type: 'blob' });
-    const filename = `${projectName() || 'Untitled project'}.zip`;
+    const filename = `${ctx.projectName() || 'Untitled project'}.zip`;
     downloadFile(filename, content);
   };
 
@@ -127,9 +127,13 @@ function App() {
       </MenuBar>
       <div class="flex flex-col gap-3 p-3">
         <input
-          class="bg-transparent p-0 text-white"
-          value={projectName()}
-          onChange={(e) => setProjectName(e.target.value)}
+          class="-mx-2 -my-1 rounded-md bg-transparent px-2 py-1 text-white transition-colors hover:bg-zinc-800 focus:bg-zinc-700 focus:outline-none"
+          placeholder="Untitled project"
+          value={ctx.projectName()}
+          onChange={(e) => ctx.setProjectName(e.target.value)}
+          onKeyDown={(e) =>
+            e.key === 'Enter' && (e.target as HTMLInputElement).blur()
+          }
         />
         <Toolbar />
       </div>
@@ -169,7 +173,7 @@ function App() {
         <OpenProjectForm
           onSubmit={async (payload) => {
             openModal.hide();
-            
+
             ctx.timeline.load(payload);
           }}
         />

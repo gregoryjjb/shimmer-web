@@ -88,32 +88,6 @@ type TimelineConfig = typeof defaultConfig;
 
 type TimelineOptions = DeepPartial<DeepWritable<TimelineConfig>>;
 
-// const kfCanvas = document.createElement('canvas');
-// kfCanvas.width = 20;
-// kfCanvas.height = 20;
-// const kfCtx = kfCanvas.getContext('2d')!;
-// kfCtx.strokeStyle = 'black'; //colors.keyframeOutline;
-// kfCtx.fillStyle = 'yellow'; // colors.keyframeOn;
-// // kfCtx.beginPath();
-// // kfCtx.moveTo(10, 5);
-// // kfCtx.lineTo(15, 10);
-// // kfCtx.lineTo(10, 15);
-// // kfCtx.lineTo(5, 10);
-// // kfCtx.lineTo(10, 5);
-// kfCtx.translate(10, 10);
-// kfCtx.rotate(Math.PI / 4);
-// kfCtx.beginPath();
-// kfCtx.rect(-5, -5, 10, 10);
-// kfCtx.fill();
-// kfCtx.stroke();
-// kfCtx.fill();
-// kfCtx.stroke();
-// kfCtx.resetTransform();
-// let kfBitmap: ImageBitmap;
-// createImageBitmap(kfCanvas).then((b) => {
-//   kfBitmap = b;
-// });
-
 const createDiamond = (
   size: number,
   strokeStyle: string | CanvasGradient | CanvasPattern,
@@ -184,7 +158,7 @@ class Timeline {
     const maxPxPerSecond = 1000;
 
     // The formula for converting zoom into pxPerSecond is:
-    // y = a * e^{bx}
+    // y = a * 𝑒^{bx}
     // Where:
     //   x = zoom scaler
     //   y = px per second

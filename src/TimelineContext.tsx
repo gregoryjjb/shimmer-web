@@ -5,7 +5,7 @@ import {
   createSignal,
   onCleanup,
   onMount,
-  useContext
+  useContext,
 } from 'solid-js';
 import { createStoredSignal } from './hooks/createStorageSignal';
 import { LocalPersistence, localPersistence } from './timeline/persistence';
@@ -31,6 +31,8 @@ const makeTimelineContext = () => {
 
   const [prompt, setPrompt] = createSignal('');
   timeline.on('render', () => setPrompt(timeline.getPrompt()));
+
+  const [projectName, setProjectName] = createStoredSignal('projectName', '');
 
   timeline.on('autosave', (data) => localPersistence.saveData(data));
 
@@ -62,6 +64,8 @@ const makeTimelineContext = () => {
     setVolume,
     selectedCount,
     prompt,
+    projectName,
+    setProjectName,
   };
 
   return value;
