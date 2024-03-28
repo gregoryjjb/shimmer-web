@@ -32,6 +32,7 @@ import {
 } from './timeline/commands';
 import { clamp } from './timeline/utils';
 import { useTimeline } from './TimelineContext';
+import GradientButton from './components/GradientButton';
 
 const tooltip = (command: SimpleCommand) => {
   const name = nameFor(command);
@@ -123,13 +124,14 @@ const Toolbar: Component<{
 
   return (
     <div class="flex flex-row flex-wrap items-center gap-2">
-      <button
+      <GradientButton
+        component="button"
         title={tooltip('playtoggle')}
-        class={`rounded-full bg-emerald-500 p-2 text-emerald-950 hover:bg-emerald-400`}
+        class={`rounded-full p-2 text-black`}
         onClick={createOnClick('playtoggle')}
       >
         <Icon path={ctx.playing() ? pause : play} class="h-6 w-6" />
-      </button>
+      </GradientButton>
       <select
         title="Playback speed"
         class="h-9 rounded-lg bg-zinc-700 px-2 text-zinc-100 hover:bg-zinc-600"

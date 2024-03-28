@@ -18,6 +18,7 @@ import {
 } from './timeline/commands';
 import { downloadFile, parseProjectData } from './timeline/export';
 import { newTracks } from './timeline/timeline-data';
+import GradientButton from './components/GradientButton';
 
 function App() {
   const ctx = useTimeline();
@@ -102,6 +103,12 @@ function App() {
         <Menu name="Help">
           <MenuItem name="Show help" onClick={() => setShowHelp(true)} />
         </Menu>
+        <GradientButton
+          component="button"
+          class="rounded px-1 py-0.5 text-sm text-black font-semibold ml-2"
+        >
+          ✨ Open sample project
+        </GradientButton>
       </MenuBar>
       <div class="flex flex-col gap-3 p-3">
         <input
@@ -151,9 +158,9 @@ function App() {
         <OpenProjectForm
           onSubmit={async (payload) => {
             openModal.hide();
-
             ctx.timeline.load(payload);
           }}
+          onCancel={() => openModal.hide()}
         />
       </OpenProjectModal>
     </div>

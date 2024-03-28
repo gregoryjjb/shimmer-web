@@ -1,5 +1,6 @@
 import { Component, Show, createMemo, createSignal } from 'solid-js';
 import FileInput from './components/FileInput';
+import GradientButton from './components/GradientButton';
 
 const NewProjectForm: Component<{
   onSubmit?: (result: {
@@ -69,6 +70,7 @@ const NewProjectForm: Component<{
         </div>
       </div>
       <FileInput
+        class="h-32 w-full"
         label="Choose a music mp3 file"
         accept=".mp3"
         onChange={(f) => {
@@ -77,12 +79,13 @@ const NewProjectForm: Component<{
         }}
       />
       <div class="flex w-full justify-end">
-        <button
+        <GradientButton
+          component="button"
           type="submit"
-          class="rounded bg-emerald-500 px-3 py-2 font-semibold text-black"
+          class="rounded-xl px-3 py-2 font-semibold text-black"
         >
           Create
-        </button>
+        </GradientButton>
       </div>
     </form>
   );
