@@ -1,5 +1,5 @@
 import JSZip from 'jszip';
-import { Component, onMount } from 'solid-js';
+import { Component } from 'solid-js';
 import './App.css';
 import Help from './Help';
 import { Menu, MenuBar, MenuItem, MenuItemSpacer } from './MenuBar';
@@ -8,6 +8,7 @@ import OpenProjectForm from './OpenProjectForm';
 import { useTimeline } from './TimelineContext';
 import Toolbar from './Toolbar';
 import { ModalTitle, createModal } from './components/Modal';
+import { fileToString } from './files';
 import { setShowHelp, showHelp } from './global';
 import {
   Command,
@@ -15,9 +16,8 @@ import {
   keybindFor,
   nameFor,
 } from './timeline/commands';
-import { LocalPersistence } from './timeline/persistence';
+import { downloadFile, parseProjectData } from './timeline/export';
 import { newTracks } from './timeline/timeline-data';
-import { downloadFile } from './timeline/export';
 
 function App() {
   const ctx = useTimeline();
@@ -29,30 +29,23 @@ function App() {
   const [NewProjectModal, modal] = createModal();
   const [OpenProjectModal, openModal] = createModal();
 
-  const importLegacy = () => {
+  const replaceJSON = () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json';
     input.click();
 
-    input.addEventListener('change', (e) => {
+    input.addEventListener('change', async () => {
       const file = input.files?.[0];
       if (!file) {
         console.error('no file selected?');
         return;
       }
 
-      const reader = new FileReader();
-      reader.readAsText(file, 'UTF-8');
+      const contents = await fileToString(file);
+      const data = parseProjectData(contents);
 
-      reader.onload = (e) => {
-        const raw = e.target?.result || '';
-        if (typeof raw !== 'string') {
-          throw new Error('Got non-string');
-        }
-
-        ctx.timeline.loadLegacyJSON(JSON.parse(raw));
-      };
+      ctx.timeline.replaceData(data);
     });
   };
 
@@ -80,22 +73,6 @@ function App() {
     );
   };
 
-  onMount(() => {
-    LocalPersistence.loadExisting().then((lp) => {
-      if (lp) {
-        console.log('Loading local data');
-
-        ctx.timeline.load({
-          name: 'What',
-          audio: lp.get('audio'),
-          tracks: JSON.parse(lp.get('tracks')),
-        });
-      } else {
-        console.log('No data found locally');
-      }
-    });
-  });
-
   return (
     <div class="flex h-screen flex-col">
       <MenuBar>
@@ -103,7 +80,8 @@ function App() {
           <MenuItem name="New project" onClick={() => modal.show()} />
           <MenuItem name="Open" onClick={() => openModal.show()} />
           <MenuItem name="Download" onClick={exportZip} />
-          <MenuItem name="Import legacy JSON" onClick={importLegacy} />
+          <MenuItemSpacer />
+          <MenuItem name="Replace JSON" onClick={replaceJSON} />
         </Menu>
         <Menu name="Edit">
           <CommandMenuItem command="undo" />
@@ -161,7 +139,7 @@ function App() {
 
             ctx.timeline.load({
               name: project.name,
-              tracks: blankData,
+              data: { tracks: blankData },
               audio: project.file,
             });
           }}

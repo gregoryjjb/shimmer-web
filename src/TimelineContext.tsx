@@ -37,6 +37,7 @@ const makeTimelineContext = () => {
   timeline.on('autosave', (data) => localPersistence.saveData(data));
 
   onMount(() => {
+    console.log('MOUNT');
     LocalPersistence.loadExisting().then((lp) => {
       if (lp) {
         console.log('Loading local data');
@@ -44,7 +45,7 @@ const makeTimelineContext = () => {
         timeline.load({
           name: 'What',
           audio: lp.get('audio'),
-          tracks: JSON.parse(lp.get('tracks')),
+          data: { tracks: JSON.parse(lp.get('tracks')) },
         });
       } else {
         console.log('No data found locally');

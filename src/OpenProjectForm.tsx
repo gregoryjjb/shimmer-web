@@ -2,53 +2,9 @@ import JSZip from 'jszip';
 import { Component, createSignal } from 'solid-js';
 import FileInput from './components/FileInput';
 import GradientButton from './components/GradientButton';
-import { mapJSONToMemory } from './timeline/timeline-data';
-import { Project, Track } from './timeline/types';
-
-const parseShowFile = async (f: File): Promise<Track[]> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsText(f, 'UTF-8');
-
-    reader.onload = (event) => {
-      try {
-        const raw = event.target?.result || '';
-
-        if (typeof raw !== 'string') {
-          throw new Error('Loaded an ArrayBuffer but expected a string');
-        }
-
-        const parsed = JSON.parse(raw);
-
-        if (typeof parsed !== 'object') {
-          throw new Error('Must parse to object');
-        }
-
-        if (!parsed) {
-          throw new Error('Blank JSON file');
-        }
-
-        if (!parsed.hasOwnProperty('tracks')) {
-          throw new Error('JSON is missing tracks');
-        }
-
-        const tracks = mapJSONToMemory(parsed);
-
-        // TODO: more validations on the shape of the tracks and keyframes
-        resolve(tracks);
-      } catch (err) {
-        reject(err);
-      }
-    };
-
-    reader.onerror = (event) => {
-      reject(
-        event.target?.error ||
-          new Error(`Unknown error while reading ${f.name}`),
-      );
-    };
-  });
-};
+import { parseProjectData } from './timeline/export';
+import { Project } from './timeline/types';
+import { fileToString } from './files';
 
 const OpenProjectForm: Component<{
   onSubmit?: (result: Project) => void;
@@ -75,19 +31,19 @@ const OpenProjectForm: Component<{
               throw 'Select an audio file';
             }
 
-            const data = jsonFile();
-            if (!data) {
+            const datafile = jsonFile();
+            if (!datafile) {
               throw 'Select a JSON file';
             }
 
-            const name = data.name.replace(/\.[^\.]*$/, '');
-            const tracks = await parseShowFile(data);
+            const name = datafile.name.replace(/\.[^\.]*$/, '');
+            const data = parseProjectData(await fileToString(datafile));
 
             setErr('');
             props.onSubmit?.({
               name,
               audio,
-              tracks,
+              data,
             });
           } else {
             // Handle zip
@@ -109,14 +65,14 @@ const OpenProjectForm: Component<{
               throw 'Missing audio.mp3';
             }
 
-            const tracks = JSON.parse(await dataFile.async('string'));
+            const data = JSON.parse(await dataFile.async('string'));
             const audio = await audioFile.async('blob');
 
             setErr('');
             props.onSubmit?.({
               name,
               audio,
-              tracks,
+              data,
             });
           }
         } catch (e) {

@@ -1,6 +1,6 @@
 import TimelineAudio from './timeline-audio';
 import TimelineData, { BoxSelection, mapJSONToMemory } from './timeline-data';
-import { Track } from './types';
+import { ProjectData, Track } from './types';
 
 import colors from './colors';
 import { ArgOf, Command, ComplexCommand, apple, keybinds } from './commands';
@@ -363,7 +363,7 @@ class Timeline {
 
     try {
       const p = this.audio.load(project.audio);
-      this.loadData(project.tracks);
+      this.replaceData(project.data);
       await p;
     } finally {
       console.log(`Loaded in ${performance.now() - start}ms`);
@@ -373,18 +373,13 @@ class Timeline {
     this.requestDraw();
   };
 
-  loadData = (data: Track[]) => {
+  replaceData = (data: ProjectData) => {
     if (this.data) {
-      this.data.replace(data);
+      this.data.replace(data.tracks);
     } else {
-      this.data = new TimelineData(this.emitter, data);
+      this.data = new TimelineData(this.emitter, data.tracks);
     }
-  };
-
-  loadLegacyJSON = (json: ShowDataJSON) => {
-    const data = mapJSONToMemory(json);
-
-    this.loadData(data);
+    this.requestDraw();
   };
 
   loadPersistence = async (source: IPersistence) => {
@@ -398,7 +393,7 @@ class Timeline {
     if (data && audio) {
       const parsedData = JSON.parse(data);
 
-      await this.load({ name: '', tracks: parsedData, audio });
+      await this.load({ name: '', data: { tracks: parsedData }, audio });
     }
 
     this.requestDraw();

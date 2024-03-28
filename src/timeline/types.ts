@@ -1,4 +1,3 @@
-
 export type ShowJSON = {
   id: number;
   name: string;
@@ -31,7 +30,13 @@ export type Keyframe = {
 
 export interface Project {
   name: string;
-  tracks: Track[];
+  data: ProjectData;
   audio: Blob;
 }
 
+/**
+ * ProjectData is the stuff that gets saved as json
+ */
+export interface ProjectData {
+  tracks: Track[];
+}

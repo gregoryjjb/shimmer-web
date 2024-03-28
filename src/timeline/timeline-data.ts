@@ -174,6 +174,7 @@ class TimelineData {
       action: 'Initial state',
       channels: JSON.stringify(d),
     });
+    this.emitter.emit('autosave', JSON.stringify(d));
   };
 
   private takeUndoSnapshot = (action: string) => {
