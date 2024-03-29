@@ -65,7 +65,7 @@ const OpenProjectForm: Component<{
         }
       }}
     >
-      <label class="text-sm font-semibold">
+      <label class="text-sm font-semibold text-zinc-300 accent-indigo-400">
         Use legacy format
         <input
           type="checkbox"
@@ -99,8 +99,8 @@ const OpenProjectForm: Component<{
         />
       </div>
       <FileInput
-        label="Select zip file"
-        accept=".zip"
+        label="Select .shmr file"
+        accept=".shmr"
         class={clsx('h-32 w-full', legacy() && 'hidden')}
         onChange={(f) => {
           setZipFile(() => f);

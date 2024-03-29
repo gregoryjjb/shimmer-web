@@ -11,11 +11,11 @@ export const SampleProjectButton: Component<{ class?: string }> = (props) => {
     <GradientButton
       component="button"
       class={clsx(
-        'rounded px-1 py-0.5 text-sm font-semibold text-black',
+        'rounded px-2 py-0.5 text-sm font-semibold text-black',
         props.class,
       )}
       onClick={async () => {
-        const project = await projectFromURL('/Carol of the Bells.zip');
+        const project = await projectFromURL('/Carol of the Bells.shmr');
         ctx.loadProject(project);
         ctx.setProjectName(project.name);
       }}

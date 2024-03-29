@@ -56,7 +56,7 @@ function App() {
     zip.file('data.json', JSON.stringify(dump.data));
     zip.file('audio.mp3', dump.audio);
     const content = await zip.generateAsync({ type: 'blob' });
-    const filename = `${ctx.projectName() || 'Untitled project'}.zip`;
+    const filename = `${ctx.projectName() || 'Untitled project'}.shmr`;
     downloadFile(filename, content);
   };
 

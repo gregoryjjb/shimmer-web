@@ -4,7 +4,7 @@ import { Track } from './types';
 
 localforage.config({
   driver: localforage.INDEXEDDB,
-  name: 'gomas-web',
+  name: 'shimmer-editor',
 });
 
 type Metadata = {

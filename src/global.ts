@@ -20,5 +20,5 @@ export const [projectName, setProjectName] = createStoredSignal(
 
 createEffect(() => {
   document.querySelector('title')!.innerHTML =
-    `${projectName()} | Gomas editor`;
+    `${projectName()} | Shimmer Editor`;
 });
