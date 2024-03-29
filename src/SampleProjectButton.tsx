@@ -16,7 +16,7 @@ export const SampleProjectButton: Component<{ class?: string }> = (props) => {
       )}
       onClick={async () => {
         const project = await projectFromURL('/Carol of the Bells.zip');
-        ctx.timeline.load(project);
+        ctx.loadProject(project);
         ctx.setProjectName(project.name);
       }}
     >

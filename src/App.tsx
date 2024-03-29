@@ -139,7 +139,7 @@ function App() {
             const blankData = newTracks(project.channelCount);
             modal.hide();
 
-            ctx.timeline.load({
+            ctx.loadProject({
               name: project.name,
               data: { tracks: blankData },
               audio: project.file,
@@ -153,7 +153,7 @@ function App() {
         <OpenProjectForm
           onSubmit={async (payload) => {
             openModal.hide();
-            ctx.timeline.load(payload);
+            ctx.loadProject(payload);
           }}
           onCancel={() => openModal.hide()}
         />

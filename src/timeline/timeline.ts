@@ -1359,6 +1359,13 @@ DPI scale: ${this.dpiScale}`;
 
     return '';
   };
+
+  hasExistingData = () => {
+    return true;
+    return (
+      this.data?.channels.find((t) => t.keyframes.length > 0) !== undefined
+    );
+  };
 }
 
 export default Timeline;

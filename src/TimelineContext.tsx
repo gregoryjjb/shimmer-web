@@ -10,6 +10,7 @@ import {
 import { createStoredSignal } from './hooks/createStorageSignal';
 import { LocalPersistence, localPersistence } from './timeline/persistence';
 import Timeline from './timeline/timeline';
+import { Project } from './timeline/types';
 
 const makeTimelineContext = () => {
   const timeline = new Timeline();
@@ -57,6 +58,12 @@ const makeTimelineContext = () => {
     timeline.destroy();
   });
 
+  const loadProject = (project: Project) => {
+    // TODO: some kind of confirmation dialog?
+
+    timeline.load(project);
+  };
+
   const value = {
     timeline,
     loading,
@@ -67,6 +74,7 @@ const makeTimelineContext = () => {
     prompt,
     projectName,
     setProjectName,
+    loadProject,
   };
 
   return value;
