@@ -5,6 +5,7 @@ import Help from './Help';
 import { Menu, MenuBar, MenuItem, MenuItemSpacer } from './MenuBar';
 import NewProjectForm from './NewProjectForm';
 import OpenProjectForm from './OpenProjectForm';
+import { SampleProjectButton } from './SampleProjectButton';
 import { useTimeline } from './TimelineContext';
 import Toolbar from './Toolbar';
 import { ModalTitle, createModal } from './components/Modal';
@@ -18,7 +19,6 @@ import {
 } from './timeline/commands';
 import { downloadFile, parseProjectData } from './timeline/export';
 import { newTracks } from './timeline/timeline-data';
-import GradientButton from './components/GradientButton';
 
 function App() {
   const ctx = useTimeline();
@@ -53,7 +53,7 @@ function App() {
   const exportZip = async () => {
     const zip = new JSZip();
     const dump = await ctx.timeline.export();
-    zip.file('data.json', dump.tracks);
+    zip.file('data.json', JSON.stringify(dump.data));
     zip.file('audio.mp3', dump.audio);
     const content = await zip.generateAsync({ type: 'blob' });
     const filename = `${ctx.projectName() || 'Untitled project'}.zip`;
@@ -103,12 +103,7 @@ function App() {
         <Menu name="Help">
           <MenuItem name="Show help" onClick={() => setShowHelp(true)} />
         </Menu>
-        <GradientButton
-          component="button"
-          class="rounded px-1 py-0.5 text-sm text-black font-semibold ml-2"
-        >
-          ✨ Open sample project
-        </GradientButton>
+        <SampleProjectButton class="ml-2" />
       </MenuBar>
       <div class="flex flex-col gap-3 p-3">
         <input

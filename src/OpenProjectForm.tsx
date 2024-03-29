@@ -2,7 +2,7 @@ import JSZip from 'jszip';
 import { Component, createSignal } from 'solid-js';
 import FileInput from './components/FileInput';
 import GradientButton from './components/GradientButton';
-import { parseProjectData } from './timeline/export';
+import { parseProjectData, projectFromFile } from './timeline/export';
 import { Project } from './timeline/types';
 import { fileToString } from './files';
 import clsx from 'clsx';
@@ -54,28 +54,10 @@ const OpenProjectForm: Component<{
               throw 'Select a file';
             }
 
-            const name = f.name.replace(/\.[^\.]*$/, '');
-            const zip = await JSZip.loadAsync(f);
-
-            const dataFile = zip.file('data.json');
-            if (!dataFile) {
-              throw 'Missing data.json';
-            }
-
-            const audioFile = zip.file('audio.mp3');
-            if (!audioFile) {
-              throw 'Missing audio.mp3';
-            }
-
-            const data = JSON.parse(await dataFile.async('string'));
-            const audio = await audioFile.async('blob');
+            const project = await projectFromFile(f);
 
             setErr('');
-            props.onSubmit?.({
-              name,
-              audio,
-              data,
-            });
+            props.onSubmit?.(project);
           }
         } catch (e) {
           console.error(e);

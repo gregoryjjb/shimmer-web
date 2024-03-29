@@ -25,7 +25,7 @@ const GradientButton = <T extends ValidComponent>(
         props.class,
         'relative z-0 overflow-hidden',
         // 'px-16 py-4 text-3xl', // Size classes
-        'bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600',
+        'bg-gradient-to-r from-blue-500 via-indigo-400 to-purple-500',
         'before:absolute before:inset-0 before:-z-10 before:opacity-0 before:transition-opacity',
         'before:bg-gradient-to-r before:from-sky-400 before:via-fuchsia-400 before:to-orange-400',
         'hocus:before:opacity-100',

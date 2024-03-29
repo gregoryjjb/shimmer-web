@@ -1,3 +1,4 @@
+import JSZip from 'jszip';
 import { Keyframe, Project, ProjectData, Track } from './types';
 
 export const toLegacyFormat = (tracks: Track[]) => {
@@ -107,4 +108,45 @@ export const parseProjectData = (data: any): ProjectData => {
   return {
     tracks,
   };
+};
+
+export const projectFromFile = async (file: File): Promise<Project> => {
+  const name = file.name.replace(/\.[^\.]*$/, '');
+
+  return await projectFromBlob(name, file);
+};
+
+export const projectFromBlob = async (
+  name: string,
+  blob: Blob,
+): Promise<Project> => {
+  const zip = await JSZip.loadAsync(blob);
+
+  const dataFile = zip.file('data.json');
+  if (!dataFile) {
+    throw 'Missing data.json';
+  }
+
+  const audioFile = zip.file('audio.mp3');
+  if (!audioFile) {
+    throw 'Missing audio.mp3';
+  }
+
+  const data = parseProjectData(await dataFile.async('string'));
+  const audio = await audioFile.async('blob');
+
+  return {
+    name,
+    audio,
+    data,
+  };
+};
+
+export const projectFromURL = async (url: string): Promise<Project> => {
+  const filename = url.split('#')[0].split('?')[0].split('/').pop();
+  const name = filename?.replace(/\.[^\.]*$/, '') || '';
+
+  const blob = await fetch(url).then((res) => res.blob());
+
+  return await projectFromBlob(name, blob);
 };

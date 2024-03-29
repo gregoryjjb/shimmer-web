@@ -1294,9 +1294,10 @@ DPI scale: ${this.dpiScale}`;
     downloadFile('My show.json', marshaled);
   };
 
-  export = async () => {
+  export = async (): Promise<Project> => {
     return {
-      tracks: JSON.stringify(this.data?.channels),
+      name: '',
+      data: { tracks: this.data?.channels || [] },
       audio: await localPersistence.getAudio(),
     };
   };
