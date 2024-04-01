@@ -61,6 +61,7 @@ const makeTimelineContext = () => {
   const loadProject = (project: Project) => {
     // TODO: some kind of confirmation dialog?
 
+    setProjectName(project.name);
     timeline.load(project);
   };
 

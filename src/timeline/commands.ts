@@ -59,7 +59,7 @@ export const apple = (): boolean => {
 
 const formattedKeybinds: Partial<Record<SimpleCommand, string>> = {};
 Object.entries(keybinds).forEach(([keybind, command]) => {
-  formattedKeybinds[command] = keybind
+  formattedKeybinds[command] ||= keybind
     .split('_')
     .map((part) => {
       if (part === 'ctrl') return apple() ? '⌘' : 'Ctrl';

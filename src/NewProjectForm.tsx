@@ -10,11 +10,8 @@ const NewProjectForm: Component<{
   }) => void;
 }> = (props) => {
   const nameInvalidRegex = /[<>/\\:"|?*\n]/m;
-  const [name, setName] = createSignal('Untitled project');
+  const [name, setName] = createSignal('');
   const nameError = createMemo(() => {
-    const n = name().trim();
-    if (n.length === 0) return 'is required';
-
     const invalid = nameInvalidRegex.test(name());
     if (invalid) return `cannot contain: ${nameInvalidRegex.toString()}`;
   });
@@ -32,7 +29,7 @@ const NewProjectForm: Component<{
         if (!f) return;
 
         props.onSubmit?.({
-          name: name(),
+          name: name().trim(),
           file: f,
           channelCount: channelCount(),
         });
@@ -48,6 +45,7 @@ const NewProjectForm: Component<{
           </label>
           <input
             id="project-name"
+            placeholder="Untitled project"
             value={name()}
             class="w-full rounded bg-zinc-700 p-2 hover:bg-zinc-600 focus:bg-zinc-600"
             onInput={(e) => setName(e.target.value)}
