@@ -225,6 +225,8 @@ export default class TimelineAudio extends Emitter<{
     this.loading = true;
     this.emit('loading', true);
 
+    localPersistence.saveAudio(blob).then(() => console.log('Audio saved'));
+
     // this.element.src = path;
 
     // const response = await fetch(path);

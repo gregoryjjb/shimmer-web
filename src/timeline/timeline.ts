@@ -867,8 +867,31 @@ class Timeline {
       if (keyframeIndex !== undefined) {
         on = (this.data?.channels[i].keyframes[keyframeIndex].value || 0) > 0;
       }
+      on = false; // Temporary: disable svg lights
       this.lights[i].style.visibility = on ? 'visible' : 'hidden';
     });
+
+    this.data?.channels.forEach((track, i) => {
+      const xPadding = 8;
+      const yPadding = 4;
+      const fontSize = layout.channelHeight - yPadding * 2;
+
+      const x = 8;
+      const y = channelsY + (i + 1) * layout.channelHeight - yPadding;
+
+      const time = this.audio.currentTime || 0;
+      const keyframeIndex = this.data?.binarySearch(i, time, 'left');
+      let on = false;
+      if (keyframeIndex !== undefined) {
+        on = (this.data?.channels[i].keyframes[keyframeIndex].value || 0) > 0;
+      }
+
+      const color = on ? theme.keyframeOn : 'black';
+
+      ctx.font = `${fontSize}px sans-serif`;
+      ctx.fillStyle = color;
+      ctx.fillText(`Track ${i}`, x, y, layout.sidebarWidth - xPadding * 2);
+    })
 
     // const lights = document.createElement('canvas');
     // lights.width = layout.sidebarWidth;
