@@ -8,6 +8,8 @@
     "format": "prettier . --write",
     "test": "vitest run",
     "test:watch": "vitest",
+    "check:prettier": "prettier . --check",
+    "check:types": "tsc",
     "build": "tsc && vite build",
     "preview": "vite preview"
   },
@@ -23,6 +25,7 @@
     "@types/audiobuffer-to-wav": "^1.0.3",
     "autoprefixer": "^10.4.16",
     "jsdom": "^22.1.0",
+    "lefthook": "^1.7.17",
     "postcss": "^8.4.30",
     "prettier": "^3.1.1",
     "prettier-plugin-tailwindcss": "^0.5.9",
