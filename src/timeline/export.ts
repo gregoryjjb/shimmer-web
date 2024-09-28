@@ -146,7 +146,11 @@ export const projectFromURL = async (url: string): Promise<Project> => {
   const filename = url.split('#')[0].split('?')[0].split('/').pop();
   const name = filename?.replace(/\.[^\.]*$/, '') || '';
 
-  const blob = await fetch(url).then((res) => res.blob());
+  const res = await fetch(url);
 
-  return await projectFromBlob(name, blob);
+  if (!res.ok) {
+    throw new Error('project fetch failed');
+  }
+
+  return await projectFromBlob(name, await res.blob());
 };

@@ -1,12 +1,11 @@
 import TimelineAudio from './timeline-audio';
-import TimelineData, { BoxSelection, mapJSONToMemory } from './timeline-data';
-import { ProjectData, Track } from './types';
+import TimelineData, { BoxSelection } from './timeline-data';
+import { ProjectData } from './types';
 
 import colors from './colors';
 import { ArgOf, Command, ComplexCommand, apple, keybinds } from './commands';
 import { TimelineEmitter } from './events';
 import * as mouse from './mouse';
-import { ShowDataJSON } from './types';
 import {
   abs,
   clamp,
@@ -266,7 +265,6 @@ class Timeline {
         .replaceAll('_Radial6', `_Radial6_${i}`)
         .replaceAll('_Radial7', `_Radial7_${i}`)
         .replaceAll('_Radial8', `_Radial8_${i}`);
-      // span.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5" viewBox="0 0 48 8"><path d="M3.227 2.121c-2.17.406 2.824-.869 4.34-.812 1.808.068 4.339 1.218 6.509 1.218s4.339-1.218 6.509-1.218 4.34 1.218 6.509 1.218c2.17 0 4.34-1.218 6.51-1.218 2.169 0 4.339 1.218 6.509 1.218s6.509-1.218 6.509-1.218" style="fill:none;stroke:#0c2010;stroke-width:.48px"/><path d="M42.59 2.555c.703-.103 1.28-.142 1.442.962.162 1.105-.152 2.937-.854 3.041-.703.103-1.53-1.563-1.692-2.667-.162-1.105.402-1.233 1.104-1.336ZM36.446 2.037c.67.234 1.199.467.831 1.52-.369 1.054-1.496 2.533-2.166 2.299-.67-.235-.631-2.094-.263-3.147.368-1.054.927-.907 1.598-.672ZM29.142 2.468c.685-.187 1.253-.296 1.547.781.294 1.077.203 2.934-.482 3.121-.685.187-1.706-1.366-2-2.443-.294-1.077.25-1.272.935-1.459ZM22.738 1.909c.699.129 1.257.278 1.055 1.376-.203 1.098-1.09 2.731-1.789 2.603-.698-.129-.944-1.972-.741-3.07.202-1.098.777-1.037 1.475-.909ZM15.315 2.638c.701-.115 1.277-.163 1.457.938.181 1.102-.102 2.939-.802 3.054-.701.115-1.556-1.536-1.736-2.638-.181-1.101.381-1.239 1.081-1.354ZM7.881 1.551c.708.053 1.279.141 1.196 1.254-.083 1.114-.789 2.834-1.497 2.781-.708-.053-1.151-1.859-1.068-2.972.083-1.113.661-1.115 1.369-1.063Z" style="fill:#f10000;stroke:#f10000;stroke-width:.24px"/></svg>`;
       span.style.position = 'absolute';
       span.style.top =
         (
@@ -286,12 +284,6 @@ class Timeline {
 
       this.root.appendChild(span);
       this.lights.push(span);
-
-      // const svg = document
-      //   .createRange()
-      //   .createContextualFragment(
-      //     `<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5" viewBox="0 0 48 8"><path d="M3.227 2.121c-2.17.406 2.824-.869 4.34-.812 1.808.068 4.339 1.218 6.509 1.218s4.339-1.218 6.509-1.218 4.34 1.218 6.509 1.218c2.17 0 4.34-1.218 6.51-1.218 2.169 0 4.339 1.218 6.509 1.218s6.509-1.218 6.509-1.218" style="fill:none;stroke:#0c2010;stroke-width:.48px"/><path d="M42.59 2.555c.703-.103 1.28-.142 1.442.962.162 1.105-.152 2.937-.854 3.041-.703.103-1.53-1.563-1.692-2.667-.162-1.105.402-1.233 1.104-1.336ZM36.446 2.037c.67.234 1.199.467.831 1.52-.369 1.054-1.496 2.533-2.166 2.299-.67-.235-.631-2.094-.263-3.147.368-1.054.927-.907 1.598-.672ZM29.142 2.468c.685-.187 1.253-.296 1.547.781.294 1.077.203 2.934-.482 3.121-.685.187-1.706-1.366-2-2.443-.294-1.077.25-1.272.935-1.459ZM22.738 1.909c.699.129 1.257.278 1.055 1.376-.203 1.098-1.09 2.731-1.789 2.603-.698-.129-.944-1.972-.741-3.07.202-1.098.777-1.037 1.475-.909ZM15.315 2.638c.701-.115 1.277-.163 1.457.938.181 1.102-.102 2.939-.802 3.054-.701.115-1.556-1.536-1.736-2.638-.181-1.101.381-1.239 1.081-1.354ZM7.881 1.551c.708.053 1.279.141 1.196 1.254-.083 1.114-.789 2.834-1.497 2.781-.708-.053-1.151-1.859-1.068-2.972.083-1.113.661-1.115 1.369-1.063Z" style="fill:#f10000;stroke:#f10000;stroke-width:.24px"/></svg>`
-      //   );
     }
 
     this.audio = new TimelineAudio(this.emitter);
@@ -475,13 +467,23 @@ class Timeline {
 
   private absolutePxToChannel = (y: number): number | null => {
     const { layout } = this.config;
-
     const channelsStartAt = layout.waveformHeight + layout.timelineHeight;
 
     if (y <= channelsStartAt) return null;
 
     return Math.floor((y - channelsStartAt) / layout.channelHeight);
   };
+
+  private channelToAbsolutePx = (channel: number) => {
+    const { layout } = this.config;
+    const channelsStartAt = layout.waveformHeight + layout.timelineHeight;
+
+    return channelsStartAt + channel * layout.channelHeight;
+  };
+
+  private get channelCount() {
+    return this.data?.channels.length || 0;
+  }
 
   private getLocalCoordinates = (
     event: MouseEvent | WheelEvent,
@@ -873,7 +875,7 @@ class Timeline {
 
     this.data?.channels.forEach((track, i) => {
       const xPadding = 8;
-      const yPadding = 4;
+      const yPadding = 6;
       const fontSize = layout.channelHeight - yPadding * 2;
 
       const x = 8;
@@ -891,7 +893,7 @@ class Timeline {
       ctx.font = `${fontSize}px sans-serif`;
       ctx.fillStyle = color;
       ctx.fillText(`Track ${i}`, x, y, layout.sidebarWidth - xPadding * 2);
-    })
+    });
 
     // const lights = document.createElement('canvas');
     // lights.width = layout.sidebarWidth;
@@ -1150,8 +1152,21 @@ DPI scale: ${this.dpiScale}`;
     this.boxSelection.startTime = this.absolutePxToTime(start.x);
     this.boxSelection.endTime = this.absolutePxToTime(end.x);
 
-    this.boxSelection.startChannel = this.absolutePxToChannel(start.y) || 0;
-    this.boxSelection.endChannel = this.absolutePxToChannel(end.y) || 0;
+    let startChannel = Number.POSITIVE_INFINITY;
+    let endChannel = Number.NEGATIVE_INFINITY;
+
+    for (let i = 0; i < this.channelCount; i++) {
+      const midpoint =
+        this.channelToAbsolutePx(i) + this.config.layout.channelHeight / 2;
+
+      if (midpoint >= start.y && midpoint <= end.y) {
+        startChannel = Math.min(startChannel, i);
+        endChannel = Math.max(endChannel, i);
+      }
+    }
+
+    this.boxSelection.startChannel = clamp(startChannel, 0, this.channelCount) //this.absolutePxToChannel(start.y) || 0;
+    this.boxSelection.endChannel = clamp(endChannel, 0, this.channelCount);
   };
 
   private handleMouseMove = (e: MouseEvent) => {
@@ -1203,6 +1218,7 @@ DPI scale: ${this.dpiScale}`;
 
         // Don't count it as a box select unless the box is bigger than 2x2 px
         if (size.x > 2 && size.y > 2) {
+          console.log('Box selection', this.boxSelection);
           this.data?.boxSelect(this.boxSelection);
         }
 
