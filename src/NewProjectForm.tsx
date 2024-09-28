@@ -3,11 +3,7 @@ import FileInput from './components/FileInput';
 import GradientButton from './components/GradientButton';
 
 const NewProjectForm: Component<{
-  onSubmit?: (result: {
-    name: string;
-    file: File;
-    channelCount: number;
-  }) => void;
+  onSubmit?: (result: { name: string; file: File; channelCount: number }) => void;
 }> = (props) => {
   const nameInvalidRegex = /[<>/\\:"|?*\n]/m;
   const [name, setName] = createSignal('');

@@ -11,12 +11,7 @@ import Toolbar from './Toolbar';
 import { ModalTitle, createModal } from './components/Modal';
 import { fileToString } from './files';
 import { setShowHelp, showHelp } from './global';
-import {
-  Command,
-  SimpleCommand,
-  keybindFor,
-  nameFor,
-} from './timeline/commands';
+import { Command, SimpleCommand, keybindFor, nameFor } from './timeline/commands';
 import { downloadFile, parseProjectData } from './timeline/export';
 import { newTracks } from './timeline/timeline-data';
 
@@ -111,9 +106,7 @@ function App() {
           placeholder="Untitled project"
           value={ctx.projectName()}
           onChange={(e) => ctx.setProjectName(e.target.value)}
-          onKeyDown={(e) =>
-            e.key === 'Enter' && (e.target as HTMLInputElement).blur()
-          }
+          onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
         />
         <Toolbar />
       </div>

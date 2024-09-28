@@ -29,13 +29,9 @@ type PeaksConfig = {
   peaksCount: number;
 };
 
-const coalescePeaksOptions = (
-  samplesDuration: number,
-  options: PeaksOptions,
-): PeaksConfig => {
+const coalescePeaksOptions = (samplesDuration: number, options: PeaksOptions): PeaksConfig => {
   const start = ('start' in options && options.start) || 0;
-  const duration =
-    ('duration' in options && options.duration) || samplesDuration - start;
+  const duration = ('duration' in options && options.duration) || samplesDuration - start;
   const peaksCount =
     'peaksCount' in options
       ? Math.ceil(options.peaksCount)
@@ -47,15 +43,8 @@ const coalescePeaksOptions = (
 /**
  * Turns normalized audio samples into peaks
  */
-const getPeaks = (
-  samples: Float32Array,
-  samplesDuration: number,
-  options: PeaksOptions,
-): Peaks => {
-  const { start, duration, peaksCount } = coalescePeaksOptions(
-    samplesDuration,
-    options,
-  );
+const getPeaks = (samples: Float32Array, samplesDuration: number, options: PeaksOptions): Peaks => {
+  const { start, duration, peaksCount } = coalescePeaksOptions(samplesDuration, options);
 
   // Raw data
   const sampleRate = samples.length / samplesDuration;
@@ -95,10 +84,7 @@ const downsamplePeaks = (
   sourceDuration: number,
   options: PeaksOptions,
 ): Peaks => {
-  const { start, duration, peaksCount } = coalescePeaksOptions(
-    sourceDuration,
-    options,
-  );
+  const { start, duration, peaksCount } = coalescePeaksOptions(sourceDuration, options);
 
   // Raw data
   const sourceRate = sourcePeaks.mins.length / sourceDuration;
@@ -160,10 +146,7 @@ export default class TimelineAudio extends Emitter<{
     this.input = document.createElement('input');
     this.input.type = 'file';
     this.input.style.display = 'none';
-    this.input.addEventListener(
-      'change',
-      this.handleOpenFile as (e: Event) => void,
-    );
+    this.input.addEventListener('change', this.handleOpenFile as (e: Event) => void);
     // document.body.appendChild(this.input);
 
     this.element = new Audio();
@@ -302,11 +285,7 @@ export default class TimelineAudio extends Emitter<{
     this.emit('loading', false);
   };
 
-  getPeaks = (
-    segmentCount: number,
-    start: number,
-    duration: number,
-  ): Peaks | undefined => {
+  getPeaks = (segmentCount: number, start: number, duration: number): Peaks | undefined => {
     if (!this.buffer) return;
 
     // Check the cache!
@@ -322,10 +301,7 @@ export default class TimelineAudio extends Emitter<{
           : this.precomputedPeaks![1000];
 
     // Use existing array if we can, to save memory
-    const cached =
-      this.cachedPeaks?.mins.length === segmentCount
-        ? this.cachedPeaks
-        : undefined;
+    const cached = this.cachedPeaks?.mins.length === segmentCount ? this.cachedPeaks : undefined;
 
     const peaks = downsamplePeaks(source, this.buffer!.duration, {
       peaksCount: segmentCount,

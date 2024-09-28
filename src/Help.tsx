@@ -1,11 +1,7 @@
 import { Component, ParentComponent } from 'solid-js';
 
 const Key: ParentComponent = (props) => {
-  return (
-    <p class="rounded border border-zinc-500 px-1 py-0.5 text-xs">
-      {props.children}
-    </p>
-  );
+  return <p class="rounded border border-zinc-500 px-1 py-0.5 text-xs">{props.children}</p>;
 };
 
 const Keybind: Component<{

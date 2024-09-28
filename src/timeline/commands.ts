@@ -77,8 +77,7 @@ Object.entries(keybinds).forEach(([keybind, command]) => {
     })
     .join(' ');
 });
-export const keybindFor = (command: SimpleCommand): string =>
-  formattedKeybinds[command] || '';
+export const keybindFor = (command: SimpleCommand): string => formattedKeybinds[command] || '';
 
 const commandNames: Record<SimpleCommand, string> = {
   play: 'Play',
@@ -119,7 +118,4 @@ export type CommandArg<T extends Command> = [T] extends [ComplexCommand]
   ? CommandsWithArgs[T]
   : never;
 
-export type ComplexCommandHandler = <T extends ComplexCommand>(
-  command: T,
-  arg: ArgOf<T>,
-) => void;
+export type ComplexCommandHandler = <T extends ComplexCommand>(command: T, arg: ArgOf<T>) => void;

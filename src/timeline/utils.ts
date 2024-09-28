@@ -84,10 +84,7 @@ export type TimestampResolution = keyof typeof timeResolutions;
  * @param resolution What to round to
  * @returns stringified time
  */
-export const stringifyTime = (
-  time: number,
-  resolution: TimestampResolution,
-): string => {
+export const stringifyTime = (time: number, resolution: TimestampResolution): string => {
   const res = timeResolutions[resolution];
 
   let t = '';

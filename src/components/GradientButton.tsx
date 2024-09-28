@@ -8,15 +8,8 @@ export type GradientButtonProps<T extends ValidComponent> = {
   hoverColor: string;
 } & ComponentProps<T>;
 
-const GradientButton = <T extends ValidComponent>(
-  props: GradientButtonProps<T>,
-): JSX.Element => {
-  const [, passthroughProps] = splitProps(props, [
-    'class',
-    'baseColor',
-    'hoverColor',
-    'component',
-  ]);
+const GradientButton = <T extends ValidComponent>(props: GradientButtonProps<T>): JSX.Element => {
+  const [, passthroughProps] = splitProps(props, ['class', 'baseColor', 'hoverColor', 'component']);
 
   return (
     <Dynamic

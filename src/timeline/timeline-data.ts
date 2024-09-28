@@ -257,10 +257,7 @@ class TimelineData {
       if (index === undefined) return;
       const kf = channel.keyframes[index];
 
-      if (
-        !found ||
-        Math.abs(kf.timestamp - time) < Math.abs(found.timestamp - time)
-      ) {
+      if (!found || Math.abs(kf.timestamp - time) < Math.abs(found.timestamp - time)) {
         found = kf;
       }
     });
@@ -369,22 +366,14 @@ class TimelineData {
     }
   };
 
-  boxSelect = ({
-    startTime,
-    endTime,
-    startChannel,
-    endChannel,
-    keepExisting,
-  }: BoxSelection) => {
+  boxSelect = ({ startTime, endTime, startChannel, endChannel, keepExisting }: BoxSelection) => {
     let anyStateChanged = false;
     for (let i = 0; i < this.channels.length; i++) {
       const track = this.channels[i];
       const trackGood = i >= startChannel && i <= endChannel;
       for (const keyframe of track.keyframes) {
         const shouldSelect =
-          (trackGood &&
-            keyframe.timestamp >= startTime &&
-            keyframe.timestamp <= endTime) ||
+          (trackGood && keyframe.timestamp >= startTime && keyframe.timestamp <= endTime) ||
           (keepExisting && keyframe.selected);
 
         if (shouldSelect != keyframe.selected) {
@@ -459,9 +448,7 @@ class TimelineData {
     }
 
     // Grab selected
-    const selected = this.channels.map((track) =>
-      track.keyframes.filter((k) => k.selected),
-    );
+    const selected = this.channels.map((track) => track.keyframes.filter((k) => k.selected));
 
     // Delete selected
     for (const track of this.channels) {
@@ -484,9 +471,7 @@ class TimelineData {
    * Flip selected keyframes vertically across channels
    */
   flipSelected = () => {
-    const selected = this.channels.map((track) =>
-      track.keyframes.filter((kf) => kf.selected),
-    );
+    const selected = this.channels.map((track) => track.keyframes.filter((kf) => kf.selected));
 
     const startIndex = selected.findIndex((kfs) => kfs.length > 0);
     const toFlip = selected.filter((kfs) => kfs.length > 0);
@@ -545,8 +530,7 @@ class TimelineData {
       for (const keyframe of track.keyframes) {
         if (keyframe.selected) {
           tcount++;
-          keyframe.timestamp =
-            (keyframe.timestamp - pivotTime) * scaleFactor + pivotTime;
+          keyframe.timestamp = (keyframe.timestamp - pivotTime) * scaleFactor + pivotTime;
         }
       }
       if (tcount > 0) {
@@ -603,9 +587,7 @@ class TimelineData {
       });
     });
 
-    const count = selectedIndexes
-      .map((is) => is.length)
-      .reduce((lens, len) => lens + len);
+    const count = selectedIndexes.map((is) => is.length).reduce((lens, len) => lens + len);
     const avg = timeSum / count;
 
     selectedIndexes.forEach((indexes, channel) => {
@@ -642,18 +624,14 @@ class TimelineData {
     });
 
     if (count > 0) {
-      this.markEdit(
-        `Snapped ${count} keyframes to ${stringifyTime(time, 'milliseconds')}`,
-      );
+      this.markEdit(`Snapped ${count} keyframes to ${stringifyTime(time, 'milliseconds')}`);
     } else {
       this.emit('No keyframes selected');
     }
   };
 
   equallySpaceSelected = () => {
-    const keyframes = this.channels.flatMap((track) =>
-      track.keyframes.filter((kf) => kf.selected),
-    );
+    const keyframes = this.channels.flatMap((track) => track.keyframes.filter((kf) => kf.selected));
 
     if (keyframes.length < 2) {
       this.emit('Must select 2+ keyframes');
@@ -669,9 +647,7 @@ class TimelineData {
       const prev = keyframes[i - 1];
 
       const currentBatch = batched[batched.length - 1];
-      const lastKeyframe = currentBatch
-        ? currentBatch[currentBatch.length - 1]
-        : undefined;
+      const lastKeyframe = currentBatch ? currentBatch[currentBatch.length - 1] : undefined;
 
       if (lastKeyframe && kf.timestamp - lastKeyframe.timestamp < threshold) {
         currentBatch.push(kf);
@@ -715,9 +691,7 @@ class TimelineData {
       });
     });
 
-    const count = markedForDeletion
-      .map((is) => is.length)
-      .reduce((lens, len) => lens + len);
+    const count = markedForDeletion.map((is) => is.length).reduce((lens, len) => lens + len);
 
     if (count) {
       this.delete(markedForDeletion);
@@ -759,9 +733,6 @@ type Action = keyof ActionArgs;
 
 interface ActionReturns<T> extends ActionResult {}
 
-type ActionHandler<T extends Action> = (
-  action: T,
-  args: ActionArgs[T],
-) => boolean;
+type ActionHandler<T extends Action> = (action: T, args: ActionArgs[T]) => boolean;
 
 export default TimelineData;

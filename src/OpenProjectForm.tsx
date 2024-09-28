@@ -67,18 +67,9 @@ const OpenProjectForm: Component<{
     >
       <label class="text-sm font-semibold text-zinc-300 accent-indigo-400">
         Use legacy format
-        <input
-          type="checkbox"
-          class="ml-2"
-          onChange={(e) => setLegacy(e.target.checked)}
-        />
+        <input type="checkbox" class="ml-2" onChange={(e) => setLegacy(e.target.checked)} />
       </label>
-      <div
-        class={clsx(
-          'flex h-32 w-full flex-row gap-4',
-          legacy() ? 'flex' : 'hidden',
-        )}
-      >
+      <div class={clsx('flex h-32 w-full flex-row gap-4', legacy() ? 'flex' : 'hidden')}>
         <FileInput
           class="flex-1"
           label="Select json file"
@@ -110,14 +101,12 @@ const OpenProjectForm: Component<{
       <div class="flex w-full items-center justify-end">
         <button
           type="button"
-          class="hocus:text-zinc-300 hocus:bg-zinc-800 rounded-xl border border-zinc-800 px-3 py-2 font-semibold text-zinc-400 transition-colors"
+          class="rounded-xl border border-zinc-800 px-3 py-2 font-semibold text-zinc-400 transition-colors hocus:bg-zinc-800 hocus:text-zinc-300"
           onClick={props.onCancel}
         >
           Cancel
         </button>
-        <p class="mr-4 flex-1 text-end text-rose-400">
-          {!!err() && '⚠ ' + err()}
-        </p>
+        <p class="mr-4 flex-1 text-end text-rose-400">{!!err() && '⚠ ' + err()}</p>
         <GradientButton
           component="button"
           type="submit"

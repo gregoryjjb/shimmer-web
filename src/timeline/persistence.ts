@@ -83,10 +83,7 @@ export class LocalPersistence {
     return this.project[key];
   };
 
-  set = async <T extends keyof Project>(
-    key: T,
-    value: Project[T],
-  ): Promise<void> => {
+  set = async <T extends keyof Project>(key: T, value: Project[T]): Promise<void> => {
     await localforage.setItem(key, value);
   };
 
@@ -135,10 +132,7 @@ export class Persistence extends Emitter<{
 
     this.audioInput = document.createElement('input');
     this.audioInput.type = 'file';
-    this.audioInput.addEventListener(
-      'change',
-      this.handleAudioFileChange as (e: Event) => void,
-    );
+    this.audioInput.addEventListener('change', this.handleAudioFileChange as (e: Event) => void);
   }
 
   storeAudio = async (data: Blob) => {
@@ -164,9 +158,7 @@ export class Persistence extends Emitter<{
     this.audioInput.click();
   };
 
-  private handleAudioFileChange = (
-    event: Event & { target: HTMLInputElement },
-  ) => {
+  private handleAudioFileChange = (event: Event & { target: HTMLInputElement }) => {
     const file = event.target.files?.[0];
     if (!file) return;
 

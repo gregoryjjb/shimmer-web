@@ -20,7 +20,7 @@ export const ModalTitle: ParentComponent = (props) => {
         onClick={() => modal?.hide()}
         class={clsx(
           'h-6 w-6 rounded-full',
-          'hover:bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600',
+          'from-indigo-600 via-purple-600 to-pink-600 hover:bg-gradient-to-r',
         )}
       >
         &#x2715;
@@ -37,10 +37,7 @@ export const Modal: ParentComponent<{
     <Show when={props.show}>
       <Portal mount={document.body}>
         <div class="absolute inset-0 z-30">
-          <div
-            class="absolute inset-0 bg-black/50"
-            onClick={() => props.onClose?.()}
-          />
+          <div class="absolute inset-0 bg-black/50" onClick={() => props.onClose?.()} />
           <div class="mx-auto mt-[25vh] max-w-2xl rounded-lg bg-zinc-900 px-6 py-3 drop-shadow-lg">
             {props.children}
           </div>

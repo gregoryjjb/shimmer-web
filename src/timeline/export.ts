@@ -67,37 +67,32 @@ export const parseProjectData = (data: any): ProjectData => {
       throw `tracks[${i}] missing keyframes`;
     }
 
-    const keyframes: Keyframe[] = (keyframesIn as any[]).map(
-      (keyframeIn, j) => {
-        const timestamp = coalesce(keyframeIn.timestamp, keyframeIn.time);
-        if (timestamp === undefined) {
-          throw `tracks[${i}].keyframes[${j}] missing timestamp or time field`;
-        }
-        if (typeof timestamp !== 'number') {
-          throw `tracks[${i}].keyframes[${j}] timestamp is not a number`;
-        }
+    const keyframes: Keyframe[] = (keyframesIn as any[]).map((keyframeIn, j) => {
+      const timestamp = coalesce(keyframeIn.timestamp, keyframeIn.time);
+      if (timestamp === undefined) {
+        throw `tracks[${i}].keyframes[${j}] missing timestamp or time field`;
+      }
+      if (typeof timestamp !== 'number') {
+        throw `tracks[${i}].keyframes[${j}] timestamp is not a number`;
+      }
 
-        const valueIn = coalesce(keyframeIn.value, keyframeIn.state);
-        if (valueIn === undefined) {
-          throw `tracks[${i}].keyframes[${j}] missing value or state field`;
-        }
-        if (!(typeof valueIn === 'number' || typeof valueIn === 'boolean')) {
-          throw `tracks[${i}].keyframes[${j}] value is not a number or boolean`;
-        }
-        const value = Number(valueIn);
+      const valueIn = coalesce(keyframeIn.value, keyframeIn.state);
+      if (valueIn === undefined) {
+        throw `tracks[${i}].keyframes[${j}] missing value or state field`;
+      }
+      if (!(typeof valueIn === 'number' || typeof valueIn === 'boolean')) {
+        throw `tracks[${i}].keyframes[${j}] value is not a number or boolean`;
+      }
+      const value = Number(valueIn);
 
-        const selected =
-          typeof keyframeIn.selected === 'boolean'
-            ? keyframeIn.selected
-            : false;
+      const selected = typeof keyframeIn.selected === 'boolean' ? keyframeIn.selected : false;
 
-        return {
-          timestamp,
-          value,
-          selected,
-        };
-      },
-    );
+      return {
+        timestamp,
+        value,
+        selected,
+      };
+    });
 
     return {
       name,
@@ -116,10 +111,7 @@ export const projectFromFile = async (file: File): Promise<Project> => {
   return await projectFromBlob(name, file);
 };
 
-export const projectFromBlob = async (
-  name: string,
-  blob: Blob,
-): Promise<Project> => {
+export const projectFromBlob = async (name: string, blob: Blob): Promise<Project> => {
   const zip = await JSZip.loadAsync(blob);
 
   const dataFile = zip.file('data.json');

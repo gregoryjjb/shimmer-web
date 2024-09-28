@@ -9,12 +9,8 @@ import {
   Accessor,
 } from 'solid-js';
 
-export default function clickOutside(
-  el: Element,
-  accessor: Accessor<() => void>,
-) {
-  const onClick = (e: MouseEvent) =>
-    !el.contains(e.target as Node) && accessor()?.();
+export default function clickOutside(el: Element, accessor: Accessor<() => void>) {
+  const onClick = (e: MouseEvent) => !el.contains(e.target as Node) && accessor()?.();
   document.body.addEventListener('click', onClick);
 
   onCleanup(() => document.body.removeEventListener('click', onClick));
@@ -71,9 +67,7 @@ export const Menu: ParentComponent<{
         classList={{
           'bg-zinc-600': isOpen(),
         }}
-        onClick={() =>
-          ctx?.setOpen((v) => (v === props.name ? null : props.name))
-        }
+        onClick={() => ctx?.setOpen((v) => (v === props.name ? null : props.name))}
         onMouseOver={() => {
           ctx?.setOpen((v) => (v && props.name) || null);
         }}
@@ -112,7 +106,7 @@ export const MenuItem: Component<MenuItemProps> = (props) => {
       }}
       disabled={props.disabled}
     >
-      <span class="flex-1 mr-6">{props.name}</span>
+      <span class="mr-6 flex-1">{props.name}</span>
       {props.keybind && <span class="text-xs opacity-50">{props.keybind}</span>}
     </button>
   );

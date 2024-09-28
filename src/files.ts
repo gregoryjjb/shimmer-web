@@ -14,10 +14,7 @@ export const fileToString = async (f: File): Promise<string> => {
     };
 
     reader.onerror = (event) => {
-      reject(
-        event.target?.error ||
-          new Error(`Unknown error while reading ${f.name}`),
-      );
+      reject(event.target?.error || new Error(`Unknown error while reading ${f.name}`));
     };
   });
 };

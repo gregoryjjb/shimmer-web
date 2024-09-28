@@ -6,15 +6,7 @@ import colors from './colors';
 import { ArgOf, Command, ComplexCommand, apple, keybinds } from './commands';
 import { TimelineEmitter } from './events';
 import * as mouse from './mouse';
-import {
-  abs,
-  clamp,
-  difference,
-  pointsToRect,
-  rangeEnd,
-  rangeStart,
-  stringifyTime,
-} from './utils';
+import { abs, clamp, difference, pointsToRect, rangeEnd, rangeStart, stringifyTime } from './utils';
 
 import lightsSVG from '../assets/lights-colored.svg?raw';
 import { downloadFile, toLegacyFormat } from './export';
@@ -267,17 +259,12 @@ class Timeline {
         .replaceAll('_Radial8', `_Radial8_${i}`);
       span.style.position = 'absolute';
       span.style.top =
-        (
-          layout.waveformHeight +
-          layout.timelineHeight +
-          layout.channelHeight * i
-        ).toString() + 'px';
+        (layout.waveformHeight + layout.timelineHeight + layout.channelHeight * i).toString() +
+        'px';
       span.style.left = '0';
       span.style.width = `${layout.sidebarWidth}px`;
       span.style.height = `${layout.channelHeight}px`;
-      const colors = ['red', 'green', 'blue', 'yellow'].sort(
-        () => Math.random() - 0.5,
-      );
+      const colors = ['red', 'green', 'blue', 'yellow'].sort(() => Math.random() - 0.5);
       for (let i = 0; i < 4; i++) {
         span.style.setProperty(`--light${i + 1}`, colors[i]);
       }
@@ -326,10 +313,7 @@ class Timeline {
     this.resizeObserver = new ResizeObserver((entries) => {
       if (!this.container) return;
 
-      this.resizeCanvas(
-        this.container.clientWidth,
-        this.container.clientHeight,
-      );
+      this.resizeCanvas(this.container.clientWidth, this.container.clientHeight);
     });
     this.resizeObserver.observe(this.container);
 
@@ -376,10 +360,7 @@ class Timeline {
 
   loadPersistence = async (source: IPersistence) => {
     const start = performance.now();
-    const [data, audio] = await Promise.all([
-      source.get('tracks'),
-      source.get('audio'),
-    ]);
+    const [data, audio] = await Promise.all([source.get('tracks'), source.get('audio')]);
     console.log('Fetched from IndexedDB in ms:', performance.now() - start);
 
     if (data && audio) {
@@ -450,19 +431,14 @@ class Timeline {
    * Converts an absolute position of pixels on the canvas to the matching time
    */
   private absolutePxToTime = (x: number) => {
-    return (
-      this.pxToDuration(x - this.config.layout.sidebarWidth) + this.position
-    );
+    return this.pxToDuration(x - this.config.layout.sidebarWidth) + this.position;
   };
 
   /**
    * Converts a timeline time to the matching absolute position on the canvas
    */
   private absoluteTimeToPx = (seconds: number) => {
-    return (
-      (seconds - this.position) * this.pxPerSecond +
-      this.config.layout.sidebarWidth
-    );
+    return (seconds - this.position) * this.pxPerSecond + this.config.layout.sidebarWidth;
   };
 
   private absolutePxToChannel = (y: number): number | null => {
@@ -485,9 +461,7 @@ class Timeline {
     return this.data?.channels.length || 0;
   }
 
-  private getLocalCoordinates = (
-    event: MouseEvent | WheelEvent,
-  ): { x: number; y: number } => {
+  private getLocalCoordinates = (event: MouseEvent | WheelEvent): { x: number; y: number } => {
     const rect = this.canvas.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
@@ -503,9 +477,7 @@ class Timeline {
     // Compute needed height of canvas
     const channelCount = this.data?.channels?.length || 0;
     const totalHeight =
-      layout.timelineHeight +
-      layout.waveformHeight +
-      channelCount * layout.channelHeight;
+      layout.timelineHeight + layout.waveformHeight + channelCount * layout.channelHeight;
 
     const ctx = this.canvas.getContext('2d');
     if (!ctx) return;
@@ -570,8 +542,7 @@ class Timeline {
     }
 
     // Draw small tick marks
-    let currentSmallMark =
-      this.position - (this.position % chosenSmallIncrement);
+    let currentSmallMark = this.position - (this.position % chosenSmallIncrement);
     while (currentSmallMark <= endSeconds) {
       // Skip any times that already have a big mark
       if (!drawnBigMarks.has(currentSmallMark.toFixed(3))) {
@@ -725,21 +696,15 @@ class Timeline {
     // Draw keyframes
     performance.mark('keyframes-start');
     if (this.data) {
-      const cutoffTimeLeft = this.absolutePxToTime(
-        channelsX - layout.keyframeSize / 2,
-      );
-      const cutoffTimeRight = this.absolutePxToTime(
-        this.canvasWidth + layout.keyframeSize / 2,
-      );
+      const cutoffTimeLeft = this.absolutePxToTime(channelsX - layout.keyframeSize / 2);
+      const cutoffTimeRight = this.absolutePxToTime(this.canvasWidth + layout.keyframeSize / 2);
 
       this.data.channels.forEach((channel, i) => {
         const y = layout.channelHeight * i + layout.channelHeight * 0.5;
         ctx.strokeStyle = theme.keyframeOutline;
 
         // We have to start from 0 if we're grabbing
-        const startIndex = this.grabbing
-          ? 0
-          : this.data?.binarySearch(i, cutoffTimeLeft, 'right');
+        const startIndex = this.grabbing ? 0 : this.data?.binarySearch(i, cutoffTimeLeft, 'right');
 
         if (startIndex === undefined) return;
 
@@ -808,8 +773,7 @@ class Timeline {
 
     //// Marker
     const scrubberTime = this.audio.currentTime || 0;
-    const scrubberPos =
-      (scrubberTime - this.position) * this.pxPerSecond + layout.sidebarWidth;
+    const scrubberPos = (scrubberTime - this.position) * this.pxPerSecond + layout.sidebarWidth;
 
     ctx.fillStyle = theme.scrubber;
     if (scrubberPos < layout.sidebarWidth) {
@@ -904,11 +868,7 @@ class Timeline {
     performance.mark('draw-end');
 
     performance.measure('draw full', 'draw-start', 'draw-end');
-    performance.measure(
-      'draw waveform',
-      'draw-waveform-start',
-      'draw-waveform-end',
-    );
+    performance.measure('draw waveform', 'draw-waveform-start', 'draw-waveform-end');
     performance.measure('diamonds', 'diamonds-start', 'diamonds-end');
     performance.measure('keyframes', 'keyframes-start', 'keyframes-end');
 
@@ -1077,14 +1037,8 @@ DPI scale: ${this.dpiScale}`;
         const channel = this.absolutePxToChannel(y);
         if (channel !== null) {
           // Select single keyframe
-          const tolerance =
-            this.config.layout.keyframeSize / 2 / this.pxPerSecond;
-          const k = this.data?.selectSingle(
-            channel,
-            time,
-            tolerance,
-            e.shiftKey,
-          );
+          const tolerance = this.config.layout.keyframeSize / 2 / this.pxPerSecond;
+          const k = this.data?.selectSingle(channel, time, tolerance, e.shiftKey);
 
           // If no single keyframe was clicked, start a box select
           if (k === undefined) {
@@ -1156,8 +1110,7 @@ DPI scale: ${this.dpiScale}`;
     let endChannel = Number.NEGATIVE_INFINITY;
 
     for (let i = 0; i < this.channelCount; i++) {
-      const midpoint =
-        this.channelToAbsolutePx(i) + this.config.layout.channelHeight / 2;
+      const midpoint = this.channelToAbsolutePx(i) + this.config.layout.channelHeight / 2;
 
       if (midpoint >= start.y && midpoint <= end.y) {
         startChannel = Math.min(startChannel, i);
@@ -1165,7 +1118,7 @@ DPI scale: ${this.dpiScale}`;
       }
     }
 
-    this.boxSelection.startChannel = clamp(startChannel, 0, this.channelCount) //this.absolutePxToChannel(start.y) || 0;
+    this.boxSelection.startChannel = clamp(startChannel, 0, this.channelCount); //this.absolutePxToChannel(start.y) || 0;
     this.boxSelection.endChannel = clamp(endChannel, 0, this.channelCount);
   };
 
@@ -1179,10 +1132,7 @@ DPI scale: ${this.dpiScale}`;
     }
 
     if (this.seeking) {
-      const clamped = Math.min(
-        Math.max(this.config.layout.sidebarWidth, x),
-        this.canvasWidth,
-      );
+      const clamped = Math.min(Math.max(this.config.layout.sidebarWidth, x), this.canvasWidth);
       const time = this.absolutePxToTime(clamped);
       this.seek(time, e.ctrlKey);
     }
@@ -1212,9 +1162,7 @@ DPI scale: ${this.dpiScale}`;
       this.applyPan();
     } else if (e.button === LEFT_MOUSE_BUTTON) {
       if (this.boxSelection) {
-        const size = abs(
-          difference(this.boxSelection.start, this.boxSelection.end),
-        );
+        const size = abs(difference(this.boxSelection.start, this.boxSelection.end));
 
         // Don't count it as a box select unless the box is bigger than 2x2 px
         if (size.x > 2 && size.y > 2) {
@@ -1401,9 +1349,7 @@ DPI scale: ${this.dpiScale}`;
 
   hasExistingData = () => {
     return true;
-    return (
-      this.data?.channels.find((t) => t.keyframes.length > 0) !== undefined
-    );
+    return this.data?.channels.find((t) => t.keyframes.length > 0) !== undefined;
   };
 }
 

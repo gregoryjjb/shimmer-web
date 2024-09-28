@@ -1,10 +1,4 @@
-import {
-  Component,
-  ParentComponent,
-  createEffect,
-  createSignal,
-  onCleanup,
-} from 'solid-js';
+import { Component, ParentComponent, createEffect, createSignal, onCleanup } from 'solid-js';
 
 import { Icon } from 'solid-heroicons';
 import {
@@ -104,19 +98,13 @@ const Toolbar: Component<{
     const currentIndex = playbackRates.indexOf(playbackRate());
     const direction = e.key === '>' ? 1 : -1;
 
-    const newIndex = clamp(
-      currentIndex + direction,
-      0,
-      playbackRates.length - 1,
-    );
+    const newIndex = clamp(currentIndex + direction, 0, playbackRates.length - 1);
     const newRate = playbackRates[newIndex];
 
     setPlaybackRate(newRate);
   };
   window.addEventListener('keydown', handlePlaybackRateHotkey);
-  onCleanup(() =>
-    window.removeEventListener('keydown', handlePlaybackRateHotkey),
-  );
+  onCleanup(() => window.removeEventListener('keydown', handlePlaybackRateHotkey));
 
   createEffect(() => {
     ctx.timeline.setPlaybackRate(parseFloat(playbackRate()));
@@ -232,11 +220,7 @@ const OpenFile: Component = () => {
 
   return (
     <>
-      <ToolbarButton
-        tooltip="Change music"
-        path={musicalNote}
-        onClick={() => inputRef.click()}
-      />
+      <ToolbarButton tooltip="Change music" path={musicalNote} onClick={() => inputRef.click()} />
       <input
         style={{ display: 'none' }}
         type="file"
