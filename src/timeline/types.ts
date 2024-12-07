@@ -23,9 +23,9 @@ export type Track = {
 };
 
 export type Keyframe = {
-  timestamp: number;
+  ts: number;
   value: number;
-  selected: boolean;
+  selected?: boolean;
 };
 
 export interface Project {

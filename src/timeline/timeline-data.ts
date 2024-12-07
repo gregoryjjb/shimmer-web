@@ -11,9 +11,17 @@ export const newTracks = (count: number): Track[] => {
 };
 
 const compareKeyframes = (a: Keyframe, b: Keyframe): number => {
-  if (a.timestamp < b.timestamp) return -1;
-  if (a.timestamp > b.timestamp) return 1;
+  if (a.ts < b.ts) return -1;
+  if (a.ts > b.ts) return 1;
   return 0;
+};
+
+const setSelected = (kf: Keyframe, selected: boolean) => {
+  if (selected) {
+    kf.selected = true;
+  } else {
+    delete kf.selected;
+  }
 };
 
 export const mapJSONToMemory = (dataJSON: ShowDataJSON) => {
@@ -24,7 +32,7 @@ export const mapJSONToMemory = (dataJSON: ShowDataJSON) => {
     };
     for (let k of c.keyframes) {
       track.keyframes.push({
-        timestamp: k.time,
+        ts: k.time,
         value: !!k.state ? 1 : 0,
         selected: false,
       });
@@ -54,8 +62,8 @@ export const binarySearch = (
     const keyframe = array[index];
     if (
       !side ||
-      (side === 'left' && keyframe.timestamp < time) ||
-      (side === 'right' && keyframe.timestamp > time)
+      (side === 'left' && keyframe.ts < time) ||
+      (side === 'right' && keyframe.ts > time)
     ) {
       return index;
     } else {
@@ -74,12 +82,12 @@ export const binarySearch = (
   }
 
   // Out of bounds left side
-  if (array[start].timestamp > time) {
+  if (array[start].ts > time) {
     return valid(start);
   }
 
   // Out of bounds right side
-  if (array[end].timestamp < time) {
+  if (array[end].ts < time) {
     return valid(end);
   }
 
@@ -100,8 +108,8 @@ export const binarySearch = (
         const left = array[start];
         const right = array[end];
 
-        const leftDist = time - left.timestamp;
-        const rightDist = right.timestamp - time;
+        const leftDist = time - left.ts;
+        const rightDist = right.ts - time;
 
         if (leftDist <= rightDist) {
           found = start;
@@ -113,7 +121,7 @@ export const binarySearch = (
       const mid = Math.round((start + end) / 2);
       const kf = array[mid];
 
-      if (time > kf.timestamp) {
+      if (time > kf.ts) {
         start = mid;
       } else {
         end = mid;
@@ -257,7 +265,7 @@ class TimelineData {
       if (index === undefined) return;
       const kf = channel.keyframes[index];
 
-      if (!found || Math.abs(kf.timestamp - time) < Math.abs(found.timestamp - time)) {
+      if (!found || Math.abs(kf.ts - time) < Math.abs(found.ts - time)) {
         found = kf;
       }
     });
@@ -275,8 +283,8 @@ class TimelineData {
     for (const track of this.channels) {
       for (const keyframe of track.keyframes) {
         if (keyframe.selected) {
-          if (keyframe.timestamp < first) first = keyframe.timestamp;
-          if (keyframe.timestamp > last) last = keyframe.timestamp;
+          if (keyframe.ts < first) first = keyframe.ts;
+          if (keyframe.ts > last) last = keyframe.ts;
         }
       }
     }
@@ -288,9 +296,8 @@ class TimelineData {
 
   private insert = (channel: number, time: number, value: number) => {
     this.channels[channel].keyframes.push({
-      timestamp: time,
+      ts: time,
       value,
-      selected: false,
     });
     this.channels[channel].keyframes.sort(compareKeyframes);
   };
@@ -324,7 +331,7 @@ class TimelineData {
     }
 
     const kf = this.channels[channel].keyframes[index];
-    const landed = Math.abs(kf.timestamp - time) <= tolerance;
+    const landed = Math.abs(kf.ts - time) <= tolerance;
 
     if (!landed) {
       if (!keepExisting) this.selectAll(false);
@@ -338,9 +345,9 @@ class TimelineData {
           keyframe.selected = false;
         }
       }
-      kf.selected = true;
+      setSelected(kf, true);
     } else {
-      kf.selected = !kf.selected;
+      setSelected(kf, !kf.selected);
     }
 
     this.markEdit('Selected keyframe');
@@ -356,7 +363,7 @@ class TimelineData {
           anyStateChanged = true;
         }
 
-        keyframe.selected = selected;
+        setSelected(keyframe, selected);
       }
     }
 
@@ -373,11 +380,11 @@ class TimelineData {
       const trackGood = i >= startChannel && i <= endChannel;
       for (const keyframe of track.keyframes) {
         const shouldSelect =
-          (trackGood && keyframe.timestamp >= startTime && keyframe.timestamp <= endTime) ||
-          (keepExisting && keyframe.selected);
+          (trackGood && keyframe.ts >= startTime && keyframe.ts <= endTime) ||
+          (keepExisting && !!keyframe.selected);
 
         if (shouldSelect != keyframe.selected) {
-          keyframe.selected = shouldSelect;
+          setSelected(keyframe, shouldSelect);
           anyStateChanged = true;
         }
       }
@@ -505,7 +512,7 @@ class TimelineData {
       let tcount = 0;
       for (const keyframe of track.keyframes) {
         if (keyframe.selected) {
-          keyframe.timestamp += time;
+          keyframe.ts += time;
           tcount++;
         }
       }
@@ -530,7 +537,7 @@ class TimelineData {
       for (const keyframe of track.keyframes) {
         if (keyframe.selected) {
           tcount++;
-          keyframe.timestamp = (keyframe.timestamp - pivotTime) * scaleFactor + pivotTime;
+          keyframe.ts = (keyframe.ts - pivotTime) * scaleFactor + pivotTime;
         }
       }
       if (tcount > 0) {
@@ -554,7 +561,7 @@ class TimelineData {
       for (const keyframe of track.keyframes) {
         if (keyframe.selected) {
           const dup = structuredClone(keyframe);
-          keyframe.selected = false;
+          setSelected(keyframe, false);
           duplicated.push(dup);
         }
       }
@@ -582,7 +589,7 @@ class TimelineData {
       track.keyframes.forEach((keyframe, j) => {
         if (keyframe.selected) {
           selectedIndexes[i].push(j);
-          timeSum += keyframe.timestamp;
+          timeSum += keyframe.ts;
         }
       });
     });
@@ -592,7 +599,7 @@ class TimelineData {
 
     selectedIndexes.forEach((indexes, channel) => {
       indexes.forEach((i) => {
-        this.channels[channel].keyframes[i].timestamp = avg;
+        this.channels[channel].keyframes[i].ts = avg;
       });
     });
 
@@ -612,7 +619,7 @@ class TimelineData {
       let tcount = 0;
       track.keyframes.forEach((kf) => {
         if (kf.selected) {
-          kf.timestamp = time;
+          kf.ts = time;
           tcount++;
         }
       });
@@ -649,7 +656,7 @@ class TimelineData {
       const currentBatch = batched[batched.length - 1];
       const lastKeyframe = currentBatch ? currentBatch[currentBatch.length - 1] : undefined;
 
-      if (lastKeyframe && kf.timestamp - lastKeyframe.timestamp < threshold) {
+      if (lastKeyframe && kf.ts - lastKeyframe.ts < threshold) {
         currentBatch.push(kf);
       } else {
         batched.push([kf]);
@@ -661,12 +668,12 @@ class TimelineData {
       return;
     }
 
-    const start = keyframes[0].timestamp;
-    const end = keyframes[keyframes.length - 1].timestamp;
+    const start = keyframes[0].ts;
+    const end = keyframes[keyframes.length - 1].ts;
     const increment = (end - start) / (batched.length - 1);
 
     batched.forEach((batch, i) => {
-      batch.forEach((kf) => (kf.timestamp = start + increment * i));
+      batch.forEach((kf) => (kf.ts = start + increment * i));
     });
 
     this.markEdit(`Spaced ${keyframes.length} keyframes`);
@@ -683,8 +690,8 @@ class TimelineData {
       track.keyframes.forEach((kf, j) => {
         if (kf.selected) {
           if (lastTimestamp === undefined) {
-            lastTimestamp = kf.timestamp;
-          } else if (kf.timestamp - lastTimestamp < threshold) {
+            lastTimestamp = kf.ts;
+          } else if (kf.ts - lastTimestamp < threshold) {
             markedForDeletion[i].push(j);
           }
         }

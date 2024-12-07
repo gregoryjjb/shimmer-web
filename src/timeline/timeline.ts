@@ -715,7 +715,7 @@ class Timeline {
 
         for (let i = startIndex; i < channel.keyframes.length; i++) {
           const kf = channel.keyframes[i];
-          let t = kf.timestamp + (kf.selected ? this.grabOffset : 0);
+          let t = kf.ts + (kf.selected ? this.grabOffset : 0);
           if (kf.selected && this.scaling) t = this.renderScaled(t);
 
           if (t > cutoffTimeRight) {
@@ -740,8 +740,8 @@ class Timeline {
           const selected =
             kf.selected ||
             (boxSelectingChannel &&
-              kf.timestamp >= this.boxSelection!.startTime &&
-              kf.timestamp <= this.boxSelection!.endTime);
+              kf.ts >= this.boxSelection!.startTime &&
+              kf.ts <= this.boxSelection!.endTime);
 
           const source =
             kf.value === 0
@@ -922,7 +922,7 @@ DPI scale: ${this.dpiScale}`;
     if (snapping) {
       const nearest = this.data?.findNearest(time);
       if (nearest) {
-        time = nearest.timestamp;
+        time = nearest.ts;
       }
     }
 

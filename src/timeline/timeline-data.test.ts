@@ -5,7 +5,7 @@ import { Keyframe } from './types';
 
 const keyframes = [0, 10, 20, 30, 40, 50, 60, 70].map<Keyframe>((n) => ({
   selected: false,
-  timestamp: n,
+  ts: n,
   value: 0,
 }));
 

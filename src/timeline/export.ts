@@ -10,7 +10,7 @@ export const toLegacyFormat = (tracks: Track[]) => {
     tracks: tracks.map((track, i) => ({
       id: i,
       keyframes: track.keyframes.map((k) => ({
-        time: k.timestamp,
+        time: k.ts,
         state: k.value,
       })),
     })),
@@ -68,9 +68,9 @@ export const parseProjectData = (data: any): ProjectData => {
     }
 
     const keyframes: Keyframe[] = (keyframesIn as any[]).map((keyframeIn, j) => {
-      const timestamp = coalesce(keyframeIn.timestamp, keyframeIn.time);
+      const timestamp = coalesce(keyframeIn.ts, keyframeIn.timestamp, keyframeIn.time);
       if (timestamp === undefined) {
-        throw `tracks[${i}].keyframes[${j}] missing timestamp or time field`;
+        throw `tracks[${i}].keyframes[${j}] missing timestamp field, checked: ts, timestamp, time`;
       }
       if (typeof timestamp !== 'number') {
         throw `tracks[${i}].keyframes[${j}] timestamp is not a number`;
@@ -87,11 +87,14 @@ export const parseProjectData = (data: any): ProjectData => {
 
       const selected = typeof keyframeIn.selected === 'boolean' ? keyframeIn.selected : false;
 
-      return {
-        timestamp,
+      const keyframe: Keyframe = {
+        ts: timestamp,
         value,
-        selected,
       };
+      if (selected) {
+        keyframe.selected = true;
+      }
+      return keyframe;
     });
 
     return {
