@@ -1,5 +1,6 @@
 import { TimelineEmitter } from './events';
-import { Keyframe, ShowDataJSON, Track } from './types';
+import { OpenedProject } from './persist';
+import { Keyframe, ProjectData, ShowDataJSON, Track } from './types';
 import { UndoHistory } from './undo';
 import { stringifyTime } from './utils';
 
@@ -132,13 +133,9 @@ export const binarySearch = (
   return found;
 };
 
-const deepClone = <T>(v: T): T => {
-  return JSON.parse(JSON.stringify(v));
-};
-
 interface UndoSnapshot {
   action: string;
-  channels: string;
+  data: string;
 }
 
 const perfEvent = (event: string) => {
@@ -158,42 +155,59 @@ export interface BoxSelection {
 }
 
 class TimelineData {
-  channels: Track[];
+  openedProject?: OpenedProject;
+
+  data: ProjectData;
 
   private emitter: TimelineEmitter;
   private undoHistory: UndoHistory<UndoSnapshot>;
 
-  constructor(emitter: TimelineEmitter, data: Track[]) {
+  constructor(emitter: TimelineEmitter) {
     this.emitter = emitter;
-    this.channels = data;
+
+    this.data = {
+      tracks: [],
+    };
+
     this.undoHistory = new UndoHistory(100, {
       action: 'Initial state',
-      channels: JSON.stringify(data),
+      data: JSON.stringify(this.data),
     });
   }
 
-  /**
-   * Replaces all data with the provided. CLEARS UNDO HISTORY!
-   */
-  replace = (data: Track[]) => {
-    const d = structuredClone(data);
-    this.channels = d;
+  get channels() {
+    return this.data.tracks ?? [];
+  }
+
+  /* Load a project for editing; clears undo history */
+  load = (project: OpenedProject) => {
+    this.openedProject = project;
+    this.data = structuredClone(project.data);
+
     this.undoHistory = new UndoHistory(100, {
       action: 'Initial state',
-      channels: JSON.stringify(d),
+      data: JSON.stringify(this.data),
     });
-    this.emitter.emit('autosave', JSON.stringify(d));
+  };
+
+  /**
+   * Replaces all project data as a single edit action
+   */
+  replaceAll = (data: ProjectData) => {
+    this.data = structuredClone(data);
+
+    this.takeUndoSnapshot('Replaced all data');
   };
 
   private takeUndoSnapshot = (action: string) => {
-    const marshaled = JSON.stringify(this.channels);
+    const marshaled = JSON.stringify(this.data);
 
     this.undoHistory.push({
       action,
-      channels: marshaled,
+      data: marshaled,
     });
 
-    this.emitter.emit('autosave', marshaled);
+    this.openedProject?.saveData(this.data);
   };
 
   private emit = (action: string) => {
@@ -225,8 +239,8 @@ class TimelineData {
       return;
     }
 
-    this.emitter.emit('autosave', snapshot.channels);
-    this.channels = JSON.parse(snapshot.channels);
+    this.data = JSON.parse(snapshot.data);
+    this.openedProject?.saveData(this.data);
     this.emit(`Undo '${undid.action}'`);
   };
 
@@ -237,9 +251,9 @@ class TimelineData {
       return;
     }
 
+    this.data = JSON.parse(redone.data);
+    this.openedProject?.saveData(this.data);
     this.emit(`Redo '${redone.action}'`);
-    this.emitter.emit('autosave', redone.channels);
-    this.channels = JSON.parse(redone.channels);
   };
 
   binarySearch = (

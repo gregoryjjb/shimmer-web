@@ -18,11 +18,13 @@
     "clsx": "^2.1.0",
     "jszip": "^3.10.1",
     "localforage": "^1.10.0",
+    "lodash-es": "^4.17.22",
     "solid-heroicons": "^3.2.4",
     "solid-js": "^1.9.1"
   },
   "devDependencies": {
     "@types/audiobuffer-to-wav": "^1.0.3",
+    "@types/lodash-es": "^4.17.12",
     "autoprefixer": "^10.4.16",
     "jsdom": "^22.1.0",
     "lefthook": "^1.7.17",

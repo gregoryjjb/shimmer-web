@@ -1,7 +1,5 @@
 import audiobufferToWav from 'audiobuffer-to-wav';
-
 import { Emitter, TimelineEmitter } from './events';
-import { localPersistence } from './persistence';
 
 type Peaks = {
   mins: Float32Array;
@@ -194,12 +192,6 @@ export default class TimelineAudio extends Emitter<{
     }
 
     this.load(file);
-    localPersistence.saveAudio(file);
-  };
-
-  loadFromPersistence = async () => {
-    const blob = await localPersistence.getAudio();
-    await this.load(blob);
   };
 
   load = async (blob: Blob) => {
@@ -207,8 +199,6 @@ export default class TimelineAudio extends Emitter<{
 
     this.loading = true;
     this.emit('loading', true);
-
-    localPersistence.saveAudio(blob).then(() => console.log('Audio saved'));
 
     // this.element.src = path;
 

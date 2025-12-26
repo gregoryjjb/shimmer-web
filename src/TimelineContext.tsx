@@ -8,7 +8,7 @@ import {
   useContext,
 } from 'solid-js';
 import { createStoredSignal } from './hooks/createStorageSignal';
-import { LocalPersistence, localPersistence } from './timeline/persistence';
+import { LocalPersistor, OpenedProject } from './timeline/persist';
 import Timeline from './timeline/timeline';
 import { Project } from './timeline/types';
 
@@ -35,23 +35,8 @@ const makeTimelineContext = () => {
 
   const [projectName, setProjectName] = createStoredSignal('projectName', '');
 
-  timeline.on('autosave', (data) => localPersistence.saveData(data));
-
   onMount(() => {
-    console.log('MOUNT');
-    LocalPersistence.loadExisting().then((lp) => {
-      if (lp) {
-        console.log('Loading local data');
-
-        timeline.load({
-          name: 'What',
-          audio: lp.get('audio'),
-          data: { tracks: JSON.parse(lp.get('tracks')) },
-        });
-      } else {
-        console.log('No data found locally');
-      }
-    });
+    OpenedProject.open(LocalPersistor).then((project) => timeline.load(project));
   });
 
   onCleanup(() => {
@@ -62,7 +47,8 @@ const makeTimelineContext = () => {
     // TODO: some kind of confirmation dialog?
 
     setProjectName(project.name);
-    timeline.load(project);
+
+    timeline.load(new OpenedProject(project.name, project.data, project.audio, LocalPersistor));
   };
 
   const value = {

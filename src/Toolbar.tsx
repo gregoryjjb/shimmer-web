@@ -214,31 +214,3 @@ const Toolbar: Component<{
 };
 
 export default Toolbar;
-
-const OpenFile: Component = () => {
-  let inputRef: HTMLInputElement;
-
-  return (
-    <>
-      <ToolbarButton tooltip="Change music" path={musicalNote} onClick={() => inputRef.click()} />
-      <input
-        style={{ display: 'none' }}
-        type="file"
-        ref={inputRef!}
-        onChange={(e) => {
-          const len = e.target.files?.length || 0;
-          if (len !== 1) {
-            console.error('Please select exactly one file');
-            return;
-          }
-
-          const file = e.target.files?.[0];
-          if (!file) {
-            console.error('No file?');
-            return;
-          }
-        }}
-      />
-    </>
-  );
-};

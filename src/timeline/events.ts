@@ -1,3 +1,5 @@
+import { ProjectData } from './types';
+
 type EventMap = Record<string, any>;
 type EventKey<T extends EventMap> = string & keyof T;
 type EventHandler<T> = (payload: T) => void;
@@ -23,7 +25,7 @@ export class TimelineEmitter extends Emitter<{
   selected: number;
   render: void;
   loading: boolean;
-  autosave: string;
+  autosave: ProjectData;
 }> {
   // constructor() {
   //   super();

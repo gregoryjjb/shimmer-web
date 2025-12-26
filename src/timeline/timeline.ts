@@ -10,7 +10,7 @@ import { abs, clamp, difference, pointsToRect, rangeEnd, rangeStart, stringifyTi
 
 import lightsSVG from '../assets/lights-colored.svg?raw';
 import { downloadFile, toLegacyFormat } from './export';
-import { IPersistence, Persistence, localPersistence } from './persistence';
+import { OpenedProject } from './persist';
 import { Project } from './types';
 
 const LEFT_MOUSE_BUTTON = 0;
@@ -130,8 +130,9 @@ class Timeline {
   private resizeObserver?: ResizeObserver;
 
   private audio: TimelineAudio;
-  private data?: TimelineData;
-  private persistence: Persistence;
+  private data: TimelineData;
+
+  private openedProject?: OpenedProject;
 
   private config: TimelineConfig = defaultConfig;
   destroyed: boolean = false;
@@ -273,15 +274,17 @@ class Timeline {
       this.lights.push(span);
     }
 
+    this.data = new TimelineData(this.emitter);
+
     this.audio = new TimelineAudio(this.emitter);
     this.audio.on('loading', (loading: boolean) => {
       this.requestDraw();
     });
 
-    this.persistence = new Persistence();
-    this.persistence.on('audioChanged', (blob) => {
-      this.audio.load(blob);
-    });
+    // this.persistence = new Persistence();
+    // this.persistence.on('audioChanged', (blob) => {
+    //   this.audio.load(blob);
+    // });
 
     // Cursor overlays on canvas
     // const wf = document.createElement('div');
@@ -332,15 +335,19 @@ class Timeline {
     this.destroyed = true;
   };
 
-  load = async (project: Project) => {
+  load = async (project: OpenedProject) => {
     const start = performance.now();
 
     this.emitter.emit('loading', true);
 
     try {
       const p = this.audio.load(project.audio);
-      this.replaceData(project.data);
+      this.data.load(project);
       await p;
+
+      this.openedProject = project;
+    } catch (err) {
+      console.error('Loading:', err);
     } finally {
       console.log(`Loaded in ${performance.now() - start}ms`);
       this.emitter.emit('loading', false);
@@ -350,24 +357,7 @@ class Timeline {
   };
 
   replaceData = (data: ProjectData) => {
-    if (this.data) {
-      this.data.replace(data.tracks);
-    } else {
-      this.data = new TimelineData(this.emitter, data.tracks);
-    }
-    this.requestDraw();
-  };
-
-  loadPersistence = async (source: IPersistence) => {
-    const start = performance.now();
-    const [data, audio] = await Promise.all([source.get('tracks'), source.get('audio')]);
-    console.log('Fetched from IndexedDB in ms:', performance.now() - start);
-
-    if (data && audio) {
-      const parsedData = JSON.parse(data);
-
-      await this.load({ name: '', data: { tracks: parsedData }, audio });
-    }
+    this.data.replaceAll(data);
 
     this.requestDraw();
   };
@@ -458,7 +448,7 @@ class Timeline {
   };
 
   private get channelCount() {
-    return this.data?.channels.length || 0;
+    return this.data.channels.length || 0;
   }
 
   private getLocalCoordinates = (event: MouseEvent | WheelEvent): { x: number; y: number } => {
@@ -475,7 +465,7 @@ class Timeline {
     const theme = colors.dark;
 
     // Compute needed height of canvas
-    const channelCount = this.data?.channels?.length || 0;
+    const channelCount = this.data.channels?.length || 0;
     const totalHeight =
       layout.timelineHeight + layout.waveformHeight + channelCount * layout.channelHeight;
 
@@ -704,7 +694,7 @@ class Timeline {
         ctx.strokeStyle = theme.keyframeOutline;
 
         // We have to start from 0 if we're grabbing
-        const startIndex = this.grabbing ? 0 : this.data?.binarySearch(i, cutoffTimeLeft, 'right');
+        const startIndex = this.grabbing ? 0 : this.data.binarySearch(i, cutoffTimeLeft, 'right');
 
         if (startIndex === undefined) return;
 
@@ -817,6 +807,32 @@ class Timeline {
     const timeString = stringifyTime(this.audio.currentTime, 'milliseconds');
     this.currentTimeDisplay.innerHTML = timeString;
 
+    // const beats = this.data.data.beats || [];
+
+    //// Beat markers
+    // beats.forEach((beatTs) => {
+    //   const pos = (beatTs - this.position) * this.pxPerSecond + layout.sidebarWidth;
+
+    //   if (pos > layout.sidebarWidth && pos < this.canvasWidth) {
+    //     ctx.fillStyle = 'oklch(79.2% 0.209 151.711)';
+    //     ctx.fillRect(pos, 0, 1, this.canvasHeight);
+    //   }
+    // });
+
+    //// Beat tapper
+    // ctx.fillStyle = 'oklch(79.2% 0.209 151.711)';
+    // for (let i = beats.length - 1; i >= 0; i--) {
+    //   if (beats[i] <= scrubberTime) {
+    //     const beat = beats[i];
+    //     console.log('Current beat', beat)
+    //     if (scrubberTime - beat < 0.1) {
+    //       ctx.fillRect(30, 30, 100, 100);
+    //     }
+
+    //     break;
+    //   }
+    // }
+
     // ctx.font = '16px Courier New,monospace';
     // ctx.fillStyle = theme.ticks;
     // ctx.fillText(timeString, 4, 20);
@@ -828,16 +844,16 @@ class Timeline {
     // Turn the lights on or off
     this.lights.forEach((light, i) => {
       const time = this.audio.currentTime || 0;
-      const keyframeIndex = this.data?.binarySearch(i, time, 'left');
+      const keyframeIndex = this.data.binarySearch(i, time, 'left');
       let on = false;
       if (keyframeIndex !== undefined) {
-        on = (this.data?.channels[i].keyframes[keyframeIndex].value || 0) > 0;
+        on = (this.data.channels[i].keyframes[keyframeIndex].value || 0) > 0;
       }
       on = false; // Temporary: disable svg lights
       this.lights[i].style.visibility = on ? 'visible' : 'hidden';
     });
 
-    this.data?.channels.forEach((track, i) => {
+    this.data.channels.forEach((track, i) => {
       const xPadding = 8;
       const yPadding = 6;
       const fontSize = layout.channelHeight - yPadding * 2;
@@ -846,10 +862,10 @@ class Timeline {
       const y = channelsY + (i + 1) * layout.channelHeight - yPadding;
 
       const time = this.audio.currentTime || 0;
-      const keyframeIndex = this.data?.binarySearch(i, time, 'left');
+      const keyframeIndex = this.data.binarySearch(i, time, 'left');
       let on = false;
       if (keyframeIndex !== undefined) {
-        on = (this.data?.channels[i].keyframes[keyframeIndex].value || 0) > 0;
+        on = (this.data.channels[i].keyframes[keyframeIndex].value || 0) > 0;
       }
 
       const color = on ? theme.keyframeOn : 'black';
@@ -920,7 +936,7 @@ DPI scale: ${this.dpiScale}`;
 
   private seek = (time: number, snapping: boolean) => {
     if (snapping) {
-      const nearest = this.data?.findNearest(time);
+      const nearest = this.data.findNearest(time);
       if (nearest) {
         time = nearest.ts;
       }
@@ -956,7 +972,7 @@ DPI scale: ${this.dpiScale}`;
   };
 
   private finalizeGrab = () => {
-    this.data?.moveSelected(this.grabOffset);
+    this.data.moveSelected(this.grabOffset);
     this.cancelGrab();
   };
 
@@ -999,7 +1015,7 @@ DPI scale: ${this.dpiScale}`;
   };
 
   private finalizeScale = () => {
-    this.data?.scaleSelected(this.scalePivot, this.scale);
+    this.data.scaleSelected(this.scalePivot, this.scale);
     this.cancelScale();
   };
 
@@ -1035,10 +1051,11 @@ DPI scale: ${this.dpiScale}`;
       } else {
         // Select
         const channel = this.absolutePxToChannel(y);
+
         if (channel !== null) {
           // Select single keyframe
           const tolerance = this.config.layout.keyframeSize / 2 / this.pxPerSecond;
-          const k = this.data?.selectSingle(channel, time, tolerance, e.shiftKey);
+          const k = this.data.selectSingle(channel, time, tolerance, e.shiftKey);
 
           // If no single keyframe was clicked, start a box select
           if (k === undefined) {
@@ -1060,14 +1077,14 @@ DPI scale: ${this.dpiScale}`;
       // Insert new frame
       else {
         const channel = this.absolutePxToChannel(y);
-        if (channel !== null) {
+        if (channel !== null && channel >= 0 && channel < this.channelCount) {
           const time = this.absolutePxToTime(x);
           const value = e.altKey ? 0 : 1;
 
           if (e.ctrlKey) {
-            this.data?.insertColumn(time, value);
+            this.data.insertColumn(time, value);
           } else {
-            this.data?.insertSingle(channel, time, value);
+            this.data.insertSingle(channel, time, value);
           }
         }
       }
@@ -1167,7 +1184,7 @@ DPI scale: ${this.dpiScale}`;
         // Don't count it as a box select unless the box is bigger than 2x2 px
         if (size.x > 2 && size.y > 2) {
           console.log('Box selection', this.boxSelection);
-          this.data?.boxSelect(this.boxSelection);
+          this.data.boxSelect(this.boxSelection);
         }
 
         this.boxSelection = undefined;
@@ -1225,14 +1242,14 @@ DPI scale: ${this.dpiScale}`;
     if (normalizedKey === 'b') {
       // Benchmark
       let start = performance.now();
-      this.data?.channels.forEach((channel) =>
+      this.data.channels.forEach((channel) =>
         channel.keyframes.forEach((keyframe) => (keyframe.selected = false)),
       );
       let duration = performance.now() - start;
       console.log('Iterating over all keyframes took', duration);
 
       start = performance.now();
-      const cloned = JSON.parse(JSON.stringify(this.data?.channels));
+      const cloned = JSON.parse(JSON.stringify(this.data.channels));
       cloned.length;
       duration = performance.now() - start;
       console.log('Cloning keyframes took', duration);
@@ -1282,10 +1299,14 @@ DPI scale: ${this.dpiScale}`;
   };
 
   export = async (): Promise<Project> => {
+    if (!this.data || !this.openedProject?.audio) {
+      throw new Error('nothing to export');
+    }
+
     return {
       name: '',
-      data: { tracks: this.data?.channels || [] },
-      audio: await localPersistence.getAudio(),
+      data: this.data.data,
+      audio: this.openedProject?.audio,
     };
   };
 
@@ -1293,26 +1314,39 @@ DPI scale: ${this.dpiScale}`;
     play: this.play,
     pause: this.pause,
     playtoggle: this.playPause,
-    undo: () => this.data?.undo(),
-    redo: () => this.data?.redo(),
-    invert: () => this.data?.invertSelected(),
-    shiftUp: () => this.data?.shiftSelected('up'),
-    shiftDown: () => this.data?.shiftSelected('down'),
-    flipVertically: () => this.data?.flipSelected(),
+    undo: () => this.data.undo(),
+    redo: () => this.data.redo(),
+    invert: () => this.data.invertSelected(),
+    shiftUp: () => this.data.shiftSelected('up'),
+    shiftDown: () => this.data.shiftSelected('down'),
+    flipVertically: () => this.data.flipSelected(),
     grab: this.startGrab,
     scale: this.startScale,
-    align: () => this.data?.alignSelected(),
-    snapToCursor: () => this.data?.snapTo(this.audio.currentTime),
-    equallySpace: () => this.data?.equallySpaceSelected(),
+    align: () => this.data.alignSelected(),
+    snapToCursor: () => this.data.snapTo(this.audio.currentTime),
+    equallySpace: () => this.data.equallySpaceSelected(),
     duplicate: () => {
-      this.data?.duplicateSelected();
+      this.data.duplicateSelected();
       this.startGrab();
     },
     cancel: this.cancelGrab,
-    delete: () => this.data?.deleteSelected(),
-    dedup: () => this.data?.dedup(),
-    pickAudioFile: () => this.persistence.pickAudio(),
-    selectAll: () => this.data?.selectAll(true),
+    delete: () => this.data.deleteSelected(),
+    dedup: () => this.data.dedup(),
+    pickAudioFile: () => {
+      // Messy: move this somewhere
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.addEventListener('change', (event) => {
+        const file = (event.target as HTMLInputElement)?.files?.[0];
+        if (!file) return;
+
+        this.audio.load(file);
+        this.openedProject?.saveAudio(file);
+      });
+
+      input.click();
+    },
+    selectAll: () => this.data.selectAll(true),
 
     downloadLegacy: this.download,
   };
@@ -1349,7 +1383,7 @@ DPI scale: ${this.dpiScale}`;
 
   hasExistingData = () => {
     return true;
-    return this.data?.channels.find((t) => t.keyframes.length > 0) !== undefined;
+    return this.data.channels.find((t) => t.keyframes.length > 0) !== undefined;
   };
 }
 
