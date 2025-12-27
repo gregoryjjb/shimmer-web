@@ -9,9 +9,3 @@ export const [hideWelcome, setHideWelcome] = createStoredSignal('hideWelcome', f
 export const [volume, setVolume] = createStoredSignal('volume', 0.5);
 
 export const [showHelp, setShowHelp] = createStoredSignal('showHelp', false);
-
-export const [projectName, setProjectName] = createStoredSignal('projectName', 'Untitled project');
-
-createEffect(() => {
-  document.querySelector('title')!.innerHTML = `${projectName()} | Shimmer Editor`;
-});

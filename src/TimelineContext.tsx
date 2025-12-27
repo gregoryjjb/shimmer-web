@@ -8,9 +8,10 @@ import {
   useContext,
 } from 'solid-js';
 import { createStoredSignal } from './hooks/createStorageSignal';
-import { LocalPersistor, OpenedProject } from './timeline/persist';
+import { LocalPersistor, OpenedProject, Persistor } from './timeline/persist';
 import Timeline from './timeline/timeline';
 import { Project } from './timeline/types';
+import { GomasPersistor } from './timeline/persist/gomas';
 
 const makeTimelineContext = () => {
   const timeline = new Timeline();
@@ -33,10 +34,28 @@ const makeTimelineContext = () => {
   const [prompt, setPrompt] = createSignal('');
   timeline.on('render', () => setPrompt(timeline.getPrompt()));
 
-  const [projectName, setProjectName] = createStoredSignal('projectName', '');
+  const [projectName, setProjectName] = createSignal('');
 
   onMount(() => {
-    OpenedProject.open(LocalPersistor).then((project) => timeline.load(project));
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+
+    const host = params.get('host');
+    const name = params.get('name');
+
+    let persistence: Persistor;
+
+    if (host !== null && name !== null) {
+      console.log('Opening remote persistence');
+      persistence = GomasPersistor(host, name);
+    } else {
+      console.log('Using local persistence');
+      persistence = LocalPersistor;
+    }
+
+    OpenedProject.open(persistence).then((project) => {
+      timeline.load(project);
+      setProjectName(project.name);
+    });
   });
 
   onCleanup(() => {

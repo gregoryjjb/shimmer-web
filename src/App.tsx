@@ -1,5 +1,5 @@
 import JSZip from 'jszip';
-import { Component } from 'solid-js';
+import { Component, createEffect } from 'solid-js';
 import './App.css';
 import Help from './Help';
 import { Menu, MenuBar, MenuItem, MenuItemSpacer } from './MenuBar';
@@ -17,6 +17,10 @@ import { newTracks } from './timeline/timeline-data';
 
 function App() {
   const ctx = useTimeline();
+
+  createEffect(() => {
+    document.querySelector('title')!.innerHTML = `${ctx.projectName()} | Shimmer Editor`;
+  });
 
   const handleCommand = (c: Command) => {
     ctx.timeline.execute(c);
@@ -101,13 +105,17 @@ function App() {
         <SampleProjectButton class="ml-2" />
       </MenuBar>
       <div class="flex flex-col gap-3 p-3">
-        <input
+        {/* Disabling because name editing is not hooked up to persistence properly */}
+        {/* <input
           class="-mx-2 -my-1 rounded-md bg-transparent px-2 py-1 text-white transition-colors hover:bg-zinc-800 focus:bg-zinc-700 focus:outline-none"
           placeholder="Untitled project"
           value={ctx.projectName()}
           onChange={(e) => ctx.setProjectName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-        />
+        /> */}
+        <p class="-mx-2 -my-1 rounded-md bg-transparent px-2 py-1 text-white transition-colors hover:bg-zinc-800 focus:bg-zinc-700 focus:outline-none">
+          {ctx.projectName()}
+        </p>
         <Toolbar />
       </div>
       <div

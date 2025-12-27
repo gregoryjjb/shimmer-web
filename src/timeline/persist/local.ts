@@ -9,11 +9,11 @@ localforage.config({
 });
 
 async function loadName(): Promise<string> {
-  throw new Error('not implemented');
+  return Promise.resolve(localStorage.getItem('projectName') ?? '');
 }
 
 async function saveName(value: string): Promise<void> {
-  throw new Error('not implemented');
+  localStorage.setItem('projectName', value);
 }
 
 async function loadData(): Promise<ProjectData | undefined> {

@@ -53,12 +53,12 @@ export class OpenedProject {
    * Persistor and creates a new OpenedProject for it
    */
   static async open(p: Persistor): Promise<OpenedProject> {
-    const [data, audio] = await Promise.all([p.loadData(), p.loadAudio()]);
+    const [name, data, audio] = await Promise.all([p.loadName(), p.loadData(), p.loadAudio()]);
 
     if (!data) throw new Error('missing data');
     if (!audio) throw new Error('missing audio');
 
-    return new OpenedProject('', data, audio, p);
+    return new OpenedProject(name, data, audio, p);
   }
 
   get name() {
