@@ -52,7 +52,7 @@ export const parseProjectData = (data: any): ProjectData => {
   if (typeof data === 'string') {
     data = JSON.parse(data);
   }
-
+  
   const tracksIn = data.tracks;
 
   if (!tracksIn || !Array.isArray(tracksIn)) {

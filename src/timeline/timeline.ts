@@ -1,6 +1,6 @@
 import TimelineAudio from './timeline-audio';
 import TimelineData, { BoxSelection } from './timeline-data';
-import { ProjectData } from './types';
+import { LayoutNode, ProjectData, Track, TrackGroup, TrackID } from './types';
 
 import colors from './colors';
 import { ArgOf, Command, ComplexCommand, apple, keybinds } from './commands';
@@ -114,9 +114,12 @@ const createDiamond = (
   return canvas;
 };
 
-interface RenderedBoxSelection extends BoxSelection {
+interface RenderedBoxSelection {
+  origin: Point;
+  cursor: Point;
   start: Point;
   end: Point;
+  keepExisting: boolean;
 }
 
 class Timeline {
@@ -124,8 +127,9 @@ class Timeline {
   private root: HTMLDivElement; // Element we add to the container
   private canvas: HTMLCanvasElement;
   private debugDisplay: HTMLPreElement;
-  private lights: HTMLDivElement[] = [];
+  // private lights: HTMLDivElement[] = [];
   private currentTimeDisplay: HTMLDivElement;
+  private trackTree: HTMLDivElement;
 
   private resizeObserver?: ResizeObserver;
 
@@ -238,6 +242,14 @@ class Timeline {
     // this.currentTimeDisplay.style.fontSize = '12px';
     this.root.appendChild(this.currentTimeDisplay);
 
+    this.trackTree = document.createElement('div');
+    this.trackTree.style.position = 'absolute';
+    this.trackTree.style.top = layout.waveformHeight + layout.timelineHeight + 'px';
+    this.trackTree.style.left = '0px';
+    this.trackTree.style.width = layout.sidebarWidth + 'px';
+    this.trackTree.style.height = layout.channelHeight * 10 + 'px';
+    this.root.appendChild(this.trackTree);
+
     this.debugDisplay = document.createElement('pre');
     this.debugDisplay.innerText = 'Foo\nBar';
     this.debugDisplay.style.position = 'absolute';
@@ -247,32 +259,32 @@ class Timeline {
     this.debugDisplay.style.fontSize = '12px';
     this.root.appendChild(this.debugDisplay);
 
-    for (let i = 0; i < 8; i++) {
-      const span = document.createElement('div');
-      span.innerHTML = lightsSVG
-        .replaceAll('_Radial1', `_Radial1_${i}`)
-        .replaceAll('_Radial2', `_Radial2_${i}`)
-        .replaceAll('_Radial3', `_Radial3_${i}`)
-        .replaceAll('_Radial4', `_Radial4_${i}`)
-        .replaceAll('_Radial5', `_Radial5_${i}`)
-        .replaceAll('_Radial6', `_Radial6_${i}`)
-        .replaceAll('_Radial7', `_Radial7_${i}`)
-        .replaceAll('_Radial8', `_Radial8_${i}`);
-      span.style.position = 'absolute';
-      span.style.top =
-        (layout.waveformHeight + layout.timelineHeight + layout.channelHeight * i).toString() +
-        'px';
-      span.style.left = '0';
-      span.style.width = `${layout.sidebarWidth}px`;
-      span.style.height = `${layout.channelHeight}px`;
-      const colors = ['red', 'green', 'blue', 'yellow'].sort(() => Math.random() - 0.5);
-      for (let i = 0; i < 4; i++) {
-        span.style.setProperty(`--light${i + 1}`, colors[i]);
-      }
+    // for (let i = 0; i < 8; i++) {
+    //   const span = document.createElement('div');
+    //   span.innerHTML = lightsSVG
+    //     .replaceAll('_Radial1', `_Radial1_${i}`)
+    //     .replaceAll('_Radial2', `_Radial2_${i}`)
+    //     .replaceAll('_Radial3', `_Radial3_${i}`)
+    //     .replaceAll('_Radial4', `_Radial4_${i}`)
+    //     .replaceAll('_Radial5', `_Radial5_${i}`)
+    //     .replaceAll('_Radial6', `_Radial6_${i}`)
+    //     .replaceAll('_Radial7', `_Radial7_${i}`)
+    //     .replaceAll('_Radial8', `_Radial8_${i}`);
+    //   span.style.position = 'absolute';
+    //   span.style.top =
+    //     (layout.waveformHeight + layout.timelineHeight + layout.channelHeight * i).toString() +
+    //     'px';
+    //   span.style.left = '0';
+    //   span.style.width = `${layout.sidebarWidth}px`;
+    //   span.style.height = `${layout.channelHeight}px`;
+    //   const colors = ['red', 'green', 'blue', 'yellow'].sort(() => Math.random() - 0.5);
+    //   for (let i = 0; i < 4; i++) {
+    //     span.style.setProperty(`--light${i + 1}`, colors[i]);
+    //   }
 
-      this.root.appendChild(span);
-      this.lights.push(span);
-    }
+    //   this.root.appendChild(span);
+    //   this.lights.push(span);
+    // }
 
     this.data = new TimelineData(this.emitter);
 
@@ -431,13 +443,25 @@ class Timeline {
     return (seconds - this.position) * this.pxPerSecond + this.config.layout.sidebarWidth;
   };
 
-  private absolutePxToChannel = (y: number): number | null => {
+  private absolutePxToChannel = (y: number): TrackID | null => {
     const { layout } = this.config;
     const channelsStartAt = layout.waveformHeight + layout.timelineHeight;
 
     if (y <= channelsStartAt) return null;
 
-    return Math.floor((y - channelsStartAt) / layout.channelHeight);
+    y -= channelsStartAt;
+
+    const rows = flattenTracks(this.data.data.tracks);
+
+    for (let row of rows) {
+      if (y >= row.startY && y < row.endY) {
+        return row.trackID ?? null;
+      }
+    }
+
+    return null;
+
+    // return Math.floor((y - channelsStartAt) / layout.channelHeight);
   };
 
   private channelToAbsolutePx = (channel: number) => {
@@ -474,6 +498,8 @@ class Timeline {
     ctx.reset();
     ctx.scale(this.dpiScale, this.dpiScale);
     ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+
+    const trackRows = flattenTracks(this.data.data.tracks);
 
     //// Sidebar
 
@@ -618,15 +644,23 @@ class Timeline {
     // Draw alternating background colors for channels
     for (let i = 0; i < 100; i++) {
       const alt = i % 2 === 0;
-      const disabled = i >= channelCount;
+      const disabled = i >= trackRows.length;
 
-      ctx.fillStyle = disabled
-        ? alt
-          ? theme.channelDisabledAlternate
-          : theme.channelDisabled
-        : alt
-          ? theme.channelAlternate
-          : theme.channel;
+      const isGroup = trackRows[i] && !('track' in trackRows[i]);
+
+      ctx.fillStyle =
+        disabled || isGroup
+          ? alt
+            ? theme.channelDisabledAlternate
+            : theme.channelDisabled
+          : isGroup
+            ? 'oklch(29.3% 0.066 243.157)'
+            : // ? alt
+              //   ? 'red'
+              //   : 'blue'
+              alt
+              ? theme.channelAlternate
+              : theme.channel;
 
       // ctx.fillStyle = i % 2 === 0 ? theme.channel : theme.channelAlternate;
 
@@ -689,22 +723,29 @@ class Timeline {
       const cutoffTimeLeft = this.absolutePxToTime(channelsX - layout.keyframeSize / 2);
       const cutoffTimeRight = this.absolutePxToTime(this.canvasWidth + layout.keyframeSize / 2);
 
-      this.data.channels.forEach((channel, i) => {
-        const y = layout.channelHeight * i + layout.channelHeight * 0.5;
+      trackRows.forEach((row, i) => {
+        if (!row.trackID) return; // Groups
+
+        const y = row.startY + layout.channelHeight * 0.5;
+        // const y = layout.channelHeight * i + layout.channelHeight * 0.5;
         ctx.strokeStyle = theme.keyframeOutline;
 
         // We have to start from 0 if we're grabbing
-        const startIndex = this.grabbing ? 0 : this.data.binarySearch(i, cutoffTimeLeft, 'right');
+        const startIndex = this.grabbing
+          ? 0
+          : this.data.binarySearch(row.trackID, cutoffTimeLeft, 'right');
 
         if (startIndex === undefined) return;
 
-        const boxSelectingChannel =
-          this.boxSelection &&
-          i >= this.boxSelection.startChannel &&
-          i <= this.boxSelection.endChannel;
+        // const boxSelectingChannel =
+        //   this.boxSelection && y >= this.boxSelection.start.y && y <= this.boxSelection.end.y;
 
-        for (let i = startIndex; i < channel.keyframes.length; i++) {
-          const kf = channel.keyframes[i];
+        const boxSelectingChannel = this.trackIsBoxSelected(row);
+
+        const track = this.data.trackLookup[row.trackID];
+
+        for (let i = startIndex; i < track.keyframes.length; i++) {
+          const kf = track.keyframes[i];
           let t = kf.ts + (kf.selected ? this.grabOffset : 0);
           if (kf.selected && this.scaling) t = this.renderScaled(t);
 
@@ -730,8 +771,8 @@ class Timeline {
           const selected =
             kf.selected ||
             (boxSelectingChannel &&
-              kf.ts >= this.boxSelection!.startTime &&
-              kf.ts <= this.boxSelection!.endTime);
+              kf.ts >= this.absolutePxToTime(this.boxSelection!.start.x) &&
+              kf.ts <= this.absolutePxToTime(this.boxSelection!.end.x));
 
           const source =
             kf.value === 0
@@ -842,37 +883,38 @@ class Timeline {
     // ctx.strokeRect(4, 2, 90, 22);
 
     // Turn the lights on or off
-    this.lights.forEach((light, i) => {
-      const time = this.audio.currentTime || 0;
-      const keyframeIndex = this.data.binarySearch(i, time, 'left');
-      let on = false;
-      if (keyframeIndex !== undefined) {
-        on = (this.data.channels[i].keyframes[keyframeIndex].value || 0) > 0;
-      }
-      on = false; // Temporary: disable svg lights
-      this.lights[i].style.visibility = on ? 'visible' : 'hidden';
-    });
+    // this.lights.forEach((light, i) => {
+    //   const time = this.audio.currentTime || 0;
+    //   const keyframeIndex = this.data.binarySearch(i, time, 'left');
+    //   let on = false;
+    //   if (keyframeIndex !== undefined) {
+    //     on = (this.data.channels[i].keyframes[keyframeIndex].value || 0) > 0;
+    //   }
+    //   on = false; // Temporary: disable svg lights
+    //   this.lights[i].style.visibility = on ? 'visible' : 'hidden';
+    // });
 
-    this.data.channels.forEach((track, i) => {
+    // Sidebar track markets
+    trackRows.forEach((row, i) => {
       const xPadding = 8;
       const yPadding = 6;
       const fontSize = layout.channelHeight - yPadding * 2;
 
-      const x = 8;
+      const x = 8 + row.depth * 10;
       const y = channelsY + (i + 1) * layout.channelHeight - yPadding;
 
       const time = this.audio.currentTime || 0;
-      const keyframeIndex = this.data.binarySearch(i, time, 'left');
+      const keyframeIndex = row.trackID ? this.data.binarySearch(row.trackID, time, 'left') : undefined;
       let on = false;
       if (keyframeIndex !== undefined) {
-        on = (this.data.channels[i].keyframes[keyframeIndex].value || 0) > 0;
+        on = (this.data.trackLookup[row.trackID ?? '']?.keyframes[keyframeIndex].value || 0) > 0;
       }
 
       const color = on ? theme.keyframeOn : 'black';
 
       ctx.font = `${fontSize}px sans-serif`;
       ctx.fillStyle = color;
-      ctx.fillText(`Track ${i}`, x, y, layout.sidebarWidth - xPadding * 2);
+      ctx.fillText(row.name ?? `Track ${i}`, x, y, layout.sidebarWidth - xPadding * 2);
     });
 
     // const lights = document.createElement('canvas');
@@ -1052,18 +1094,20 @@ DPI scale: ${this.dpiScale}`;
         // Select
         const channel = this.absolutePxToChannel(y);
 
-        if (channel !== null) {
+        let k: number | undefined;
+
+        if (channel) {
           // Select single keyframe
           const tolerance = this.config.layout.keyframeSize / 2 / this.pxPerSecond;
-          const k = this.data.selectSingle(channel, time, tolerance, e.shiftKey);
+          k = this.data.selectSingle(channel, time, tolerance, e.shiftKey);
+        }
 
-          // If no single keyframe was clicked, start a box select
-          if (k === undefined) {
-            this.updateBoxSelection({ x, y });
+        // If no single keyframe was clicked, start a box select
+        if (k === undefined) {
+          this.updateBoxSelection({ x, y });
 
-            if (this.boxSelection) {
-              this.boxSelection.keepExisting = e.shiftKey;
-            }
+          if (this.boxSelection) {
+            this.boxSelection.keepExisting = e.shiftKey;
           }
         }
       }
@@ -1077,7 +1121,7 @@ DPI scale: ${this.dpiScale}`;
       // Insert new frame
       else {
         const channel = this.absolutePxToChannel(y);
-        if (channel !== null && channel >= 0 && channel < this.channelCount) {
+        if (channel) {
           const time = this.absolutePxToTime(x);
           const value = e.altKey ? 0 : 1;
 
@@ -1096,19 +1140,7 @@ DPI scale: ${this.dpiScale}`;
   };
 
   private updateBoxSelection = (p: Point) => {
-    if (!this.boxSelection) {
-      this.boxSelection = {
-        start: p,
-        end: p,
-        startChannel: 0,
-        endChannel: 0,
-        startTime: 0,
-        endTime: 0,
-        keepExisting: false,
-      };
-    }
-
-    this.boxSelection.end = {
+    const clamped = {
       x: clamp(p.x, this.config.layout.sidebarWidth, this.canvasWidth),
       y: clamp(
         p.y,
@@ -1117,26 +1149,40 @@ DPI scale: ${this.dpiScale}`;
       ),
     };
 
-    const start = rangeStart(this.boxSelection.start, this.boxSelection.end);
-    const end = rangeEnd(this.boxSelection.start, this.boxSelection.end);
+    if (!this.boxSelection) {
+      this.boxSelection = {
+        origin: clamped,
+        cursor: clamped,
+        start: clamped,
+        end: clamped,
+        keepExisting: false,
+      };
 
-    this.boxSelection.startTime = this.absolutePxToTime(start.x);
-    this.boxSelection.endTime = this.absolutePxToTime(end.x);
-
-    let startChannel = Number.POSITIVE_INFINITY;
-    let endChannel = Number.NEGATIVE_INFINITY;
-
-    for (let i = 0; i < this.channelCount; i++) {
-      const midpoint = this.channelToAbsolutePx(i) + this.config.layout.channelHeight / 2;
-
-      if (midpoint >= start.y && midpoint <= end.y) {
-        startChannel = Math.min(startChannel, i);
-        endChannel = Math.max(endChannel, i);
-      }
+      return;
     }
 
-    this.boxSelection.startChannel = clamp(startChannel, 0, this.channelCount); //this.absolutePxToChannel(start.y) || 0;
-    this.boxSelection.endChannel = clamp(endChannel, 0, this.channelCount);
+    this.boxSelection.cursor = clamped;
+
+    this.boxSelection.start = rangeStart(this.boxSelection.origin, this.boxSelection.cursor);
+    this.boxSelection.end = rangeEnd(this.boxSelection.origin, this.boxSelection.cursor);
+
+    // this.boxSelection.startTime = this.absolutePxToTime(start.x);
+    // this.boxSelection.endTime = this.absolutePxToTime(end.x);
+
+    // let startChannel = Number.POSITIVE_INFINITY;
+    // let endChannel = Number.NEGATIVE_INFINITY;
+
+    // for (let i = 0; i < this.channelCount; i++) {
+    //   const midpoint = this.channelToAbsolutePx(i) + this.config.layout.channelHeight / 2;
+
+    //   if (midpoint >= start.y && midpoint <= end.y) {
+    //     startChannel = Math.min(startChannel, i);
+    //     endChannel = Math.max(endChannel, i);
+    //   }
+    // }
+
+    // this.boxSelection.startChannel = clamp(startChannel, 0, this.channelCount); //this.absolutePxToChannel(start.y) || 0;
+    // this.boxSelection.endChannel = clamp(endChannel, 0, this.channelCount);
   };
 
   private handleMouseMove = (e: MouseEvent) => {
@@ -1184,7 +1230,16 @@ DPI scale: ${this.dpiScale}`;
         // Don't count it as a box select unless the box is bigger than 2x2 px
         if (size.x > 2 && size.y > 2) {
           console.log('Box selection', this.boxSelection);
-          this.data.boxSelect(this.boxSelection);
+          this.data.boxSelect({
+            startTime: this.absolutePxToTime(this.boxSelection.start.x),
+            endTime: this.absolutePxToTime(this.boxSelection.end.x),
+            keepExisting: this.boxSelection.keepExisting,
+            tracks: flattenTracks(this.data.data.tracks)
+              .map((t) => {
+                return t.trackID && this.trackIsBoxSelected(t) ? this.data.trackLookup[t.trackID] : undefined;
+              })
+              .filter((t) => !!t),
+          });
         }
 
         this.boxSelection = undefined;
@@ -1385,6 +1440,53 @@ DPI scale: ${this.dpiScale}`;
     return true;
     return this.data.channels.find((t) => t.keyframes.length > 0) !== undefined;
   };
+
+  trackIsBoxSelected = (track: TrackRow) => {
+    if (!this.boxSelection) return false;
+
+    const offset = this.config.layout.timelineHeight + this.config.layout.waveformHeight;
+
+    const start = this.boxSelection.start.y - offset;
+    const end = this.boxSelection.end.y - offset;
+
+    const midpoint = (track.startY + track.endY) / 2;
+
+    return midpoint >= start && midpoint <= end;
+  };
 }
 
 export default Timeline;
+
+type TrackRow = {
+  name: string;
+  depth: number;
+  startY: number;
+  endY: number;
+  trackID?: TrackID;
+};
+
+function flattenTracks(nodes: LayoutNode[], depth = 0, y = 0): TrackRow[] {
+  const result: TrackRow[] = [];
+
+  // Need to be real constants
+  const groupHeight = 30;
+  const trackHeight = 30;
+
+  nodes.forEach((node, i) => {
+    if (node.type === 'group') {
+      // is group
+      result.push({ name: node.name, depth, startY: y, endY: (y += groupHeight) }); // Group entry
+      result.push(...flattenTracks(node.children, depth + 1, y)); // Children
+    } else {
+      result.push({
+        name: node.name || `Track ${i}`,
+        depth,
+        trackID: node.id,
+        startY: y,
+        endY: (y += trackHeight),
+      });
+    }
+  });
+
+  return result;
+}

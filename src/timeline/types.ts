@@ -17,15 +17,37 @@ export type ShowKeyframeJSON = {
   state: number;
 };
 
-export type Track = {
+export type TrackGroup = {
   name: string;
-  keyframes: Keyframe[];
+  tracks: (Track | TrackGroup)[];
 };
 
 export type Keyframe = {
   ts: number;
   value: number;
   selected?: boolean;
+};
+
+export type LayoutNode = Group | Track;
+
+export type LayoutNodeID = string;
+
+export type TrackID = LayoutNodeID;
+
+export type Group = {
+  type: 'group';
+  id: LayoutNodeID;
+
+  name: string;
+  children: LayoutNode[];
+}
+
+export type Track = {
+  type: 'track',
+  id: TrackID;
+  
+  name?: string;
+  keyframes: Keyframe[];
 };
 
 export interface Project {
@@ -38,5 +60,5 @@ export interface Project {
  * ProjectData is the stuff that gets saved as json
  */
 export interface ProjectData {
-  tracks: Track[];
+  tracks: LayoutNode[];
 }
