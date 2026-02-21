@@ -40,12 +40,12 @@ export type Group = {
 
   name: string;
   children: LayoutNode[];
-}
+};
 
 export type Track = {
-  type: 'track',
+  type: 'track';
   id: TrackID;
-  
+
   name?: string;
   keyframes: Keyframe[];
 };
@@ -60,5 +60,6 @@ export interface Project {
  * ProjectData is the stuff that gets saved as json
  */
 export interface ProjectData {
+  version: '2';
   tracks: LayoutNode[];
 }

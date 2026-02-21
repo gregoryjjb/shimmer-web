@@ -1,21 +1,5 @@
 import JSZip from 'jszip';
-import { Keyframe, Project, ProjectData, Track } from './types';
-
-export const toLegacyFormat = (tracks: Track[]) => {
-  return {
-    projectData: {
-      name: 'Old format name',
-      id: 'old_format_id',
-    },
-    tracks: tracks.map((track, i) => ({
-      id: i,
-      keyframes: track.keyframes.map((k) => ({
-        time: k.ts,
-        state: k.value,
-      })),
-    })),
-  };
-};
+import { Group, Keyframe, LayoutNode, Project, ProjectData, Track } from './types';
 
 export const downloadFile = (name: string, contents: string | Blob) => {
   const file = new File([contents], name, { type: 'text/json' });
@@ -45,67 +29,174 @@ const coalesce = (...v: any[]): any => {
   }
 };
 
+const parseKeyframe = (raw: any, path: string): Keyframe => {
+  if (typeof raw !== 'object' || raw === null) {
+    throw new Error(`${path} is not an object`);
+  }
+
+  const ts = raw.ts;
+  if (typeof ts !== 'number') {
+    throw new Error(`${path}.ts must be a number`);
+  }
+
+  const value = raw.value;
+  if (typeof value !== 'number') {
+    throw new Error(`${path}.value must be a number`);
+  }
+
+  const keyframe: Keyframe = { ts, value };
+  if (typeof raw.selected === 'boolean' && raw.selected) {
+    keyframe.selected = true;
+  }
+  return keyframe;
+};
+
+const parseTrack = (raw: any, path: string): Track => {
+  if (typeof raw !== 'object' || raw === null) {
+    throw new Error(`${path} is not an object`);
+  }
+
+  const id = raw.id;
+  if (typeof id !== 'string' || id.length === 0) {
+    throw new Error(`${path}.id must be a non-empty string`);
+  }
+
+  if (!Array.isArray(raw.keyframes)) {
+    throw new Error(`${path}.keyframes must be an array`);
+  }
+
+  const keyframes = raw.keyframes.map((kf: any, i: number) =>
+    parseKeyframe(kf, `${path}.keyframes[${i}]`),
+  );
+
+  const track: Track = { type: 'track', id, keyframes };
+  if (typeof raw.name === 'string') {
+    track.name = raw.name;
+  }
+  return track;
+};
+
+const parseGroup = (raw: any, path: string): Group => {
+  if (typeof raw !== 'object' || raw === null) {
+    throw new Error(`${path} is not an object`);
+  }
+
+  const id = raw.id;
+  if (typeof id !== 'string' || id.length === 0) {
+    throw new Error(`${path}.id must be a non-empty string`);
+  }
+
+  const name = raw.name;
+  if (typeof name !== 'string') {
+    throw new Error(`${path}.name must be a string`);
+  }
+
+  if (!Array.isArray(raw.children)) {
+    throw new Error(`${path}.children must be an array`);
+  }
+
+  const children = raw.children.map((child: any, i: number) =>
+    parseLayoutNode(child, `${path}.children[${i}]`),
+  );
+
+  return { type: 'group', id, name, children };
+};
+
+const parseLayoutNode = (raw: any, path: string): LayoutNode => {
+  if (typeof raw !== 'object' || raw === null) {
+    throw new Error(`${path} is not an object`);
+  }
+
+  if (raw.type === 'track') {
+    return parseTrack(raw, path);
+  } else if (raw.type === 'group') {
+    return parseGroup(raw, path);
+  }
+
+  throw new Error(`${path}.type must be 'track' or 'group', got '${raw.type}'`);
+};
+
 /**
- * Parses any new or old data object and returns the cleaned result
+ * Parses any version of a project data object and returns
+ * a valid ProjectData. Unversioned (old format) data is silently
+ * upgraded to the current format.
  */
 export const parseProjectData = (data: any): ProjectData => {
   if (typeof data === 'string') {
     data = JSON.parse(data);
   }
-  
-  const tracksIn = data.tracks;
 
-  if (!tracksIn || !Array.isArray(tracksIn)) {
-    throw 'No tracks data present';
+  if (typeof data !== 'object' || data === null) {
+    throw new Error('Project data must be an object');
   }
 
-  const tracks: Track[] = (tracksIn as any[]).map((trackIn, i) => {
-    const name = stringify(trackIn.name) || stringify(trackIn.id) || '';
-
-    const keyframesIn = trackIn.keyframes;
-    if (!keyframesIn || !Array.isArray(keyframesIn)) {
-      throw `tracks[${i}] missing keyframes`;
+  // Old format: no version field — silently upgrade
+  if (data.version === undefined) {
+    if (!Array.isArray(data.tracks)) {
+      throw new Error('Project data missing tracks array');
     }
 
-    const keyframes: Keyframe[] = (keyframesIn as any[]).map((keyframeIn, j) => {
-      const timestamp = coalesce(keyframeIn.ts, keyframeIn.timestamp, keyframeIn.time);
-      if (timestamp === undefined) {
-        throw `tracks[${i}].keyframes[${j}] missing timestamp field, checked: ts, timestamp, time`;
-      }
-      if (typeof timestamp !== 'number') {
-        throw `tracks[${i}].keyframes[${j}] timestamp is not a number`;
+    const tracks: Track[] = data.tracks.map((trackIn: any, i: number) => {
+      if (typeof trackIn !== 'object' || trackIn === null) {
+        throw new Error(`tracks[${i}] is not an object`);
       }
 
-      const valueIn = coalesce(keyframeIn.value, keyframeIn.state);
-      if (valueIn === undefined) {
-        throw `tracks[${i}].keyframes[${j}] missing value or state field`;
+      if (!Array.isArray(trackIn.keyframes)) {
+        throw new Error(`tracks[${i}].keyframes must be an array`);
       }
-      if (!(typeof valueIn === 'number' || typeof valueIn === 'boolean')) {
-        throw `tracks[${i}].keyframes[${j}] value is not a number or boolean`;
-      }
-      const value = Number(valueIn);
 
-      const selected = typeof keyframeIn.selected === 'boolean' ? keyframeIn.selected : false;
+      const keyframes = trackIn.keyframes.map((kf: any, j: number) => {
+        const ts = coalesce(kf.ts, kf.timestamp, kf.time);
+        if (typeof ts !== 'number') {
+          throw new Error(`tracks[${i}].keyframes[${j}] missing or invalid timestamp`);
+        }
 
-      const keyframe: Keyframe = {
-        ts: timestamp,
-        value,
+        const valueIn = coalesce(kf.value, kf.state);
+        if (valueIn === undefined) {
+          throw new Error(`tracks[${i}].keyframes[${j}] missing value or state field`);
+        }
+        const value = Number(valueIn);
+        if (isNaN(value)) {
+          throw new Error(`tracks[${i}].keyframes[${j}] value is not a valid number`);
+        }
+
+        const keyframe: Keyframe = { ts, value };
+        if (typeof kf.selected === 'boolean' && kf.selected) {
+          keyframe.selected = true;
+        }
+        return keyframe;
+      });
+
+      const name = typeof trackIn.name === 'string' ? trackIn.name : undefined;
+
+      const track: Track = {
+        type: 'track',
+        id: `track-${i}`,
+        keyframes,
       };
-      if (selected) {
-        keyframe.selected = true;
+      if (name) {
+        track.name = name;
       }
-      return keyframe;
+      return track;
     });
 
-    return {
-      name,
-      keyframes,
-    };
-  });
+    return { version: '2', tracks };
+  }
 
-  return {
-    tracks,
-  };
+  // Current format: strict parsing
+  if (data.version !== '2') {
+    throw new Error(`Unknown project data version: '${data.version}'`);
+  }
+
+  if (!Array.isArray(data.tracks)) {
+    throw new Error('Project data missing tracks array');
+  }
+
+  const tracks: LayoutNode[] = data.tracks.map((node: any, i: number) =>
+    parseLayoutNode(node, `tracks[${i}]`),
+  );
+
+  return { version: '2', tracks };
 };
 
 export const projectFromFile = async (file: File): Promise<Project> => {

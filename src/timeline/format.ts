@@ -1,5 +1,3 @@
-
-
 type Keyframe = {
   ts: number;
   value: number;
@@ -10,11 +8,11 @@ type TrackID = string;
 
 type Track = {
   keyframes: Keyframe[];
-}
+};
 
 type Project = {
   tracks: Record<TrackID, Track>;
-}
+};
 
 export function unmarshalProject(data: any) {
   if (typeof data === 'string') {

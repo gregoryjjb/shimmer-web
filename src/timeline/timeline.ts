@@ -1,6 +1,6 @@
 import TimelineAudio from './timeline-audio';
-import TimelineData, { BoxSelection } from './timeline-data';
-import { LayoutNode, ProjectData, Track, TrackGroup, TrackID } from './types';
+import TimelineData from './timeline-data';
+import { LayoutNode, ProjectData, TrackID } from './types';
 
 import colors from './colors';
 import { ArgOf, Command, ComplexCommand, apple, keybinds } from './commands';
@@ -8,8 +8,7 @@ import { TimelineEmitter } from './events';
 import * as mouse from './mouse';
 import { abs, clamp, difference, pointsToRect, rangeEnd, rangeStart, stringifyTime } from './utils';
 
-import lightsSVG from '../assets/lights-colored.svg?raw';
-import { downloadFile, toLegacyFormat } from './export';
+import { downloadFile } from './export';
 import { OpenedProject } from './persist';
 import { Project } from './types';
 
@@ -644,9 +643,11 @@ class Timeline {
     // Draw alternating background colors for channels
     for (let i = 0; i < 100; i++) {
       const alt = i % 2 === 0;
-      const disabled = i >= trackRows.length;
 
-      const isGroup = trackRows[i] && !('track' in trackRows[i]);
+      const trackRow = trackRows[i];
+
+      const disabled = !trackRow;
+      const isGroup = trackRow?.type === 'group';
 
       ctx.fillStyle =
         disabled || isGroup
@@ -655,14 +656,9 @@ class Timeline {
             : theme.channelDisabled
           : isGroup
             ? 'oklch(29.3% 0.066 243.157)'
-            : // ? alt
-              //   ? 'red'
-              //   : 'blue'
-              alt
+            : alt
               ? theme.channelAlternate
               : theme.channel;
-
-      // ctx.fillStyle = i % 2 === 0 ? theme.channel : theme.channelAlternate;
 
       const y = layout.channelHeight * i;
 
@@ -904,7 +900,9 @@ class Timeline {
       const y = channelsY + (i + 1) * layout.channelHeight - yPadding;
 
       const time = this.audio.currentTime || 0;
-      const keyframeIndex = row.trackID ? this.data.binarySearch(row.trackID, time, 'left') : undefined;
+      const keyframeIndex = row.trackID
+        ? this.data.binarySearch(row.trackID, time, 'left')
+        : undefined;
       let on = false;
       if (keyframeIndex !== undefined) {
         on = (this.data.trackLookup[row.trackID ?? '']?.keyframes[keyframeIndex].value || 0) > 0;
@@ -1236,7 +1234,9 @@ DPI scale: ${this.dpiScale}`;
             keepExisting: this.boxSelection.keepExisting,
             tracks: flattenTracks(this.data.data.tracks)
               .map((t) => {
-                return t.trackID && this.trackIsBoxSelected(t) ? this.data.trackLookup[t.trackID] : undefined;
+                return t.trackID && this.trackIsBoxSelected(t)
+                  ? this.data.trackLookup[t.trackID]
+                  : undefined;
               })
               .filter((t) => !!t),
           });
@@ -1349,7 +1349,7 @@ DPI scale: ${this.dpiScale}`;
   download = () => {
     if (!this.data) return;
 
-    const marshaled = JSON.stringify(toLegacyFormat(this.data.channels));
+    const marshaled = JSON.stringify(this.data.data);
     downloadFile('My show.json', marshaled);
   };
 
@@ -1458,6 +1458,7 @@ DPI scale: ${this.dpiScale}`;
 export default Timeline;
 
 type TrackRow = {
+  type: 'track' | 'group';
   name: string;
   depth: number;
   startY: number;
@@ -1475,10 +1476,11 @@ function flattenTracks(nodes: LayoutNode[], depth = 0, y = 0): TrackRow[] {
   nodes.forEach((node, i) => {
     if (node.type === 'group') {
       // is group
-      result.push({ name: node.name, depth, startY: y, endY: (y += groupHeight) }); // Group entry
+      result.push({ type: 'group', name: node.name, depth, startY: y, endY: (y += groupHeight) }); // Group entry
       result.push(...flattenTracks(node.children, depth + 1, y)); // Children
     } else {
       result.push({
+        type: 'track',
         name: node.name || `Track ${i}`,
         depth,
         trackID: node.id,

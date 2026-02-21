@@ -1,11 +1,10 @@
-import JSZip from 'jszip';
+import clsx from 'clsx';
 import { Component, createSignal } from 'solid-js';
 import FileInput from './components/FileInput';
 import GradientButton from './components/GradientButton';
+import { fileToString } from './files';
 import { parseProjectData, projectFromFile } from './timeline/export';
 import { Project } from './timeline/types';
-import { fileToString } from './files';
-import clsx from 'clsx';
 
 const OpenProjectForm: Component<{
   onSubmit?: (result: Project) => void;

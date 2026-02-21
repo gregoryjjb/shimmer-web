@@ -142,7 +142,8 @@ function App() {
 
             ctx.loadProject({
               name: project.name,
-              data: { tracks: blankData },
+              // TODO: generate blank projects somewhere else
+              data: { version: '2', tracks: blankData },
               audio: project.file,
             });
           }}

@@ -175,6 +175,7 @@ class TimelineData {
     this.emitter = emitter;
 
     this.data = {
+      version: '2',
       tracks: [],
     };
 
@@ -194,13 +195,13 @@ class TimelineData {
       this._channels = [];
 
       const queue: LayoutNode[] = [];
-  
+
       queue.push(...this.data.tracks);
-  
+
       while (queue.length > 0) {
         const next = queue.pop();
         if (!next) break;
-  
+
         if (next.type === 'group') {
           // Push in reverse order so they are iterated over immediately
           queue.push(...[...next.children].reverse());
@@ -295,7 +296,7 @@ class TimelineData {
 
   private emit = (action: string) => {
     console.log('data emit:', action);
-    console.log(this.data)
+    console.log(this.data);
     this.emitter.emit('edit', action);
     this.emitSelected();
   };
@@ -344,11 +345,7 @@ class TimelineData {
     this.clearIndexes();
   };
 
-  binarySearch = (
-    trackID: TrackID,
-    time: number,
-    side?: BinarySearchSide,
-  ): number | undefined => {
+  binarySearch = (trackID: TrackID, time: number, side?: BinarySearchSide): number | undefined => {
     const array = this.trackLookup[trackID]?.keyframes;
     if (!array) return undefined;
 
