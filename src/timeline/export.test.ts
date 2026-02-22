@@ -23,8 +23,7 @@ describe('parseProjectDataVersioned', () => {
         tracks: [
           {
             type: 'track',
-            id: 'track-0',
-            name: 'Track A',
+            id: 'Track A',
             keyframes: [
               { ts: 1.0, value: 1 },
               { ts: 2.0, value: 0 },
@@ -47,17 +46,17 @@ describe('parseProjectDataVersioned', () => {
       expect(result.version).toBe('2');
       expect(result.tracks[0]).toMatchObject({
         type: 'track',
-        id: 'track-0',
+        id: 'T',
         keyframes: [{ ts: 5.0, value: 1 }],
       });
     });
 
-    test('generates sequential IDs from track index', () => {
+    test('generates sequential IDs from track index when no name', () => {
       const result = parseProjectData({
         tracks: [{ keyframes: [] }, { keyframes: [] }, { keyframes: [] }],
       });
 
-      expect(result.tracks.map((t) => t.id)).toEqual(['track-0', 'track-1', 'track-2']);
+      expect(result.tracks.map((t) => t.id)).toEqual(['Track 0', 'Track 1', 'Track 2']);
     });
 
     test('preserves selected flag on keyframes', () => {
@@ -111,7 +110,6 @@ describe('parseProjectDataVersioned', () => {
           {
             type: 'track',
             id: 'abc',
-            name: 'My Track',
             keyframes: [{ ts: 1.5, value: 0 }],
           },
         ],
@@ -128,7 +126,6 @@ describe('parseProjectDataVersioned', () => {
           {
             type: 'group',
             id: 'g1',
-            name: 'Group 1',
             children: [
               {
                 type: 'track',
@@ -161,12 +158,10 @@ describe('parseProjectDataVersioned', () => {
           {
             type: 'group',
             id: 'outer',
-            name: 'Outer',
             children: [
               {
                 type: 'group',
                 id: 'inner',
-                name: 'Inner',
                 children: [
                   {
                     type: 'track',
@@ -221,7 +216,7 @@ describe('parseProjectDataVersioned', () => {
       expect(() =>
         parseProjectData({
           version: '2',
-          tracks: [{ type: 'group', id: 'g', name: 'G' }],
+          tracks: [{ type: 'group', id: 'g' }],
         }),
       ).toThrow('children must be an array');
     });
@@ -247,6 +242,49 @@ describe('parseProjectDataVersioned', () => {
 
     test('throws on null input', () => {
       expect(() => parseProjectData(null)).toThrow('Project data must be an object');
+    });
+  });
+
+  // --- ID uniqueness validation ---
+
+  describe('duplicate ID validation', () => {
+    test('throws on duplicate track IDs in v2', () => {
+      expect(() =>
+        parseProjectData({
+          version: '2',
+          tracks: [
+            { type: 'track', id: 'dup', keyframes: [] },
+            { type: 'track', id: 'dup', keyframes: [] },
+          ],
+        }),
+      ).toThrow("Duplicate node ID: 'dup'");
+    });
+
+    test('throws on duplicate IDs across groups and tracks in v2', () => {
+      expect(() =>
+        parseProjectData({
+          version: '2',
+          tracks: [
+            {
+              type: 'group',
+              id: 'shared',
+              children: [{ type: 'track', id: 't1', keyframes: [] }],
+            },
+            { type: 'track', id: 'shared', keyframes: [] },
+          ],
+        }),
+      ).toThrow("Duplicate node ID: 'shared'");
+    });
+
+    test('throws on duplicate IDs in old format upgrade', () => {
+      expect(() =>
+        parseProjectData({
+          tracks: [
+            { name: 'Same Name', keyframes: [] },
+            { name: 'Same Name', keyframes: [] },
+          ],
+        }),
+      ).toThrow("Duplicate node ID: 'Same Name'");
     });
   });
 });

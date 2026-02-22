@@ -454,7 +454,7 @@ class Timeline {
 
     for (let row of rows) {
       if (y >= row.startY && y < row.endY) {
-        return row.trackID ?? null;
+        return row.type === 'track' ? row.id : null;
       }
     }
 
@@ -720,7 +720,7 @@ class Timeline {
       const cutoffTimeRight = this.absolutePxToTime(this.canvasWidth + layout.keyframeSize / 2);
 
       trackRows.forEach((row, i) => {
-        if (!row.trackID) return; // Groups
+        if (row.type === 'group') return; // Groups
 
         const y = row.startY + layout.channelHeight * 0.5;
         // const y = layout.channelHeight * i + layout.channelHeight * 0.5;
@@ -729,7 +729,7 @@ class Timeline {
         // We have to start from 0 if we're grabbing
         const startIndex = this.grabbing
           ? 0
-          : this.data.binarySearch(row.trackID, cutoffTimeLeft, 'right');
+          : this.data.binarySearch(row.id, cutoffTimeLeft, 'right');
 
         if (startIndex === undefined) return;
 
@@ -738,7 +738,7 @@ class Timeline {
 
         const boxSelectingChannel = this.trackIsBoxSelected(row);
 
-        const track = this.data.trackLookup[row.trackID];
+        const track = this.data.trackLookup[row.id];
 
         for (let i = startIndex; i < track.keyframes.length; i++) {
           const kf = track.keyframes[i];
@@ -900,19 +900,18 @@ class Timeline {
       const y = channelsY + (i + 1) * layout.channelHeight - yPadding;
 
       const time = this.audio.currentTime || 0;
-      const keyframeIndex = row.trackID
-        ? this.data.binarySearch(row.trackID, time, 'left')
-        : undefined;
+      const keyframeIndex =
+        row.type === 'track' ? this.data.binarySearch(row.id, time, 'left') : undefined;
       let on = false;
       if (keyframeIndex !== undefined) {
-        on = (this.data.trackLookup[row.trackID ?? '']?.keyframes[keyframeIndex].value || 0) > 0;
+        on = (this.data.trackLookup[row.id]?.keyframes[keyframeIndex].value || 0) > 0;
       }
 
       const color = on ? theme.keyframeOn : 'black';
 
       ctx.font = `${fontSize}px sans-serif`;
       ctx.fillStyle = color;
-      ctx.fillText(row.name ?? `Track ${i}`, x, y, layout.sidebarWidth - xPadding * 2);
+      ctx.fillText(row.id, x, y, layout.sidebarWidth - xPadding * 2);
     });
 
     // const lights = document.createElement('canvas');
@@ -1234,8 +1233,8 @@ DPI scale: ${this.dpiScale}`;
             keepExisting: this.boxSelection.keepExisting,
             tracks: flattenTracks(this.data.data.tracks)
               .map((t) => {
-                return t.trackID && this.trackIsBoxSelected(t)
-                  ? this.data.trackLookup[t.trackID]
+                return t.type === 'track' && this.trackIsBoxSelected(t)
+                  ? this.data.trackLookup[t.id]
                   : undefined;
               })
               .filter((t) => !!t),
@@ -1459,11 +1458,10 @@ export default Timeline;
 
 type TrackRow = {
   type: 'track' | 'group';
-  name: string;
+  id: string;
   depth: number;
   startY: number;
   endY: number;
-  trackID?: TrackID;
 };
 
 function flattenTracks(nodes: LayoutNode[], depth = 0, y = 0): TrackRow[] {
@@ -1476,14 +1474,13 @@ function flattenTracks(nodes: LayoutNode[], depth = 0, y = 0): TrackRow[] {
   nodes.forEach((node, i) => {
     if (node.type === 'group') {
       // is group
-      result.push({ type: 'group', name: node.name, depth, startY: y, endY: (y += groupHeight) }); // Group entry
+      result.push({ type: 'group', id: node.id, depth, startY: y, endY: (y += groupHeight) }); // Group entry
       result.push(...flattenTracks(node.children, depth + 1, y)); // Children
     } else {
       result.push({
         type: 'track',
-        name: node.name || `Track ${i}`,
+        id: node.id,
         depth,
-        trackID: node.id,
         startY: y,
         endY: (y += trackHeight),
       });

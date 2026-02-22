@@ -36,17 +36,15 @@ export type TrackID = LayoutNodeID;
 
 export type Group = {
   type: 'group';
-  id: LayoutNodeID;
+  id: string;
 
-  name: string;
   children: LayoutNode[];
 };
 
 export type Track = {
   type: 'track';
-  id: TrackID;
+  id: string;
 
-  name?: string;
   keyframes: Keyframe[];
 };
 

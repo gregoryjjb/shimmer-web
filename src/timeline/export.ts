@@ -60,6 +60,7 @@ const parseTrack = (raw: any, path: string): Track => {
   if (typeof id !== 'string' || id.length === 0) {
     throw new Error(`${path}.id must be a non-empty string`);
   }
+  console.log('Parsed track', id);
 
   if (!Array.isArray(raw.keyframes)) {
     throw new Error(`${path}.keyframes must be an array`);
@@ -69,11 +70,7 @@ const parseTrack = (raw: any, path: string): Track => {
     parseKeyframe(kf, `${path}.keyframes[${i}]`),
   );
 
-  const track: Track = { type: 'track', id, keyframes };
-  if (typeof raw.name === 'string') {
-    track.name = raw.name;
-  }
-  return track;
+  return { type: 'track', id, keyframes };
 };
 
 const parseGroup = (raw: any, path: string): Group => {
@@ -85,11 +82,7 @@ const parseGroup = (raw: any, path: string): Group => {
   if (typeof id !== 'string' || id.length === 0) {
     throw new Error(`${path}.id must be a non-empty string`);
   }
-
-  const name = raw.name;
-  if (typeof name !== 'string') {
-    throw new Error(`${path}.name must be a string`);
-  }
+  console.log('Parsed group', id);
 
   if (!Array.isArray(raw.children)) {
     throw new Error(`${path}.children must be an array`);
@@ -99,7 +92,7 @@ const parseGroup = (raw: any, path: string): Group => {
     parseLayoutNode(child, `${path}.children[${i}]`),
   );
 
-  return { type: 'group', id, name, children };
+  return { type: 'group', id, children };
 };
 
 const parseLayoutNode = (raw: any, path: string): LayoutNode => {
@@ -114,6 +107,29 @@ const parseLayoutNode = (raw: any, path: string): LayoutNode => {
   }
 
   throw new Error(`${path}.type must be 'track' or 'group', got '${raw.type}'`);
+};
+
+const collectIds = (nodes: LayoutNode[]): string[] => {
+  const ids: string[] = [];
+  for (const node of nodes) {
+    ids.push(node.id);
+    if (node.type === 'group') {
+      ids.push(...collectIds(node.children));
+    }
+  }
+  return ids;
+};
+
+const validateUniqueIds = (nodes: LayoutNode[]) => {
+  const ids = collectIds(nodes);
+  const seen = new Set<string>();
+  for (const id of ids) {
+    if (seen.has(id)) {
+      console.log('Failing nodes', nodes);
+      throw new Error(`Duplicate node ID: '${id}'`);
+    }
+    seen.add(id);
+  }
 };
 
 /**
@@ -132,6 +148,8 @@ export const parseProjectData = (data: any): ProjectData => {
 
   // Old format: no version field — silently upgrade
   if (data.version === undefined) {
+    console.log('Upgrading old format data');
+
     if (!Array.isArray(data.tracks)) {
       throw new Error('Project data missing tracks array');
     }
@@ -167,19 +185,14 @@ export const parseProjectData = (data: any): ProjectData => {
         return keyframe;
       });
 
-      const name = typeof trackIn.name === 'string' ? trackIn.name : undefined;
-
-      const track: Track = {
-        type: 'track',
-        id: `track-${i}`,
+      return {
+        type: 'track' as const,
+        id: trackIn.name || trackIn.id || `Track ${i}`,
         keyframes,
       };
-      if (name) {
-        track.name = name;
-      }
-      return track;
     });
 
+    validateUniqueIds(tracks);
     return { version: '2', tracks };
   }
 
@@ -196,6 +209,7 @@ export const parseProjectData = (data: any): ProjectData => {
     parseLayoutNode(node, `tracks[${i}]`),
   );
 
+  validateUniqueIds(tracks);
   return { version: '2', tracks };
 };
 
