@@ -177,9 +177,14 @@ class Timeline {
   // Offset in seconds
   private basePosition: number = 0;
   private panStartPx: number = 0;
+  private panStartPxY: number = 0;
 
   // Additional offset because of the current pan in seconds
   private panOffset: number = 0;
+
+  // Y-axis scroll offset in pixels
+  private scrollY: number = 0;
+  private panOffsetY: number = 0;
 
   private seeking = false;
 
@@ -202,6 +207,29 @@ class Timeline {
   private get position() {
     return Math.max(this.basePosition + this.panOffset, 0);
   }
+
+  /**
+   * Current vertical scroll offset in pixels, clamped to >= 0
+   */
+  private get currentScrollY(): number {
+    return Math.max(this.scrollY + this.panOffsetY, 0);
+  }
+
+  /**
+   * Converts a screen-space Y pixel to content-space Y (accounting for scroll)
+   */
+  private screenToContentY = (screenY: number): number => {
+    const channelsStartAt = this.config.layout.waveformHeight + this.config.layout.timelineHeight;
+    return screenY - channelsStartAt + this.currentScrollY;
+  };
+
+  /**
+   * Converts a content-space Y to screen-space Y pixel
+   */
+  private contentToScreenY = (contentY: number): number => {
+    const channelsStartAt = this.config.layout.waveformHeight + this.config.layout.timelineHeight;
+    return contentY - this.currentScrollY + channelsStartAt;
+  };
 
   // Width in fake web pixels
   private get canvasWidth() {
@@ -443,12 +471,11 @@ class Timeline {
   };
 
   private absolutePxToChannel = (y: number): TrackID | null => {
-    const { layout } = this.config;
-    const channelsStartAt = layout.waveformHeight + layout.timelineHeight;
+    const channelsStartAt = this.config.layout.waveformHeight + this.config.layout.timelineHeight;
 
     if (y <= channelsStartAt) return null;
 
-    y -= channelsStartAt;
+    y = this.screenToContentY(y);
 
     const rows = flattenTracks(this.data.data.tracks);
 
@@ -638,7 +665,14 @@ class Timeline {
     const channelsY = waveformY + layout.waveformHeight;
     const channelsWidth = this.canvasWidth - channelsX;
     const channelsHeight = channelCount * layout.channelHeight;
-    ctx.translate(channelsX, channelsY);
+
+    // Clip so scrolled channels don't draw over the waveform/timeline
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, channelsY, this.canvasWidth, this.canvasHeight - channelsY);
+    ctx.clip();
+
+    ctx.translate(channelsX, this.contentToScreenY(0));
 
     // Draw alternating background colors for channels
     for (let i = 0; i < 100; i++) {
@@ -662,7 +696,9 @@ class Timeline {
 
       const y = layout.channelHeight * i;
 
-      if (y > this.canvasHeight) break;
+      // Skip rows that are completely off-screen
+      if (this.contentToScreenY(y + layout.channelHeight) < channelsY) continue;
+      if (this.contentToScreenY(y) > this.canvasHeight) break;
 
       ctx.fillRect(0, y, channelsWidth, layout.channelHeight);
     }
@@ -798,6 +834,10 @@ class Timeline {
     ctx.resetTransform();
     ctx.scale(this.dpiScale, this.dpiScale);
 
+    // Restore clipping state (end channels clip region)
+    ctx.restore();
+    ctx.scale(this.dpiScale, this.dpiScale);
+
     //// Marker
     const scrubberTime = this.audio.currentTime || 0;
     const scrubberPos = (scrubberTime - this.position) * this.pxPerSecond + layout.sidebarWidth;
@@ -890,14 +930,18 @@ class Timeline {
     //   this.lights[i].style.visibility = on ? 'visible' : 'hidden';
     // });
 
-    // Sidebar track markets
+    // Sidebar track labels
     trackRows.forEach((row, i) => {
       const xPadding = 8;
       const yPadding = 6;
       const fontSize = layout.channelHeight - yPadding * 2;
 
       const x = 8 + row.depth * 10;
-      const y = channelsY + (i + 1) * layout.channelHeight - yPadding;
+      const y = this.contentToScreenY((i + 1) * layout.channelHeight) - yPadding;
+
+      // Skip labels that are off-screen
+      if (y < channelsY) return;
+      if (y - fontSize > this.canvasHeight) return;
 
       const time = this.audio.currentTime || 0;
       const keyframeIndex =
@@ -955,12 +999,14 @@ DPI scale: ${this.dpiScale}`;
   ///////////////////
   // Panning
 
-  private startPan = (x: number) => {
+  private startPan = (x: number, y: number) => {
     this.panStartPx = x;
+    this.panStartPxY = y;
   };
 
-  private updatePan = (x: number) => {
+  private updatePan = (x: number, y: number) => {
     this.panOffset = (this.panStartPx - x) / this.pxPerSecond;
+    this.panOffsetY = this.panStartPxY - y;
     this.requestDraw();
   };
 
@@ -968,6 +1014,9 @@ DPI scale: ${this.dpiScale}`;
     this.basePosition = this.position;
     this.panOffset = 0;
     this.panStartPx = 0;
+    this.scrollY = this.currentScrollY;
+    this.panOffsetY = 0;
+    this.panStartPxY = 0;
   };
 
   ///////////////////
@@ -1130,7 +1179,7 @@ DPI scale: ${this.dpiScale}`;
         }
       }
     } else if (e.button === MIDDLE_MOUSE_BUTTON) {
-      this.startPan(x);
+      this.startPan(x, y);
     }
 
     this.requestDraw();
@@ -1186,7 +1235,7 @@ DPI scale: ${this.dpiScale}`;
     const { x, y } = this.getLocalCoordinates(e);
 
     if (mouse.middleButtonHeld(e)) {
-      this.updatePan(x);
+      this.updatePan(x, y);
     } else if (this.panOffset) {
       this.applyPan();
     }
@@ -1443,10 +1492,8 @@ DPI scale: ${this.dpiScale}`;
   trackIsBoxSelected = (track: TrackRow) => {
     if (!this.boxSelection) return false;
 
-    const offset = this.config.layout.timelineHeight + this.config.layout.waveformHeight;
-
-    const start = this.boxSelection.start.y - offset;
-    const end = this.boxSelection.end.y - offset;
+    const start = this.screenToContentY(this.boxSelection.start.y);
+    const end = this.screenToContentY(this.boxSelection.end.y);
 
     const midpoint = (track.startY + track.endY) / 2;
 
