@@ -55,6 +55,22 @@ export const newTracks = (count: number): LayoutNode[] => {
             },
           ],
         },
+        {
+          type: 'group',
+          id: 'Fence',
+          children: [
+            { type: 'track', id: 'Fence 1', keyframes: [] },
+            { type: 'track', id: 'Fence 2', keyframes: [] },
+            { type: 'track', id: 'Fence 3', keyframes: [] },
+            { type: 'track', id: 'Fence 4', keyframes: [] },
+            { type: 'track', id: 'Fence 5', keyframes: [] },
+            { type: 'track', id: 'Fence 6', keyframes: [] },
+            { type: 'track', id: 'Fence 7', keyframes: [] },
+            { type: 'track', id: 'Fence 8', keyframes: [] },
+            { type: 'track', id: 'Fence 9', keyframes: [] },
+            { type: 'track', id: 'Fence 10', keyframes: [] },
+          ],
+        },
       ],
     },
   ];
