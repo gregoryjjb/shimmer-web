@@ -1471,21 +1471,33 @@ function flattenTracks(nodes: LayoutNode[], depth = 0, y = 0): TrackRow[] {
   const groupHeight = 30;
   const trackHeight = 30;
 
-  nodes.forEach((node, i) => {
-    if (node.type === 'group') {
-      // is group
-      result.push({ type: 'group', id: node.id, depth, startY: y, endY: (y += groupHeight) }); // Group entry
-      result.push(...flattenTracks(node.children, depth + 1, y)); // Children
-    } else {
-      result.push({
-        type: 'track',
-        id: node.id,
-        depth,
-        startY: y,
-        endY: (y += trackHeight),
-      });
-    }
-  });
+  let currentY = y;
+
+  function traverse(currentNodes: LayoutNode[], currentDepth: number) {
+    currentNodes.forEach((node) => {
+      if (node.type === 'group') {
+        // is group
+        result.push({
+          type: 'group',
+          id: node.id,
+          depth: currentDepth,
+          startY: currentY,
+          endY: (currentY += groupHeight),
+        }); // Group entry
+        traverse(node.children, currentDepth + 1); // Children
+      } else {
+        result.push({
+          type: 'track',
+          id: node.id,
+          depth: currentDepth,
+          startY: currentY,
+          endY: (currentY += trackHeight),
+        });
+      }
+    });
+  }
+
+  traverse(nodes, depth);
 
   return result;
 }

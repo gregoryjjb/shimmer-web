@@ -12,13 +12,52 @@ import {
 import { UndoHistory } from './undo';
 import { stringifyTime } from './utils';
 
-export const newTracks = (count: number): Track[] => {
-  return Array.from(Array(count).keys()).map((n) => ({
-    type: 'track',
-    id: `${n}`,
-    name: `Track ${n}`,
-    keyframes: [],
-  }));
+export const newTracks = (count: number): LayoutNode[] => {
+  // TODO: don't hardcode the default layout template
+  return [
+    {
+      type: 'group',
+      id: 'Root',
+      children: [
+        {
+          type: 'group',
+          id: 'Roof',
+          children: [
+            {
+              type: 'group',
+              id: 'Roof parkview',
+              children: [
+                { type: 'track', id: 'Roof 1', keyframes: [] },
+                { type: 'track', id: 'Roof 2', keyframes: [] },
+                { type: 'track', id: 'Roof 3', keyframes: [] },
+                { type: 'track', id: 'Roof 4', keyframes: [] },
+                { type: 'track', id: 'Roof 5', keyframes: [] },
+                { type: 'track', id: 'Roof 6', keyframes: [] },
+                { type: 'track', id: 'Roof 7', keyframes: [] },
+                { type: 'track', id: 'Roof 8', keyframes: [] },
+              ],
+            },
+            {
+              type: 'group',
+              id: 'Roof hamilton',
+              children: [
+                { type: 'track', id: 'Roof 9', keyframes: [] },
+                { type: 'track', id: 'Roof 10', keyframes: [] },
+                { type: 'track', id: 'Roof 11', keyframes: [] },
+                { type: 'track', id: 'Roof 12', keyframes: [] },
+                { type: 'track', id: 'Roof 13', keyframes: [] },
+                { type: 'track', id: 'Roof 14', keyframes: [] },
+                { type: 'track', id: 'Roof 15', keyframes: [] },
+                { type: 'track', id: 'Roof 16', keyframes: [] },
+                { type: 'track', id: 'Roof 17', keyframes: [] },
+                { type: 'track', id: 'Roof 18', keyframes: [] },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ];
 };
 
 const compareKeyframes = (a: Keyframe, b: Keyframe): number => {
