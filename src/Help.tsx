@@ -41,7 +41,6 @@ const Help: Component<{
       <div class="flex flex-row flex-wrap gap-3">
         <Keybind action="Play/pause" key="Space" />
         <Keybind action="Insert keyframes" key="RMB" />
-        <Keybind action="Insert full row" ctrl key="RMB" />
         <Keybind action="Select keyframes" key="LMB" />
         <Keybind action="Multi-select" shift key="LMB" />
         <Keybind action="Invert keyframe values" key="I" />

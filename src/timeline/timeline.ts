@@ -1163,12 +1163,20 @@ DPI scale: ${this.dpiScale}`;
         const row = this.absolutePxToLayoutRow(y);
         const channel = row && row.type === 'track' ? row.id : undefined;
 
-        let k: number | undefined;
+        const keepExisting = e.shiftKey;
 
+        // This selection flow is kind of bad because it creates multiple edit
+        // checkpoints in the undo history: deselecting all and starting a box
+        // select are separate events.
+
+        let k: number | undefined;
         if (channel) {
-          // Select single keyframe
+          // Select single keyframe. Will deselect all if no keyframe is hit.
           const tolerance = this.config.layout.keyframeSize / 2 / this.pxPerSecond;
-          k = this.data.selectSingle(channel, time, tolerance, e.shiftKey);
+          k = this.data.selectSingle(channel, time, tolerance, keepExisting);
+        } else if (!keepExisting) {
+          // Hacky: if we didn't hit a track row, force a deselect all.
+          this.data.selectAll(false);
         }
 
         // If no single keyframe was clicked, start a box select
@@ -1176,7 +1184,7 @@ DPI scale: ${this.dpiScale}`;
           this.updateBoxSelection({ x, y });
 
           if (this.boxSelection) {
-            this.boxSelection.keepExisting = e.shiftKey;
+            this.boxSelection.keepExisting = keepExisting;
           }
         }
       }
