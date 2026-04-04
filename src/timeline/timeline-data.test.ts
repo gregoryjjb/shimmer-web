@@ -1,6 +1,7 @@
 import { expect, test, describe } from 'vitest';
 
-import { binarySearch } from './timeline-data';
+import { TimelineEmitter } from './events';
+import TimelineData, { binarySearch } from './timeline-data';
 import { Keyframe } from './types';
 
 const keyframes = [0, 10, 20, 30, 40, 50, 60, 70].map<Keyframe>((n) => ({
@@ -49,4 +50,33 @@ describe('binarySearch2', () => {
     const actual = binarySearch(keyframes, 40);
     expect(actual).toBe(4);
   });
+});
+
+test('insertAuto on a group inserts keyframes on all descendant tracks', () => {
+  const data = new TimelineData(new TimelineEmitter());
+
+  data.replaceAll({
+    version: '2',
+    tracks: [
+      {
+        type: 'group',
+        id: 'group-a',
+        children: [
+          { type: 'track', id: 'track-1', keyframes: [] },
+          {
+            type: 'group',
+            id: 'nested-group',
+            children: [{ type: 'track', id: 'track-2', keyframes: [] }],
+          },
+        ],
+      },
+      { type: 'track', id: 'track-3', keyframes: [] },
+    ],
+  });
+
+  data.insertAuto('group-a', 12.5, 1);
+
+  expect(data.trackLookup['track-1'].keyframes).toEqual([{ ts: 12.5, value: 1 }]);
+  expect(data.trackLookup['track-2'].keyframes).toEqual([{ ts: 12.5, value: 1 }]);
+  expect(data.trackLookup['track-3'].keyframes).toEqual([]);
 });

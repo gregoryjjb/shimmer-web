@@ -1,14 +1,6 @@
 import { TimelineEmitter } from './events';
 import { OpenedProject } from './persist';
-import {
-  Keyframe,
-  LayoutNode,
-  ProjectData,
-  ShowDataJSON,
-  Track,
-  TrackGroup,
-  TrackID,
-} from './types';
+import { Keyframe, LayoutNode, LayoutNodeID, ProjectData, Track, TrackID } from './types';
 import { UndoHistory } from './undo';
 import { stringifyTime } from './utils';
 
@@ -269,48 +261,30 @@ class TimelineData {
     return this._channels;
   }
 
-  get channelsIter() {
-    const root = this.data.tracks;
-
-    return {
-      *[Symbol.iterator]() {
-        const queue: LayoutNode[] = [];
-
-        queue.push(...root);
-
-        while (queue.length > 0) {
-          const next = queue.pop();
-          if (!next) break;
-
-          if (next.type === 'group') {
-            // Push in reverse order so they are iterated over immediately
-            queue.push(...[...next.children].reverse());
-          } else {
-            yield next;
-          }
-        }
-      },
-    };
-  }
-
   // TODO: clear this every time the tracks are modified (not the keyframes)
   private _trackLookup: Record<TrackID, Track> | undefined;
+  private _nodeLookup: Record<LayoutNodeID, LayoutNode> | undefined;
 
   get trackLookup() {
-    if (!this._trackLookup) {
-      this._trackLookup = {};
-
-      for (const track of this.channels) {
-        this._trackLookup[track.id] = track;
-      }
-    }
-
-    return this._trackLookup;
+    return this._trackLookup ?? {};
   }
 
-  private clearIndexes() {
+  get nodeLookup() {
+    return this._nodeLookup ?? {};
+  }
+
+  private rebuildIndexes() {
     this._channels = undefined;
-    this._trackLookup = undefined;
+
+    this._trackLookup = {};
+    this._nodeLookup = {};
+
+    for (let next of iterateNodes(...this.data.tracks)) {
+      this._nodeLookup[next.id] = next;
+      if (next.type === 'track') {
+        this._trackLookup[next.id] = next;
+      }
+    }
   }
 
   /* Load a project for editing; clears undo history */
@@ -319,7 +293,7 @@ class TimelineData {
     this.data = structuredClone(project.data);
 
     // Clear indexes
-    this.clearIndexes();
+    this.rebuildIndexes();
 
     this.undoHistory = new UndoHistory(100, {
       action: 'Initial state',
@@ -333,7 +307,7 @@ class TimelineData {
   replaceAll = (data: ProjectData) => {
     this.data = structuredClone(data);
 
-    this.clearIndexes();
+    this.rebuildIndexes();
 
     this.takeUndoSnapshot('Replaced all data');
   };
@@ -383,7 +357,7 @@ class TimelineData {
     this.openedProject?.saveData(this.data);
     this.emit(`Undo '${undid.action}'`);
 
-    this.clearIndexes();
+    this.rebuildIndexes();
   };
 
   redo = () => {
@@ -397,7 +371,7 @@ class TimelineData {
     this.openedProject?.saveData(this.data);
     this.emit(`Redo '${redone.action}'`);
 
-    this.clearIndexes();
+    this.rebuildIndexes();
   };
 
   binarySearch = (trackID: TrackID, time: number, side?: BinarySearchSide): number | undefined => {
@@ -456,17 +430,26 @@ class TimelineData {
     this.trackLookup[trackID].keyframes.sort(compareKeyframes);
   };
 
-  insertSingle = (trackID: TrackID, time: number, value: number) => {
-    this.insert(trackID, time, value);
+  /**
+   * Inserts a keyframe on the track referenced by nodeID. If the provided
+   * nodeID is a group, inserts a keyframe on every child track.
+   */
+  insertAuto = (nodeID: LayoutNodeID, time: number, value: number) => {
+    const node = this.nodeLookup[nodeID];
 
-    this.markEdit('Inserted keyframe');
-  };
+    const trackIDs = [];
 
-  insertColumn = (time: number, value: number) => {
-    for (let track of this.channels) {
-      this.insert(track.id, time, value);
+    for (let child of iterateNodes(node)) {
+      if (child.type === 'track') {
+        trackIDs.push(child.id);
+      }
     }
-    this.markEdit('Inserted keyframe column');
+
+    for (const id of trackIDs) {
+      this.insert(id, time, value);
+    }
+
+    this.markEdit(`Inserted ${trackIDs.length} keyframe(s)`);
   };
 
   selectSingle = (
@@ -890,6 +873,28 @@ class TimelineData {
         track.keyframes.splice(indexes[ii]);
       }
     });
+  };
+}
+
+function iterateNodes(...nodes: LayoutNode[]) {
+  return {
+    *[Symbol.iterator]() {
+      const queue: LayoutNode[] = [];
+
+      queue.push(...nodes);
+
+      while (queue.length > 0) {
+        const next = queue.pop();
+        if (!next) break;
+
+        yield next;
+
+        if (next.type === 'group') {
+          // Push in reverse order so they are iterated over immediately
+          queue.push(...[...next.children].reverse());
+        }
+      }
+    },
   };
 }
 

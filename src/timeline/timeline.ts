@@ -1,6 +1,6 @@
 import TimelineAudio from './timeline-audio';
 import TimelineData from './timeline-data';
-import { LayoutNode, ProjectData, TrackID } from './types';
+import { LayoutNode, LayoutNodeID, ProjectData, TrackID } from './types';
 
 import colors from './colors';
 import { ArgOf, Command, ComplexCommand, apple, keybinds } from './commands';
@@ -470,7 +470,7 @@ class Timeline {
     return (seconds - this.position) * this.pxPerSecond + this.config.layout.sidebarWidth;
   };
 
-  private absolutePxToChannel = (y: number): TrackID | null => {
+  private absolutePxToLayoutRow = (y: number): LayoutRow | null => {
     const channelsStartAt = this.config.layout.waveformHeight + this.config.layout.timelineHeight;
 
     if (y <= channelsStartAt) return null;
@@ -479,15 +479,13 @@ class Timeline {
 
     const rows = flattenTracks(this.data.data.tracks);
 
-    for (let row of rows) {
+    for (const row of rows) {
       if (y >= row.startY && y < row.endY) {
-        return row.type === 'track' ? row.id : null;
+        return row;
       }
     }
 
     return null;
-
-    // return Math.floor((y - channelsStartAt) / layout.channelHeight);
   };
 
   private channelToAbsolutePx = (channel: number) => {
@@ -1138,7 +1136,8 @@ DPI scale: ${this.dpiScale}`;
         }
       } else {
         // Select
-        const channel = this.absolutePxToChannel(y);
+        const row = this.absolutePxToLayoutRow(y);
+        const channel = row && row.type === 'track' ? row.id : undefined;
 
         let k: number | undefined;
 
@@ -1166,15 +1165,17 @@ DPI scale: ${this.dpiScale}`;
       }
       // Insert new frame
       else {
-        const channel = this.absolutePxToChannel(y);
-        if (channel) {
+        const row = this.absolutePxToLayoutRow(y);
+
+        if (row) {
           const time = this.absolutePxToTime(x);
           const value = e.altKey ? 0 : 1;
 
           if (e.ctrlKey) {
-            this.data.insertColumn(time, value);
+            // TODO! Can use ctrl for something else now
           } else {
-            this.data.insertSingle(channel, time, value);
+            console.log('Inserting auto', row);
+            this.data.insertAuto(row.id, time, value);
           }
         }
       }
@@ -1489,7 +1490,7 @@ DPI scale: ${this.dpiScale}`;
     return this.data.channels.find((t) => t.keyframes.length > 0) !== undefined;
   };
 
-  trackIsBoxSelected = (track: TrackRow) => {
+  trackIsBoxSelected = (track: LayoutRow) => {
     if (!this.boxSelection) return false;
 
     const start = this.screenToContentY(this.boxSelection.start.y);
@@ -1503,16 +1504,16 @@ DPI scale: ${this.dpiScale}`;
 
 export default Timeline;
 
-type TrackRow = {
+type LayoutRow = {
   type: 'track' | 'group';
-  id: string;
+  id: LayoutNodeID;
   depth: number;
   startY: number;
   endY: number;
 };
 
-function flattenTracks(nodes: LayoutNode[], depth = 0, y = 0): TrackRow[] {
-  const result: TrackRow[] = [];
+function flattenTracks(nodes: LayoutNode[], depth = 0, y = 0): LayoutRow[] {
+  const result: LayoutRow[] = [];
 
   // Need to be real constants
   const groupHeight = 30;
