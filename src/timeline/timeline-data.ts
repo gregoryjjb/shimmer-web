@@ -876,7 +876,7 @@ class TimelineData {
   };
 }
 
-function iterateNodes(...nodes: LayoutNode[]) {
+export function iterateNodes(...nodes: LayoutNode[]) {
   return {
     *[Symbol.iterator]() {
       const queue: LayoutNode[] = [];

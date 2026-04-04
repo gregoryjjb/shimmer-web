@@ -1,5 +1,5 @@
 import TimelineAudio from './timeline-audio';
-import TimelineData from './timeline-data';
+import TimelineData, { iterateNodes } from './timeline-data';
 import { LayoutNode, LayoutNodeID, ProjectData, TrackID } from './types';
 
 import colors from './colors';
@@ -38,6 +38,8 @@ const lightTheme = {
   channelAlternate: colors.gray[100],
   channelDisabled: colors.gray[400],
   channelDisabledAlternate: colors.gray[300],
+  channelGroup: colors.zinc[900],
+  channelGroupAlternate: colors.zinc[800],
   keyframeOutline: colors.gray[900],
   keyframeOutlineSelected: colors.red[600],
   keyframeOn: colors.yellow[200],
@@ -50,10 +52,18 @@ const darkTheme = {
   ticks: colors.white,
   scrubber: colors.red[500],
   waveform: colors.gray[400],
-  channel: colors.zinc[700],
-  channelAlternate: colors.zinc[600],
-  channelDisabled: colors.zinc[900],
-  channelDisabledAlternate: colors.zinc[800],
+
+  // Hovered
+  channel: colors.sky[900],
+  channelAlternate: colors.sky[800],
+
+  // Basic
+  channelDisabled: colors.zinc[700],
+  channelDisabledAlternate: colors.zinc[600],
+
+  channelGroup: colors.zinc[900],
+  channelGroupAlternate: colors.zinc[800],
+
   keyframeOutline: colors.gray[900],
   keyframeOutlineSelected: colors.red[500],
   keyframeOn: colors.yellow[300],
@@ -173,6 +183,9 @@ class Timeline {
    */
   private zoom = 0.5;
   private dpiScale = 1;
+
+  private mouseX = 0;
+  private mouseY = 0;
 
   // Offset in seconds
   private basePosition: number = 0;
@@ -661,7 +674,7 @@ class Timeline {
 
     const channelsX = layout.sidebarWidth;
     const channelsY = waveformY + layout.waveformHeight;
-    const channelsWidth = this.canvasWidth - channelsX;
+    const channelsWidth = this.canvasWidth; // - channelsX;
     const channelsHeight = channelCount * layout.channelHeight;
 
     // Clip so scrolled channels don't draw over the waveform/timeline
@@ -670,27 +683,36 @@ class Timeline {
     ctx.rect(0, channelsY, this.canvasWidth, this.canvasHeight - channelsY);
     ctx.clip();
 
-    ctx.translate(channelsX, this.contentToScreenY(0));
+    ctx.translate(0, this.contentToScreenY(0));
+
+    // Find hovered tracks
+    const hoveredNodeIDs = new Set<string>();
+    const row = this.absolutePxToLayoutRow(this.mouseY);
+    if (row) {
+      for (let child of iterateNodes(this.data.nodeLookup[row.id])) {
+        hoveredNodeIDs.add(child.id);
+      }
+    }
 
     // Draw alternating background colors for channels
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < trackRows.length; i++) {
+      const trackRow = trackRows[i];
       const alt = i % 2 === 0;
 
-      const trackRow = trackRows[i];
-
-      const disabled = !trackRow;
       const isGroup = trackRow?.type === 'group';
+      const isHovered = hoveredNodeIDs.has(trackRow.id);
 
-      ctx.fillStyle =
-        disabled || isGroup
+      ctx.fillStyle = isHovered
+        ? alt
+          ? theme.channelAlternate
+          : theme.channel
+        : isGroup
           ? alt
+            ? theme.channelGroupAlternate
+            : theme.channelGroup
+          : alt
             ? theme.channelDisabledAlternate
-            : theme.channelDisabled
-          : isGroup
-            ? 'oklch(29.3% 0.066 243.157)'
-            : alt
-              ? theme.channelAlternate
-              : theme.channel;
+            : theme.channelDisabled;
 
       const y = layout.channelHeight * i;
 
@@ -750,7 +772,7 @@ class Timeline {
     // Draw keyframes
     performance.mark('keyframes-start');
     if (this.data) {
-      const cutoffTimeLeft = this.absolutePxToTime(channelsX - layout.keyframeSize / 2);
+      const cutoffTimeLeft = this.absolutePxToTime(0 - layout.keyframeSize / 2);
       const cutoffTimeRight = this.absolutePxToTime(this.canvasWidth + layout.keyframeSize / 2);
 
       trackRows.forEach((row, i) => {
@@ -790,7 +812,7 @@ class Timeline {
             continue;
           }
 
-          const x = this.absoluteTimeToPx(t) - layout.sidebarWidth;
+          const x = this.absoluteTimeToPx(t); // - layout.sidebarWidth;
 
           // const next = channel.keyframes[i + 1];
           // const playing =
@@ -876,7 +898,9 @@ class Timeline {
 
     //// Sidebar
     ctx.fillStyle = theme.sidebar;
+    ctx.globalAlpha = 0.75;
     ctx.fillRect(0, 0, layout.sidebarWidth, this.canvasHeight);
+    ctx.globalAlpha = 1;
 
     // Current time
     const timeString = stringifyTime(this.audio.currentTime, 'milliseconds');
@@ -1235,6 +1259,9 @@ DPI scale: ${this.dpiScale}`;
   private handleMouseMove = (e: MouseEvent) => {
     const { x, y } = this.getLocalCoordinates(e);
 
+    this.mouseX = x;
+    this.mouseY = y;
+
     if (mouse.middleButtonHeld(e)) {
       this.updatePan(x, y);
     } else if (this.panOffset) {
@@ -1253,18 +1280,18 @@ DPI scale: ${this.dpiScale}`;
       } else {
         this.boxSelection = undefined;
       }
-      this.requestDraw();
     }
 
     if (this.grabbing) {
       this.updateGrab({ x, y });
-      this.requestDraw();
     }
 
     if (this.scaling) {
       this.updateScale({ x, y });
-      this.requestDraw();
     }
+
+    // TODO: ideally every mousemove wouldn't require a draw? Maybe doesn't matter
+    this.requestDraw();
   };
 
   private handleMouseUp = (e: MouseEvent) => {
