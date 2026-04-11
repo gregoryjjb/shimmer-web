@@ -14,6 +14,7 @@ import { setShowHelp, showHelp } from './global';
 import { Command, SimpleCommand, keybindFor, nameFor } from './timeline/commands';
 import { downloadFile, parseProjectData } from './timeline/export';
 import { newTracks } from './timeline/timeline-data';
+import { UpgradeLayoutForm } from './UpgradeLayoutForm';
 
 function App() {
   const ctx = useTimeline();
@@ -28,6 +29,7 @@ function App() {
 
   const [NewProjectModal, modal] = createModal();
   const [OpenProjectModal, openModal] = createModal();
+  const [LayoutModal, layoutModal] = createModal();
 
   const replaceJSON = () => {
     const input = document.createElement('input');
@@ -82,6 +84,7 @@ function App() {
           <MenuItem name="Download" onClick={exportZip} />
           <MenuItemSpacer />
           <MenuItem name="Replace JSON" onClick={replaceJSON} />
+          <MenuItem name="Upgrade layout" onClick={() => layoutModal.show()} />
         </Menu>
         <Menu name="Edit">
           <CommandMenuItem command="undo" />
@@ -160,8 +163,18 @@ function App() {
           onCancel={() => openModal.hide()}
         />
       </OpenProjectModal>
+
+      <LayoutModal>
+        <ModalTitle>Upgrade layout</ModalTitle>
+        <UpgradeLayoutForm onClose={() => layoutModal.hide()} />
+      </LayoutModal>
     </div>
   );
+}
+
+function ModalContent() {
+  console.log('Bla!!');
+  return <p>Bla!</p>;
 }
 
 export default App;

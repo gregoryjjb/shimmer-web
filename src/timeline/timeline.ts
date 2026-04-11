@@ -1200,15 +1200,12 @@ DPI scale: ${this.dpiScale}`;
         const row = this.absolutePxToLayoutRow(y);
 
         if (row) {
-          const time = this.absolutePxToTime(x);
+          const snapToCursor = e.ctrlKey;
+
+          const time = snapToCursor ? this.audio.currentTime : this.absolutePxToTime(x);
           const value = e.altKey ? 0 : 1;
 
-          if (e.ctrlKey) {
-            // TODO! Can use ctrl for something else now
-          } else {
-            console.log('Inserting auto', row);
-            this.data.insertAuto(row.id, time, value);
-          }
+          this.data.insertAuto(row.id, time, value);
         }
       }
     } else if (e.button === MIDDLE_MOUSE_BUTTON) {
@@ -1534,6 +1531,10 @@ DPI scale: ${this.dpiScale}`;
     const midpoint = (track.startY + track.endY) / 2;
 
     return midpoint >= start && midpoint <= end;
+  };
+
+  getData = () => {
+    return structuredClone(this.data.data);
   };
 }
 
