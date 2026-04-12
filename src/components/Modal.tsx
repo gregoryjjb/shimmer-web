@@ -38,7 +38,7 @@ export const Modal: ParentComponent<{
       <Portal mount={document.body}>
         <div class="absolute inset-0 z-30">
           <div class="absolute inset-0 bg-black/50" onClick={() => props.onClose?.()} />
-          <div class="mx-auto mt-[25vh] max-w-2xl rounded-lg bg-zinc-900 px-6 py-3 drop-shadow-lg">
+          <div class="mx-auto mt-[10vh] max-h-[80vh] max-w-4xl rounded-lg bg-zinc-900 px-6 py-3 drop-shadow-lg">
             {props.children}
           </div>
         </div>

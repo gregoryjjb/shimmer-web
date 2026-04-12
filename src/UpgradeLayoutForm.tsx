@@ -76,35 +76,38 @@ export const UpgradeLayoutForm: Component<{
 
         <div class="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
           <h2 class="mb-3 text-sm font-semibold text-zinc-100">New layout mapping</h2>
-          <div class="flex max-h-[24rem] flex-col gap-3 overflow-y-auto pr-1">
-            <For each={targetIDs}>
-              {(targetID) => (
-                <label class="grid items-center gap-2 rounded-md bg-zinc-900/80 p-3 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1.4fr)]">
-                  <span class="truncate font-medium text-zinc-100">{targetID}</span>
-                  <span class="text-zinc-500">=</span>
-                  <select
-                    class="rounded bg-zinc-700 p-2 text-sm text-zinc-100 hover:bg-zinc-600 focus:bg-zinc-600"
-                    value={mapping()[targetID] ?? ''}
-                    onInput={(e) =>
-                      setMapping((current) => ({
-                        ...current,
-                        [targetID]: e.currentTarget.value || undefined,
-                      }))
-                    }
-                  >
-                    <option value="">Unassigned</option>
-                    <For each={sourceIDs}>
-                      {(sourceID) => <option value={sourceID}>{sourceID}</option>}
-                    </For>
-                  </select>
-                </label>
+          <div class="flex flex-col gap-3 pr-1">
+            <For each={targetData}>
+              {(node) => (
+                <TargetNodeMapping
+                  node={node}
+                  sourceIDs={sourceIDs}
+                  mapping={mapping()}
+                  onTrackChange={(targetID, sourceID) =>
+                    setMapping((current) => ({
+                      ...current,
+                      [targetID]: sourceID,
+                    }))
+                  }
+                  onGroupChange={(targetTrackIDs, sourceID) =>
+                    setMapping((current) => {
+                      const next = { ...current };
+
+                      for (const targetTrackID of targetTrackIDs) {
+                        next[targetTrackID] = sourceID;
+                      }
+
+                      return next;
+                    })
+                  }
+                />
               )}
             </For>
           </div>
         </div>
       </div>
 
-      <div class="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
+      {/* <div class="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
         <h2 class="mb-2 text-sm font-semibold text-zinc-100">Mapping summary</h2>
         <Show
           when={Object.keys(assignmentsBySource()).length > 0}
@@ -122,7 +125,7 @@ export const UpgradeLayoutForm: Component<{
             </For>
           </div>
         </Show>
-      </div>
+      </div> */}
 
       <div class="flex w-full items-center justify-end gap-3">
         <button
@@ -141,6 +144,97 @@ export const UpgradeLayoutForm: Component<{
         </GradientButton>
       </div>
     </form>
+  );
+};
+
+const TargetNodeMapping: Component<{
+  node: LayoutNode;
+  sourceIDs: string[];
+  mapping: Record<string, string | undefined>;
+  onTrackChange: (targetID: string, sourceID: string | undefined) => void;
+  onGroupChange: (targetTrackIDs: string[], sourceID: string | undefined) => void;
+  depth?: number;
+}> = (props) => {
+  const depth = props.depth ?? 0;
+
+  if (props.node.type === 'track') {
+    return (
+      <label
+        class="grid items-center gap-2 rounded-md bg-zinc-900/80 p-3 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1.4fr)]"
+        style={{ 'margin-left': `${depth * 16}px` }}
+      >
+        <span class="truncate font-medium text-zinc-100">{props.node.id}</span>
+        <span class="text-zinc-500">=</span>
+        <MappingSelect
+          sourceIDs={props.sourceIDs}
+          value={props.mapping[props.node.id]}
+          onChange={(sourceID) => props.onTrackChange(props.node.id, sourceID)}
+        />
+      </label>
+    );
+  }
+
+  const childTrackIDs = collectTrackIDs([props.node]);
+  const groupValue = createMemo(() => {
+    const assigned = childTrackIDs
+      .map((targetID) => props.mapping[targetID])
+      .filter((value): value is string => value !== undefined);
+
+    if (assigned.length !== childTrackIDs.length) return undefined;
+
+    const first = assigned[0];
+    return assigned.every((value) => value === first) ? first : undefined;
+  });
+
+  return (
+    <div class="flex flex-col gap-2">
+      <label
+        class="grid items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/50 p-3 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1.4fr)]"
+        style={{ 'margin-left': `${depth * 16}px` }}
+      >
+        <span class="truncate font-semibold text-zinc-200">{props.node.id}</span>
+        <span class="text-zinc-500">=</span>
+        <MappingSelect
+          sourceIDs={props.sourceIDs}
+          value={groupValue()}
+          placeholder="Mixed / unassigned"
+          onChange={(sourceID) => props.onGroupChange(childTrackIDs, sourceID)}
+        />
+      </label>
+
+      <div class="flex flex-col gap-2">
+        <For each={props.node.children}>
+          {(child) => (
+            <TargetNodeMapping
+              node={child}
+              sourceIDs={props.sourceIDs}
+              mapping={props.mapping}
+              onTrackChange={props.onTrackChange}
+              onGroupChange={props.onGroupChange}
+              depth={depth + 1}
+            />
+          )}
+        </For>
+      </div>
+    </div>
+  );
+};
+
+const MappingSelect: Component<{
+  sourceIDs: string[];
+  value: string | undefined;
+  onChange: (sourceID: string | undefined) => void;
+  placeholder?: string;
+}> = (props) => {
+  return (
+    <select
+      class="rounded bg-zinc-700 p-2 text-sm text-zinc-100 hover:bg-zinc-600 focus:bg-zinc-600"
+      value={props.value ?? ''}
+      onInput={(e) => props.onChange(e.currentTarget.value || undefined)}
+    >
+      <option value="">{props.placeholder ?? 'Unassigned'}</option>
+      <For each={props.sourceIDs}>{(sourceID) => <option value={sourceID}>{sourceID}</option>}</For>
+    </select>
   );
 };
 
@@ -176,20 +270,29 @@ function upgradeLayout({
     }
   }
 
-  for (const newTrack of iterateNodes(...targetData)) {
-    const oldID = mapping[newTrack.id];
-
-    if (oldID) {
-      if (newTrack.type !== 'track') {
-        throw new Error(`Mapping was created for non-track node "${newTrack.id}"`);
-      }
-
-      newTrack.keyframes = sourceTrackByID[oldID].keyframes;
-    }
-  }
-
   return {
     version: '2',
-    tracks: targetData,
+    tracks: targetData.map((node) => cloneMappedNode(node, sourceTrackByID, mapping)),
+  };
+}
+
+function cloneMappedNode(
+  node: LayoutNode,
+  sourceTrackByID: Record<string, Track>,
+  mapping: Record<string, string | undefined>,
+): LayoutNode {
+  if (node.type === 'group') {
+    return {
+      ...node,
+      children: node.children.map((child) => cloneMappedNode(child, sourceTrackByID, mapping)),
+    };
+  }
+
+  const oldID = mapping[node.id];
+  const sourceTrack = oldID ? sourceTrackByID[oldID] : undefined;
+
+  return {
+    ...node,
+    keyframes: sourceTrack ? sourceTrack.keyframes.map((keyframe) => ({ ...keyframe })) : [],
   };
 }
