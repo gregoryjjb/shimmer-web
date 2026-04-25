@@ -12,7 +12,7 @@ export const SampleProjectButton: Component<{ class?: string }> = (props) => {
       component="button"
       class={clsx('rounded px-2 py-0.5 text-sm font-semibold text-black', props.class)}
       onClick={async () => {
-        const project = await projectFromURL('/Carol of the Bells.shmr');
+        const project = await projectFromURL('/Christmas Eve - Sarajevo.shmr');
         ctx.loadProject(project);
         ctx.setProjectName(project.name);
       }}
