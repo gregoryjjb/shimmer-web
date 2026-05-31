@@ -148,7 +148,11 @@ class Timeline {
   private openedProject?: OpenedProject;
 
   private config: TimelineConfig = defaultConfig;
-  destroyed: boolean = false;
+
+  _destroyed: boolean = false;
+  get destroyed() {
+    return this._destroyed;
+  }
 
   private readonly emitter = new TimelineEmitter();
   on = this.emitter.on;
@@ -361,10 +365,11 @@ class Timeline {
    * will be rendered there
    */
   attach = (container: Element) => {
+    this.detach();
+
     this.container = container;
     this.container.appendChild(this.root);
 
-    this.resizeObserver?.disconnect();
     this.resizeObserver = new ResizeObserver((entries) => {
       if (!this.container) return;
 
@@ -375,16 +380,25 @@ class Timeline {
     this.resizeCanvas(this.container.clientWidth, this.container.clientHeight);
   };
 
-  destroy = () => {
+  detach = () => {
     this.resizeObserver?.disconnect();
-    this.container?.removeChild(this.root);
+    this.resizeObserver = undefined;
 
+    if (this.root.parentElement === this.container) {
+      this.container?.removeChild(this.root);
+    }
+
+    this.container = undefined;
+  };
+
+  destroy = () => {
+    this.detach();
     this.audio.destroy();
 
     window.removeEventListener('mousemove', this.handleMouseMove);
     window.removeEventListener('keydown', this.handleKeyDown);
 
-    this.destroyed = true;
+    this._destroyed = true;
   };
 
   load = async (project: OpenedProject) => {
@@ -1308,7 +1322,6 @@ DPI scale: ${this.dpiScale}`;
 
         // Don't count it as a box select unless the box is bigger than 2x2 px
         if (size.x > 2 && size.y > 2) {
-          console.log('Box selection', this.boxSelection);
           this.data.boxSelect({
             startTime: this.absolutePxToTime(this.boxSelection.start.x),
             endTime: this.absolutePxToTime(this.boxSelection.end.x),

@@ -325,7 +325,6 @@ class TimelineData {
 
   private emit = (action: string) => {
     console.log('data emit:', action);
-    console.log(this.data);
     this.emitter.emit('edit', action);
     this.emitSelected();
   };
@@ -388,10 +387,13 @@ class TimelineData {
   findNearest = (time: number): Keyframe | undefined => {
     let found: Keyframe | undefined;
 
-    for (const channel of this.channels) {
-      const index = binarySearch(channel.keyframes, time);
-      if (index === undefined) return;
-      const kf = channel.keyframes[index];
+    for (const track of iterateLeaves(...this.data.tracks)) {
+      const index = binarySearch(track.keyframes, time);
+      if (index === undefined) {
+        continue;
+      }
+
+      const kf = track.keyframes[index];
 
       if (!found || Math.abs(kf.ts - time) < Math.abs(found.ts - time)) {
         found = kf;
@@ -876,6 +878,9 @@ class TimelineData {
   };
 }
 
+/**
+ * Iterates over all nodes in the tree, including groups
+ */
 export function iterateNodes(...nodes: LayoutNode[]) {
   return {
     *[Symbol.iterator]() {
@@ -892,6 +897,21 @@ export function iterateNodes(...nodes: LayoutNode[]) {
         if (next.type === 'group') {
           // Push in reverse order so they are iterated over immediately
           queue.push(...[...next.children].reverse());
+        }
+      }
+    },
+  };
+}
+
+/**
+ * Iterates over all leaf nodes (tracks)
+ */
+export function iterateLeaves(...nodes: LayoutNode[]) {
+  return {
+    *[Symbol.iterator]() {
+      for (let next of iterateNodes(...nodes)) {
+        if (next.type === 'track') {
+          yield next;
         }
       }
     },

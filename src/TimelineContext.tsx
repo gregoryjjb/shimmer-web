@@ -53,6 +53,8 @@ const makeTimelineContext = () => {
     }
 
     OpenedProject.open(persistence).then((project) => {
+      if (timeline.destroyed) return;
+
       timeline.load(project);
       setProjectName(project.name);
     });
