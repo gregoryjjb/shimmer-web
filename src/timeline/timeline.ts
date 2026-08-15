@@ -74,7 +74,7 @@ const defaultConfig = {
   layout: {
     timelineHeight: 40,
     waveformHeight: 100,
-    sidebarWidth: 160,
+    sidebarWidth: 240,
     channelHeight: 30,
     keyframeSize: 20,
   },
@@ -138,7 +138,6 @@ class Timeline {
   private debugDisplay: HTMLPreElement;
   // private lights: HTMLDivElement[] = [];
   private currentTimeDisplay: HTMLDivElement;
-  private trackTree: HTMLDivElement;
 
   private resizeObserver?: ResizeObserver;
 
@@ -208,6 +207,7 @@ class Timeline {
   private boxSelection: RenderedBoxSelection | undefined;
 
   private lastFrameTimestamp?: DOMHighResTimeStamp;
+  private panFrameRequest?: number;
 
   private diamondCache?: {
     keyframeOn: CanvasImageSource;
@@ -285,14 +285,6 @@ class Timeline {
     // this.currentTimeDisplay.style.padding = '4px';
     // this.currentTimeDisplay.style.fontSize = '12px';
     this.root.appendChild(this.currentTimeDisplay);
-
-    this.trackTree = document.createElement('div');
-    this.trackTree.style.position = 'absolute';
-    this.trackTree.style.top = layout.waveformHeight + layout.timelineHeight + 'px';
-    this.trackTree.style.left = '0px';
-    this.trackTree.style.width = layout.sidebarWidth + 'px';
-    this.trackTree.style.height = layout.channelHeight * 10 + 'px';
-    this.root.appendChild(this.trackTree);
 
     this.debugDisplay = document.createElement('pre');
     this.debugDisplay.innerText = 'Foo\nBar';
@@ -394,6 +386,11 @@ class Timeline {
   destroy = () => {
     this.detach();
     this.audio.destroy();
+
+    if (this.panFrameRequest !== undefined) {
+      cancelAnimationFrame(this.panFrameRequest);
+      this.panFrameRequest = undefined;
+    }
 
     window.removeEventListener('mousemove', this.handleMouseMove);
     window.removeEventListener('keydown', this.handleKeyDown);
@@ -966,34 +963,6 @@ class Timeline {
     //   this.lights[i].style.visibility = on ? 'visible' : 'hidden';
     // });
 
-    // Sidebar track labels
-    trackRows.forEach((row, i) => {
-      const xPadding = 8;
-      const yPadding = 6;
-      const fontSize = layout.channelHeight - yPadding * 2;
-
-      const x = 8 + row.depth * 10;
-      const y = this.contentToScreenY((i + 1) * layout.channelHeight) - yPadding;
-
-      // Skip labels that are off-screen
-      if (y < channelsY) return;
-      if (y - fontSize > this.canvasHeight) return;
-
-      const time = this.audio.currentTime || 0;
-      const keyframeIndex =
-        row.type === 'track' ? this.data.binarySearch(row.id, time, 'left') : undefined;
-      let on = false;
-      if (keyframeIndex !== undefined) {
-        on = (this.data.trackLookup[row.id]?.keyframes[keyframeIndex].value || 0) > 0;
-      }
-
-      const color = on ? theme.keyframeOn : 'black';
-
-      ctx.font = `${fontSize}px sans-serif`;
-      ctx.fillStyle = color;
-      ctx.fillText(row.id, x, y, layout.sidebarWidth - xPadding * 2);
-    });
-
     // const lights = document.createElement('canvas');
     // lights.width = layout.sidebarWidth;
     // lights.height = layout.channelHeight;
@@ -1043,6 +1012,7 @@ DPI scale: ${this.dpiScale}`;
   private updatePan = (x: number, y: number) => {
     this.panOffset = (this.panStartPx - x) / this.pxPerSecond;
     this.panOffsetY = this.panStartPxY - y;
+    this.requestPanEmit();
     this.requestDraw();
   };
 
@@ -1053,6 +1023,16 @@ DPI scale: ${this.dpiScale}`;
     this.scrollY = this.currentScrollY;
     this.panOffsetY = 0;
     this.panStartPxY = 0;
+    this.requestPanEmit();
+  };
+
+  private requestPanEmit = () => {
+    if (this.panFrameRequest !== undefined) return;
+
+    this.panFrameRequest = requestAnimationFrame(() => {
+      this.panFrameRequest = undefined;
+      this.emitter.emit('pan', this.pan);
+    });
   };
 
   ///////////////////
@@ -1355,14 +1335,16 @@ DPI scale: ${this.dpiScale}`;
       this.basePosition = Math.max(this.basePosition + offset, 0);
     }
 
+    this.requestPanEmit();
     this.requestDraw();
   };
 
   private handleKeyDown = (e: KeyboardEvent): boolean => {
-    // Ignore if an input is focused
-    const target = e.target as EventTarget & { nodeName: string; type: string };
-    if (target?.nodeName === 'INPUT' && target?.type === 'text') {
-      return false;
+    // Let editable controls and native button activation handle their own keys.
+    const target = e.target;
+    if (target instanceof HTMLElement) {
+      if (target.closest('input, select, textarea, [contenteditable="true"]')) return false;
+      if (target.closest('button') && (e.key === ' ' || e.key === 'Enter')) return false;
     }
 
     // Ignore if the event is being fired because the key is held
@@ -1535,6 +1517,22 @@ DPI scale: ${this.dpiScale}`;
   get projectData(): DeepReadonly<ProjectData> {
     return this.data.data;
   }
+
+  get layout() {
+    return this.config.layout;
+  }
+
+  get pan() {
+    return {
+      x: this.position,
+      y: this.currentScrollY,
+    };
+  }
+
+  setNodeLocked = (nodeID: LayoutNodeID, locked: boolean) => {
+    this.data.setNodeLocked(nodeID, locked);
+    this.requestDraw();
+  };
 }
 
 export default Timeline;

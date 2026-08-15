@@ -22,6 +22,9 @@ const makeTimelineContext = () => {
   );
   timeline.on('dataChanged', (data) => setProjectData(data));
 
+  const [pan, setPan] = createSignal(timeline.pan);
+  timeline.on('pan', setPan);
+
   const [loading, setLoading] = createSignal(false);
   timeline.on('loading', (l) => setLoading(l));
 
@@ -81,6 +84,7 @@ const makeTimelineContext = () => {
   const value = {
     timeline,
     projectData,
+    pan,
     loading,
     playing,
     volume,

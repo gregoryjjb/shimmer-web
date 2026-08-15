@@ -439,6 +439,23 @@ class TimelineData {
     this.trackLookup[trackID].keyframes.sort(compareKeyframes);
   };
 
+  setNodeLocked = (nodeID: LayoutNodeID, locked: boolean) => {
+    const node = this.nodeLookup[nodeID];
+    if (!node) return;
+
+    let changed = 0;
+    for (const track of iterateLeaves(node)) {
+      if (track.locked === locked) continue;
+
+      track.locked = locked;
+      changed++;
+    }
+
+    if (changed > 0) {
+      this.markEdit(`${locked ? 'Locked' : 'Unlocked'} ${changed} track(s)`);
+    }
+  };
+
   /**
    * Inserts a keyframe on the track referenced by nodeID. If the provided
    * nodeID is a group, inserts a keyframe on every child track.

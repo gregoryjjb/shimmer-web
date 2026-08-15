@@ -27,6 +27,7 @@ export class TimelineEmitter extends Emitter<{
   loading: boolean;
   autosave: ProjectData;
   dataChanged: DeepReadonly<ProjectData>;
+  pan: { x: number; y: number };
 }> {
   // constructor() {
   //   super();
