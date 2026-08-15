@@ -1,5 +1,6 @@
 import { debounce, DebouncedFunc } from 'lodash-es';
 
+import { parseProjectData } from '../export';
 import { ProjectData } from '../types';
 
 export { LocalPersistor } from './local';
@@ -40,7 +41,7 @@ export class OpenedProject {
 
   constructor(name: string, data: ProjectData, audio: Blob, persistor: Persistor) {
     this._name = name;
-    this._data = data;
+    this._data = parseProjectData(data);
     this._audio = audio;
 
     this.persistor = persistor;

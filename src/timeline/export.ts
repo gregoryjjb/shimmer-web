@@ -51,6 +51,14 @@ const parseKeyframe = (raw: any, path: string): Keyframe => {
   return keyframe;
 };
 
+const parseLocked = (raw: any, path: string): boolean => {
+  if (raw.locked === undefined) return false;
+  if (typeof raw.locked !== 'boolean') {
+    throw new Error(`${path}.locked must be a boolean`);
+  }
+  return raw.locked;
+};
+
 const parseTrack = (raw: any, path: string): Track => {
   if (typeof raw !== 'object' || raw === null) {
     throw new Error(`${path} is not an object`);
@@ -70,7 +78,7 @@ const parseTrack = (raw: any, path: string): Track => {
     parseKeyframe(kf, `${path}.keyframes[${i}]`),
   );
 
-  return { type: 'track', id, keyframes };
+  return { type: 'track', id, keyframes, locked: parseLocked(raw, path) };
 };
 
 const parseGroup = (raw: any, path: string): Group => {
@@ -189,6 +197,7 @@ export const parseProjectData = (data: any): ProjectData => {
         type: 'track' as const,
         id: trackIn.name || trackIn.id || `Track ${i}`,
         keyframes,
+        locked: parseLocked(trackIn, `tracks[${i}]`),
       };
     });
 

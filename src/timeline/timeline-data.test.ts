@@ -62,15 +62,15 @@ test('insertAuto on a group inserts keyframes on all descendant tracks', () => {
         type: 'group',
         id: 'group-a',
         children: [
-          { type: 'track', id: 'track-1', keyframes: [] },
+          { type: 'track', id: 'track-1', keyframes: [], locked: false },
           {
             type: 'group',
             id: 'nested-group',
-            children: [{ type: 'track', id: 'track-2', keyframes: [] }],
+            children: [{ type: 'track', id: 'track-2', keyframes: [], locked: false }],
           },
         ],
       },
-      { type: 'track', id: 'track-3', keyframes: [] },
+      { type: 'track', id: 'track-3', keyframes: [], locked: false },
     ],
   });
 

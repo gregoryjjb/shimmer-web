@@ -300,5 +300,6 @@ function cloneMappedNode(
   return {
     ...node,
     keyframes: sourceTrack ? sourceTrack.keyframes.map((keyframe) => ({ ...keyframe })) : [],
+    locked: sourceTrack?.locked ?? false,
   };
 }

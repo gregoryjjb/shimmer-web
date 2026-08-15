@@ -24,6 +24,7 @@ describe('parseProjectDataVersioned', () => {
           {
             type: 'track',
             id: 'Track A',
+            locked: false,
             keyframes: [
               { ts: 1.0, value: 1 },
               { ts: 2.0, value: 0 },
@@ -110,6 +111,7 @@ describe('parseProjectDataVersioned', () => {
           {
             type: 'track',
             id: 'abc',
+            locked: false,
             keyframes: [{ ts: 1.5, value: 0 }],
           },
         ],
@@ -130,11 +132,13 @@ describe('parseProjectDataVersioned', () => {
               {
                 type: 'track',
                 id: 't1',
+                locked: false,
                 keyframes: [{ ts: 0, value: 1 }],
               },
               {
                 type: 'track',
                 id: 't2',
+                locked: false,
                 keyframes: [],
               },
             ],
@@ -142,6 +146,7 @@ describe('parseProjectDataVersioned', () => {
           {
             type: 'track',
             id: 't3',
+            locked: false,
             keyframes: [{ ts: 2.0, value: 0 }],
           },
         ],
@@ -166,6 +171,7 @@ describe('parseProjectDataVersioned', () => {
                   {
                     type: 'track',
                     id: 'deep',
+                    locked: false,
                     keyframes: [],
                   },
                 ],

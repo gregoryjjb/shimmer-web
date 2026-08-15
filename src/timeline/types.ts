@@ -46,6 +46,7 @@ export type Track = {
   id: string;
 
   keyframes: Keyframe[];
+  locked: boolean;
 };
 
 export interface Project {
