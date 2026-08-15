@@ -36,10 +36,10 @@ export const Modal: ParentComponent<{
   return (
     <Show when={props.show}>
       <Portal mount={document.body}>
-        <div class="absolute inset-0 z-30">
+        <div class="fixed inset-0 z-30 p-4">
           <div class="absolute inset-0 bg-black/50" onClick={() => props.onClose?.()} />
-          <div class="mx-auto mt-[10vh] max-h-[80vh] max-w-4xl rounded-lg bg-zinc-900 px-6 py-3 drop-shadow-lg">
-            {props.children}
+          <div class="relative mx-auto mt-[5vh] flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg bg-zinc-900 drop-shadow-lg">
+            <div class="flex min-h-0 flex-col overflow-y-auto px-6 py-3">{props.children}</div>
           </div>
         </div>
       </Portal>

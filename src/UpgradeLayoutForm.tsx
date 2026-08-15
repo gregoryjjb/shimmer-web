@@ -36,7 +36,7 @@ export const UpgradeLayoutForm: Component<{
 
   return (
     <form
-      class="flex flex-col gap-4"
+      class="flex min-h-0 flex-1 flex-col gap-4"
       onSubmit={(e) => {
         e.preventDefault();
 
@@ -55,28 +55,32 @@ export const UpgradeLayoutForm: Component<{
         same source more than once.
       </p>
 
-      <div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-        <div class="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
-          <h2 class="mb-2 text-sm font-semibold text-zinc-100">Existing node IDs</h2>
-          <Show
-            when={sourceIDs.length > 0}
-            fallback={
-              <p class="text-sm text-zinc-400">No track IDs found in the current layout.</p>
-            }
-          >
-            <div class="flex flex-wrap gap-2">
-              <For each={sourceIDs}>
-                {(id) => (
-                  <span class="rounded-md bg-zinc-800 px-2 py-1 text-sm text-zinc-200">{id}</span>
-                )}
-              </For>
-            </div>
-          </Show>
+      <div class="grid min-h-0 flex-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+        <div class="flex min-h-0 flex-col rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
+          <h2 class="mb-2 text-sm font-semibold text-zinc-100">
+            {sourceIDs.length} existing tracks
+          </h2>
+          <div class="min-h-0 overflow-y-auto pr-1">
+            <Show
+              when={sourceIDs.length > 0}
+              fallback={
+                <p class="text-sm text-zinc-400">No track IDs found in the current layout.</p>
+              }
+            >
+              <div class="flex flex-wrap gap-2">
+                <For each={sourceIDs}>
+                  {(id) => (
+                    <span class="rounded-md bg-zinc-800 px-2 py-1 text-sm text-zinc-200">{id}</span>
+                  )}
+                </For>
+              </div>
+            </Show>
+          </div>
         </div>
 
-        <div class="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
-          <h2 class="mb-3 text-sm font-semibold text-zinc-100">New layout mapping</h2>
-          <div class="flex flex-col gap-3 pr-1">
+        <div class="flex min-h-0 flex-col rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
+          <h2 class="mb-3 text-sm font-semibold text-zinc-100">{targetIDs.length} new tracks</h2>
+          <div class="flex min-h-0 flex-col gap-3 overflow-y-auto pr-1">
             <For each={targetData}>
               {(node) => (
                 <TargetNodeMapping
@@ -157,13 +161,15 @@ const TargetNodeMapping: Component<{
 }> = (props) => {
   const depth = props.depth ?? 0;
 
+  const indentPx = 20;
+
   if (props.node.type === 'track') {
     return (
       <label
-        class="grid items-center gap-2 rounded-md bg-zinc-900/80 p-3 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1.4fr)]"
-        style={{ 'margin-left': `${depth * 16}px` }}
+        class="-m-2 grid items-center gap-2 rounded p-2 focus-within:bg-zinc-500 hover:bg-zinc-500 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1.4fr)]"
+        style={{ 'margin-left': `${depth * indentPx}px` }}
       >
-        <span class="truncate font-medium text-zinc-100">{props.node.id}</span>
+        <span class="truncate text-sm text-zinc-100">{props.node.id}</span>
         <span class="text-zinc-500">=</span>
         <MappingSelect
           sourceIDs={props.sourceIDs}
@@ -189,10 +195,10 @@ const TargetNodeMapping: Component<{
   return (
     <div class="flex flex-col gap-2">
       <label
-        class="grid items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/50 p-3 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1.4fr)]"
-        style={{ 'margin-left': `${depth * 16}px` }}
+        class="grid items-center gap-2 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1.4fr)]"
+        style={{ 'margin-left': `${depth * indentPx}px` }}
       >
-        <span class="truncate font-semibold text-zinc-200">{props.node.id}</span>
+        <span class="truncate text-sm font-semibold text-zinc-200">{props.node.id}</span>
         <span class="text-zinc-500">=</span>
         <MappingSelect
           sourceIDs={props.sourceIDs}
@@ -228,7 +234,7 @@ const MappingSelect: Component<{
 }> = (props) => {
   return (
     <select
-      class="rounded bg-zinc-700 p-2 text-sm text-zinc-100 hover:bg-zinc-600 focus:bg-zinc-600"
+      class="rounded bg-transparent p-2 text-sm text-zinc-100 hover:bg-zinc-600 focus:bg-zinc-600"
       value={props.value ?? ''}
       onInput={(e) => props.onChange(e.currentTarget.value || undefined)}
     >

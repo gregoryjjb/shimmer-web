@@ -1255,24 +1255,6 @@ DPI scale: ${this.dpiScale}`;
 
     this.boxSelection.start = rangeStart(this.boxSelection.origin, this.boxSelection.cursor);
     this.boxSelection.end = rangeEnd(this.boxSelection.origin, this.boxSelection.cursor);
-
-    // this.boxSelection.startTime = this.absolutePxToTime(start.x);
-    // this.boxSelection.endTime = this.absolutePxToTime(end.x);
-
-    // let startChannel = Number.POSITIVE_INFINITY;
-    // let endChannel = Number.NEGATIVE_INFINITY;
-
-    // for (let i = 0; i < this.channelCount; i++) {
-    //   const midpoint = this.channelToAbsolutePx(i) + this.config.layout.channelHeight / 2;
-
-    //   if (midpoint >= start.y && midpoint <= end.y) {
-    //     startChannel = Math.min(startChannel, i);
-    //     endChannel = Math.max(endChannel, i);
-    //   }
-    // }
-
-    // this.boxSelection.startChannel = clamp(startChannel, 0, this.channelCount); //this.absolutePxToChannel(start.y) || 0;
-    // this.boxSelection.endChannel = clamp(endChannel, 0, this.channelCount);
   };
 
   private handleMouseMove = (e: MouseEvent) => {
