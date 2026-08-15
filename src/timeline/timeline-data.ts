@@ -299,6 +299,7 @@ class TimelineData {
 
     // Clear indexes
     this.rebuildIndexes();
+    this.deselectLockedTracks();
 
     this.undoHistory = new UndoHistory(100, {
       action: 'Initial state',
@@ -315,6 +316,7 @@ class TimelineData {
     this.data = structuredClone(data);
 
     this.rebuildIndexes();
+    this.deselectLockedTracks();
 
     this.takeUndoSnapshot('Replaced all data');
   };
@@ -348,7 +350,7 @@ class TimelineData {
 
   private emitSelected = () => {
     let count = 0;
-    for (const track of this.channels) {
+    for (const track of this.unlockedTracks) {
       for (const keyframe of track.keyframes) {
         if (keyframe.selected) count++;
       }
@@ -422,7 +424,7 @@ class TimelineData {
     let first = Number.POSITIVE_INFINITY;
     let last = 0;
 
-    for (const track of this.channels) {
+    for (const track of this.unlockedTracks) {
       for (const keyframe of track.keyframes) {
         if (keyframe.selected) {
           if (keyframe.ts < first) first = keyframe.ts;
@@ -444,16 +446,44 @@ class TimelineData {
     this.trackLookup[trackID].keyframes.sort(compareKeyframes);
   };
 
+  private get unlockedTracks() {
+    return iterateUnlockedLeaves(...this.data.tracks);
+  }
+
+  private deselectLockedTracks = () => {
+    let count = 0;
+
+    for (const track of this.channels) {
+      if (!track.locked) continue;
+
+      for (const keyframe of track.keyframes) {
+        if (!keyframe.selected) continue;
+
+        setSelected(keyframe, false);
+        count++;
+      }
+    }
+
+    return count;
+  };
+
   setNodeLocked = (nodeID: LayoutNodeID, locked: boolean) => {
     const node = this.nodeLookup[nodeID];
     if (!node) return;
 
     let changed = 0;
     for (const track of iterateLeaves(node)) {
-      if (track.locked === locked) continue;
+      if (locked) {
+        for (const keyframe of track.keyframes) {
+          if (!keyframe.selected) continue;
+          setSelected(keyframe, false);
+        }
+      }
 
-      track.locked = locked;
-      changed++;
+      if (track.locked !== locked) {
+        track.locked = locked;
+        changed++;
+      }
     }
 
     if (changed > 0) {
@@ -467,13 +497,13 @@ class TimelineData {
    */
   insertAuto = (nodeID: LayoutNodeID, time: number, value: number) => {
     const node = this.nodeLookup[nodeID];
+    if (!node) return;
 
-    const trackIDs = [];
+    const trackIDs = Array.from(iterateUnlockedLeaves(node), (track) => track.id);
 
-    for (let child of iterateNodes(node)) {
-      if (child.type === 'track') {
-        trackIDs.push(child.id);
-      }
+    if (trackIDs.length === 0) {
+      this.emit('No unlocked tracks to insert into');
+      return;
     }
 
     for (const id of trackIDs) {
@@ -490,6 +520,13 @@ class TimelineData {
     keepExisting: boolean,
   ): number | undefined => {
     const p = perfEvent('selectSingle');
+    const track = this.trackLookup[trackID];
+
+    if (!track || track.locked) {
+      if (!keepExisting) this.selectAll(false);
+      p();
+      return;
+    }
 
     const index = this.binarySearch(trackID, time);
     if (index === undefined) {
@@ -498,7 +535,7 @@ class TimelineData {
       return;
     }
 
-    const kf = this.trackLookup[trackID]?.keyframes[index];
+    const kf = track.keyframes[index];
     const landed = Math.abs(kf.ts - time) <= tolerance;
 
     if (!landed) {
@@ -524,8 +561,13 @@ class TimelineData {
 
   selectAll = (selected: boolean) => {
     let anyStateChanged = false;
+    const tracks = selected ? this.unlockedTracks : this.channels;
 
-    for (const track of this.channels) {
+    if (selected && this.deselectLockedTracks() > 0) {
+      anyStateChanged = true;
+    }
+
+    for (const track of tracks) {
       for (const keyframe of track.keyframes) {
         if (keyframe.selected !== selected) {
           anyStateChanged = true;
@@ -543,18 +585,18 @@ class TimelineData {
 
   boxSelect = ({ startTime, endTime, tracks, keepExisting }: BoxSelection) => {
     let anyStateChanged = false;
+    const selectableTrackIDs = new Set(
+      tracks.filter((track) => !track.locked).map((track) => track.id),
+    );
 
     for (const track of this.channels) {
       for (const keyframe of track.keyframes) {
-        setSelected(keyframe, false);
-      }
-    }
-
-    for (const track of tracks) {
-      for (const keyframe of track.keyframes) {
         const shouldSelect =
-          (keyframe.ts >= startTime && keyframe.ts <= endTime) ||
-          (keepExisting && !!keyframe.selected);
+          !track.locked &&
+          ((selectableTrackIDs.has(track.id) &&
+            keyframe.ts >= startTime &&
+            keyframe.ts <= endTime) ||
+            (keepExisting && !!keyframe.selected));
 
         if (shouldSelect != keyframe.selected) {
           setSelected(keyframe, shouldSelect);
@@ -570,7 +612,7 @@ class TimelineData {
   deleteSelected = () => {
     let count = 0;
 
-    for (const track of this.channels) {
+    for (const track of this.unlockedTracks) {
       track.keyframes = track.keyframes.filter((k) => {
         if (k.selected) count++;
         return !k.selected;
@@ -587,7 +629,7 @@ class TimelineData {
   invertSelected = () => {
     let count = 0;
 
-    for (const track of this.channels) {
+    for (const track of this.unlockedTracks) {
       for (const keyframe of track.keyframes) {
         if (keyframe.selected) {
           keyframe.value = keyframe.value === 0 ? 1 : 0;
@@ -610,7 +652,7 @@ class TimelineData {
     const offset = direction === 'up' ? -1 : 1;
     let count = 0;
 
-    const channels = Array.from(this.channels);
+    const channels = Array.from(this.unlockedTracks);
 
     for (let i = 0; i < channels.length; i++) {
       const track = channels[i];
@@ -633,7 +675,7 @@ class TimelineData {
     const selected = channels.map((track) => track.keyframes.filter((k) => k.selected));
 
     // Delete selected
-    for (const track of this.channels) {
+    for (const track of channels) {
       track.keyframes = track.keyframes.filter((k) => !k.selected);
     }
 
@@ -653,7 +695,7 @@ class TimelineData {
    * Flip selected keyframes vertically across channels
    */
   flipSelected = () => {
-    const channels = Array.from(this.channels);
+    const channels = Array.from(this.unlockedTracks);
 
     const selected = channels.map((track) => track.keyframes.filter((kf) => kf.selected));
 
@@ -666,7 +708,7 @@ class TimelineData {
     }
 
     // Delete selected
-    for (const track of this.channels) {
+    for (const track of channels) {
       track.keyframes = track.keyframes.filter((k) => !k.selected);
     }
 
@@ -685,7 +727,7 @@ class TimelineData {
   moveSelected = (time: number) => {
     let count = 0;
 
-    for (const track of this.channels) {
+    for (const track of this.unlockedTracks) {
       let tcount = 0;
       for (const keyframe of track.keyframes) {
         if (keyframe.selected) {
@@ -709,7 +751,7 @@ class TimelineData {
   scaleSelected = (pivotTime: number, scaleFactor: number) => {
     let count = 0;
 
-    for (const track of this.channels) {
+    for (const track of this.unlockedTracks) {
       let tcount = 0;
       for (const keyframe of track.keyframes) {
         if (keyframe.selected) {
@@ -733,7 +775,7 @@ class TimelineData {
   duplicateSelected = () => {
     let count = 0;
 
-    for (const track of this.channels) {
+    for (const track of this.unlockedTracks) {
       const duplicated: Keyframe[] = [];
       for (const keyframe of track.keyframes) {
         if (keyframe.selected) {
@@ -758,7 +800,7 @@ class TimelineData {
   };
 
   alignSelected = () => {
-    const channels = Array.from(this.channels);
+    const channels = Array.from(this.unlockedTracks);
 
     const selectedIndexes: number[][] = channels.map(() => []);
 
@@ -794,7 +836,7 @@ class TimelineData {
    */
   snapTo = (time: number) => {
     let count = 0;
-    for (let track of this.channels) {
+    for (let track of this.unlockedTracks) {
       let tcount = 0;
       track.keyframes.forEach((kf) => {
         if (kf.selected) {
@@ -817,7 +859,7 @@ class TimelineData {
   };
 
   equallySpaceSelected = () => {
-    const keyframes = Array.from(this.channels).flatMap((track) =>
+    const keyframes = Array.from(this.unlockedTracks).flatMap((track) =>
       track.keyframes.filter((kf) => kf.selected),
     );
 
@@ -865,7 +907,7 @@ class TimelineData {
     const threshold = 0.001; // 1ms
     const markedForDeletion: Record<TrackID, number[]> = {};
 
-    for (const track of this.channels) {
+    for (const track of this.unlockedTracks) {
       let lastTimestamp: number | undefined;
 
       track.keyframes.forEach((kf, j) => {
@@ -941,6 +983,21 @@ export function iterateLeaves(...nodes: LayoutNode[]) {
       for (let next of iterateNodes(...nodes)) {
         if (next.type === 'track') {
           yield next;
+        }
+      }
+    },
+  };
+}
+
+/**
+ * Iterates over all unlocked leaf nodes (tracks)
+ */
+export function iterateUnlockedLeaves(...nodes: LayoutNode[]) {
+  return {
+    *[Symbol.iterator]() {
+      for (const track of iterateLeaves(...nodes)) {
+        if (!track.locked) {
+          yield track;
         }
       }
     },
