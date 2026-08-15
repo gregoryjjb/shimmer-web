@@ -2,6 +2,7 @@ export type SimpleCommand =
   | 'play'
   | 'pause'
   | 'playtoggle'
+  | 'insertBeat'
   | 'undo'
   | 'redo'
   | 'invert'
@@ -23,6 +24,7 @@ export type SimpleCommand =
 
 export const keybinds: Record<string, SimpleCommand> = {
   ' ': 'playtoggle',
+  b: 'insertBeat',
   ctrl_z: 'undo',
   ctrl_shift_z: 'redo',
   i: 'invert',
@@ -83,6 +85,7 @@ const commandNames: Record<SimpleCommand, string> = {
   play: 'Play',
   pause: 'Pause',
   playtoggle: 'Play/pause',
+  insertBeat: 'Insert beat',
   undo: 'Undo',
   redo: 'Redo',
   invert: 'Invert values',

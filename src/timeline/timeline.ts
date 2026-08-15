@@ -1,6 +1,7 @@
 import TimelineAudio from './timeline-audio';
 import TimelineData, { iterateNodes } from './timeline-data';
 import { DeepReadonly, Keyframe, LayoutNode, LayoutNodeID, ProjectData } from './types';
+import { BEAT_TRACK_ID } from './beat';
 
 import colors from './colors';
 import { ArgOf, Command, ComplexCommand, apple, keybinds } from './commands';
@@ -43,6 +44,7 @@ const lightTheme = {
   keyframeOutline: colors.gray[900],
   keyframeOutlineSelected: colors.red[600],
   keyframeOn: colors.yellow[200],
+  keyframeBeat: colors.emerald[400],
   boxSelectOutline: colors.black,
 } as const;
 
@@ -67,6 +69,7 @@ const darkTheme = {
   keyframeOutline: colors.gray[900],
   keyframeOutlineSelected: colors.red[500],
   keyframeOn: colors.yellow[300],
+  keyframeBeat: colors.emerald[400],
   boxSelectOutline: colors.cyan[300],
 } satisfies Record<keyof typeof lightTheme, string>;
 
@@ -216,6 +219,8 @@ class Timeline {
     keyframeOffSelected: CanvasImageSource;
     keyframeOnPlaying: CanvasImageSource;
     keyframeOffPlaying: CanvasImageSource;
+    keyframeBeat: CanvasImageSource;
+    keyframeBeatSelected: CanvasImageSource;
   };
 
   /**
@@ -775,6 +780,18 @@ class Timeline {
           'transparent',
           1 * this.dpiScale,
         ),
+        keyframeBeat: createDiamond(
+          layout.keyframeSize * this.dpiScale,
+          theme.keyframeOutline,
+          theme.keyframeBeat,
+          1 * this.dpiScale,
+        ),
+        keyframeBeatSelected: createDiamond(
+          layout.keyframeSize * this.dpiScale,
+          theme.keyframeOutlineSelected,
+          theme.keyframeBeat,
+          1 * this.dpiScale,
+        ),
       };
     }
 
@@ -838,17 +855,21 @@ class Timeline {
               kf.ts <= this.absolutePxToTime(this.boxSelection!.end.x));
 
           const source =
-            kf.value === 0
+            row.id === BEAT_TRACK_ID
               ? selected
-                ? this.diamondCache!.keyframeOffSelected
-                : playing
-                  ? this.diamondCache!.keyframeOffPlaying
-                  : this.diamondCache!.keyframeOff
-              : selected
-                ? this.diamondCache!.keyframeOnSelected
-                : playing
-                  ? this.diamondCache!.keyframeOnPlaying
-                  : this.diamondCache!.keyframeOn;
+                ? this.diamondCache!.keyframeBeatSelected
+                : this.diamondCache!.keyframeBeat
+              : kf.value === 0
+                ? selected
+                  ? this.diamondCache!.keyframeOffSelected
+                  : playing
+                    ? this.diamondCache!.keyframeOffPlaying
+                    : this.diamondCache!.keyframeOff
+                : selected
+                  ? this.diamondCache!.keyframeOnSelected
+                  : playing
+                    ? this.diamondCache!.keyframeOnPlaying
+                    : this.diamondCache!.keyframeOn;
 
           ctx.drawImage(
             source,
@@ -1352,22 +1373,6 @@ DPI scale: ${this.dpiScale}`;
 
     const normalizedKey = e.key.toLowerCase();
 
-    if (normalizedKey === 'b') {
-      // Benchmark
-      let start = performance.now();
-      this.data.channels.forEach((channel) =>
-        channel.keyframes.forEach((keyframe) => (keyframe.selected = false)),
-      );
-      let duration = performance.now() - start;
-      console.log('Iterating over all keyframes took', duration);
-
-      start = performance.now();
-      const cloned = JSON.parse(JSON.stringify(this.data.channels));
-      cloned.length;
-      duration = performance.now() - start;
-      console.log('Cloning keyframes took', duration);
-    }
-
     let combo = '';
     if (apple() ? e.metaKey : e.ctrlKey) combo += 'ctrl_';
     if (e.shiftKey) combo += 'shift_';
@@ -1427,6 +1432,7 @@ DPI scale: ${this.dpiScale}`;
     play: this.play,
     pause: this.pause,
     playtoggle: this.playPause,
+    insertBeat: () => this.data.insertBeat(this.audio.currentTime),
     undo: () => this.data.undo(),
     redo: () => this.data.redo(),
     invert: () => this.data.invertSelected(),

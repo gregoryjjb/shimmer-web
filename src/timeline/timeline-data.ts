@@ -1,4 +1,5 @@
 import { TimelineEmitter } from './events';
+import { BEAT_TRACK_ID, createBeatTrack, ensureBeatTrackFirst } from './beat';
 import { OpenedProject } from './persist';
 import { Keyframe, LayoutNode, LayoutNodeID, ProjectData, Track, TrackID } from './types';
 import { UndoHistory } from './undo';
@@ -7,6 +8,7 @@ import { stringifyTime } from './utils';
 export const newTracks = (count: number): LayoutNode[] => {
   // TODO: don't hardcode the default layout template
   return [
+    createBeatTrack(),
     {
       type: 'group',
       id: 'Root',
@@ -296,6 +298,7 @@ class TimelineData {
   load = (project: OpenedProject) => {
     this.openedProject = project;
     this.data = structuredClone(project.data);
+    this.data.tracks = ensureBeatTrackFirst(this.data.tracks);
 
     // Clear indexes
     this.rebuildIndexes();
@@ -314,6 +317,7 @@ class TimelineData {
    */
   replaceAll = (data: ProjectData) => {
     this.data = structuredClone(data);
+    this.data.tracks = ensureBeatTrackFirst(this.data.tracks);
 
     this.rebuildIndexes();
     this.deselectLockedTracks();
@@ -511,6 +515,24 @@ class TimelineData {
     }
 
     this.markEdit(`Inserted ${trackIDs.length} keyframe(s)`);
+  };
+
+  insertBeat = (time: number) => {
+    const beatTrack = this.trackLookup[BEAT_TRACK_ID];
+    if (!beatTrack) {
+      this.emit('Beat track is missing');
+      return;
+    }
+
+    const nearestIndex = binarySearch(beatTrack.keyframes, time);
+    const nearest = nearestIndex === undefined ? undefined : beatTrack.keyframes[nearestIndex];
+    if (nearest && Math.abs(nearest.ts - time) < 0.001) {
+      this.emit('Beat already exists at the current time');
+      return;
+    }
+
+    this.insert(BEAT_TRACK_ID, time, 0);
+    this.markEdit('Inserted beat');
   };
 
   selectSingle = (

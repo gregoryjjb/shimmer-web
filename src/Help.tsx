@@ -40,6 +40,7 @@ const Help: Component<{
       </div>
       <div class="flex flex-row flex-wrap gap-3">
         <Keybind action="Play/pause" key="Space" />
+        <Keybind action="Insert beat" key="B" />
         <Keybind action="Insert keyframes" key="RMB" />
         <Keybind action="Select keyframes" key="LMB" />
         <Keybind action="Multi-select" shift key="LMB" />

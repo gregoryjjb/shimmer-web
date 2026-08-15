@@ -1,6 +1,7 @@
 import { Component, For, Show, createMemo, createSignal } from 'solid-js';
 import GradientButton from './components/GradientButton';
 import { useTimeline } from './TimelineContext';
+import { BEAT_TRACK_ID } from './timeline/beat';
 import { iterateNodes, newTracks } from './timeline/timeline-data';
 import { Keyframe, LayoutNode, ProjectData, Track } from './timeline/types';
 
@@ -12,12 +13,13 @@ export const UpgradeLayoutForm: Component<{
   const sourceData = ctx.timeline.getData().tracks;
   const targetData = newTracks(0);
 
-  const sourceIDs = collectTrackIDs(sourceData);
-  const targetIDs = collectTrackIDs(targetData);
+  const sourceIDs = collectTrackIDs(sourceData).filter((id) => id !== BEAT_TRACK_ID);
+  const targetIDs = collectTrackIDs(targetData).filter((id) => id !== BEAT_TRACK_ID);
 
-  const defaultMapping = Object.fromEntries(
-    targetIDs.map((targetID, index) => [targetID, sourceIDs[index]]),
-  ) as Record<string, string | undefined>;
+  const defaultMapping = {
+    [BEAT_TRACK_ID]: BEAT_TRACK_ID,
+    ...Object.fromEntries(targetIDs.map((targetID, index) => [targetID, sourceIDs[index]])),
+  } as Record<string, string | undefined>;
 
   // Mapping from new track to old track (tracks only, not groups!)
   const [mapping, setMapping] = createSignal<Record<string, string | undefined>>(defaultMapping);
@@ -164,6 +166,19 @@ const TargetNodeMapping: Component<{
   const indentPx = 20;
 
   if (props.node.type === 'track') {
+    if (props.node.id === BEAT_TRACK_ID) {
+      return (
+        <div
+          class="-m-2 grid items-center gap-2 rounded p-2 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1.4fr)]"
+          style={{ 'margin-left': `${depth * indentPx}px` }}
+        >
+          <span class="truncate text-sm text-zinc-100">{BEAT_TRACK_ID}</span>
+          <span class="text-zinc-500">=</span>
+          <span class="p-2 text-sm text-zinc-400">Preserved</span>
+        </div>
+      );
+    }
+
     return (
       <label
         class="-m-2 grid items-center gap-2 rounded p-2 focus-within:bg-zinc-500 hover:bg-zinc-500 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1.4fr)]"
@@ -300,6 +315,6 @@ function cloneMappedNode(
   return {
     ...node,
     keyframes: sourceTrack ? sourceTrack.keyframes.map((keyframe) => ({ ...keyframe })) : [],
-    locked: sourceTrack?.locked ?? false,
+    locked: sourceTrack?.locked ?? node.locked,
   };
 }
