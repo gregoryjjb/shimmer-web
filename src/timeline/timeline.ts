@@ -1,6 +1,6 @@
 import TimelineAudio from './timeline-audio';
 import TimelineData, { iterateNodes } from './timeline-data';
-import { DeepReadonly, LayoutNode, LayoutNodeID, ProjectData, TrackID } from './types';
+import { DeepReadonly, Keyframe, LayoutNode, LayoutNodeID, ProjectData } from './types';
 
 import colors from './colors';
 import { ArgOf, Command, ComplexCommand, apple, keybinds } from './commands';
@@ -1522,6 +1522,10 @@ DPI scale: ${this.dpiScale}`;
     return this.config.layout;
   }
 
+  get currentTime() {
+    return this.audio.currentTime || 0;
+  }
+
   get pan() {
     return {
       x: this.position,
@@ -1537,15 +1541,21 @@ DPI scale: ${this.dpiScale}`;
 
 export default Timeline;
 
-type LayoutRow = {
+export type LayoutRow = {
   type: 'track' | 'group';
   id: LayoutNodeID;
   depth: number;
   startY: number;
   endY: number;
+  locked: boolean;
+  keyframes?: DeepReadonly<Keyframe[]>;
 };
 
-function flattenTracks(nodes: LayoutNode[], depth = 0, y = 0): LayoutRow[] {
+export function flattenTracks(
+  nodes: readonly DeepReadonly<LayoutNode>[],
+  depth = 0,
+  y = 0,
+): LayoutRow[] {
   const result: LayoutRow[] = [];
 
   // Need to be real constants
@@ -1554,31 +1564,36 @@ function flattenTracks(nodes: LayoutNode[], depth = 0, y = 0): LayoutRow[] {
 
   let currentY = y;
 
-  function traverse(currentNodes: LayoutNode[], currentDepth: number) {
-    currentNodes.forEach((node) => {
-      if (node.type === 'group') {
-        // is group
-        result.push({
-          type: 'group',
-          id: node.id,
-          depth: currentDepth,
-          startY: currentY,
-          endY: (currentY += groupHeight),
-        }); // Group entry
-        traverse(node.children, currentDepth + 1); // Children
-      } else {
-        result.push({
-          type: 'track',
-          id: node.id,
-          depth: currentDepth,
-          startY: currentY,
-          endY: (currentY += trackHeight),
-        });
-      }
-    });
+  function traverse(node: DeepReadonly<LayoutNode>, currentDepth: number): boolean {
+    if (node.type === 'track') {
+      result.push({
+        type: 'track',
+        id: node.id,
+        depth: currentDepth,
+        startY: currentY,
+        endY: (currentY += trackHeight),
+        locked: node.locked,
+        keyframes: node.keyframes,
+      });
+      return node.locked;
+    }
+
+    const row: LayoutRow = {
+      type: 'group',
+      id: node.id,
+      depth: currentDepth,
+      startY: currentY,
+      endY: (currentY += groupHeight),
+      locked: false,
+    };
+    result.push(row);
+
+    const childLockStates = node.children.map((child) => traverse(child, currentDepth + 1));
+    row.locked = childLockStates.length > 0 && childLockStates.every(Boolean);
+    return row.locked;
   }
 
-  traverse(nodes, depth);
+  nodes.forEach((node) => traverse(node, depth));
 
   return result;
 }

@@ -1,3 +1,4 @@
+/* @refresh reload */
 import {
   ParentComponent,
   createContext,
@@ -40,8 +41,12 @@ const makeTimelineContext = () => {
   const [selectedCount, setSelectedCount] = createSignal(0);
   timeline.on('selected', (n) => setSelectedCount(n));
 
+  const [currentTime, setCurrentTime] = createSignal(timeline.currentTime);
   const [prompt, setPrompt] = createSignal('');
-  timeline.on('render', () => setPrompt(timeline.getPrompt()));
+  timeline.on('render', () => {
+    setCurrentTime(timeline.currentTime);
+    setPrompt(timeline.getPrompt());
+  });
 
   const [projectName, setProjectName] = createSignal('');
 
@@ -90,6 +95,7 @@ const makeTimelineContext = () => {
     volume,
     setVolume,
     selectedCount,
+    currentTime,
     prompt,
     projectName,
     setProjectName,

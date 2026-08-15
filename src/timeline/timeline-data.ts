@@ -104,7 +104,7 @@ const setSelected = (kf: Keyframe, selected: boolean) => {
 type BinarySearchSide = 'left' | 'right';
 
 export const binarySearch = (
-  array: Keyframe[],
+  array: readonly Keyframe[],
   time: number,
   side?: BinarySearchSide,
 ): number | undefined => {
@@ -188,6 +188,11 @@ export const binarySearch = (
   }
 
   return found;
+};
+
+export const isOn = (keyframes: readonly Keyframe[], time: number): boolean => {
+  const index = binarySearch(keyframes, time, 'left');
+  return index !== undefined && keyframes[index].value > 0;
 };
 
 interface UndoSnapshot {

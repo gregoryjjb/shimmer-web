@@ -1,47 +1,9 @@
-import { Component, For, createMemo } from 'solid-js';
+import { Component, Index, createMemo } from 'solid-js';
 import { Icon } from 'solid-heroicons';
 import { lockClosed, lockOpen } from 'solid-heroicons/solid-mini';
 import { useTimeline } from './TimelineContext';
-import { DeepReadonly, LayoutNode, LayoutNodeID } from './timeline/types';
-
-type LockState = 'locked' | 'unlocked';
-
-type TrackTreeRow = {
-  id: LayoutNodeID;
-  type: LayoutNode['type'];
-  depth: number;
-  lockState: LockState;
-};
-
-type ReadonlyLayoutNode = DeepReadonly<LayoutNode>;
-
-const combineLockStates = (states: LockState[]): LockState => {
-  return states.length > 0 && states.every((state) => state === 'locked') ? 'locked' : 'unlocked';
-};
-
-const flattenNode = (
-  node: ReadonlyLayoutNode,
-  depth = 0,
-): { rows: TrackTreeRow[]; lockState: LockState } => {
-  if (node.type === 'track') {
-    const lockState = node.locked ? 'locked' : 'unlocked';
-    return {
-      lockState,
-      rows: [{ id: node.id, type: node.type, depth, lockState }],
-    };
-  }
-
-  const children = node.children.map((child) => flattenNode(child, depth + 1));
-  const lockState = combineLockStates(children.map((child) => child.lockState));
-
-  return {
-    lockState,
-    rows: [
-      { id: node.id, type: node.type, depth, lockState },
-      ...children.flatMap((child) => child.rows),
-    ],
-  };
-};
+import { isOn } from './timeline/timeline-data';
+import { flattenTracks } from './timeline/timeline';
 
 const TrackTree: Component = () => {
   const ctx = useTimeline();
@@ -49,7 +11,7 @@ const TrackTree: Component = () => {
   // during runtime then we need to make it reactive
   const layout = ctx.timeline.layout;
 
-  const rows = createMemo(() => ctx.projectData().tracks.flatMap((node) => flattenNode(node).rows));
+  const rows = createMemo(() => flattenTracks(ctx.projectData().tracks));
 
   return (
     <div
@@ -60,47 +22,55 @@ const TrackTree: Component = () => {
       }}
     >
       <div style={{ transform: `translateY(-${ctx.pan().y}px)` }}>
-        <For each={rows()}>
+        <Index each={rows()}>
           {(row) => {
-            const nextLocked = row.lockState !== 'locked';
-            const action = nextLocked ? 'Lock' : 'Unlock';
-            const subject = row.type === 'group' ? 'group' : 'track';
+            const rowIsOn = createMemo(() => {
+              const keyframes = row().keyframes;
+              return keyframes !== undefined && isOn(keyframes, ctx.currentTime());
+            });
+            const nextLocked = () => !row().locked;
+            const action = () => (row().locked ? 'Unlock' : 'Lock');
+            const subject = () => (row().type === 'group' ? 'group' : 'track');
 
             return (
               <div
                 class="pointer-events-none flex items-center gap-1 pr-1"
                 style={{
                   height: `${layout.channelHeight}px`,
-                  'padding-left': `${8 + row.depth * 10}px`,
+                  'padding-left': `${8 + row().depth * 10}px`,
                 }}
               >
                 <span
-                  class="min-w-0 flex-1 truncate text-base leading-none text-zinc-950"
-                  title={row.id}
+                  class="min-w-0 flex-1 truncate text-base leading-none"
+                  classList={{
+                    'text-yellow-300': rowIsOn(),
+                    'text-zinc-400': !rowIsOn(),
+                  }}
+                  style={{
+                    'text-shadow': rowIsOn() ? '0 0 6px rgba(253, 224, 71, 0.65)' : 'none',
+                  }}
+                  title={row().id}
                 >
-                  {row.id}
+                  {row().id}
                 </span>
                 <button
                   type="button"
-                  class="pointer-events-auto shrink-0 rounded p-1 transition-colors hover:bg-zinc-600/80 hover:text-white"
+                  class="pointer-events-auto shrink-0 rounded p-1 transition-colors hover:bg-zinc-600/80"
                   classList={{
-                    'text-zinc-500': row.lockState === 'unlocked',
-                    'bg-zinc-700/60 text-zinc-100': row.lockState === 'locked',
+                    'text-zinc-500 hover:text-white': !row().locked,
+                    'text-rose-300': row().locked,
                   }}
-                  title={`${action} ${subject} ${row.id}`}
-                  aria-label={`${action} ${subject} ${row.id}`}
-                  aria-pressed={row.lockState === 'locked'}
-                  onClick={() => ctx.timeline.setNodeLocked(row.id, nextLocked)}
+                  title={`${action()} ${subject()} ${row().id}`}
+                  aria-label={`${action()} ${subject()} ${row().id}`}
+                  aria-pressed={row().locked}
+                  onClick={() => ctx.timeline.setNodeLocked(row().id, nextLocked())}
                 >
-                  <Icon
-                    path={row.lockState === 'unlocked' ? lockOpen : lockClosed}
-                    class="h-4 w-4"
-                  />
+                  <Icon path={row().locked ? lockClosed : lockOpen} class="h-4 w-4" />
                 </button>
               </div>
             );
           }}
-        </For>
+        </Index>
       </div>
     </div>
   );
