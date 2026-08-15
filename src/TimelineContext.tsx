@@ -10,11 +10,17 @@ import {
 import { createStoredSignal } from './hooks/createStorageSignal';
 import { LocalPersistor, OpenedProject, Persistor } from './timeline/persist';
 import Timeline from './timeline/timeline';
-import { Project } from './timeline/types';
+import { DeepReadonly, Project, ProjectData } from './timeline/types';
 import { GomasPersistor } from './timeline/persist/gomas';
 
 const makeTimelineContext = () => {
   const timeline = new Timeline();
+
+  const [projectData, setProjectData] = createSignal<DeepReadonly<ProjectData>>(
+    timeline.projectData,
+    { equals: false },
+  );
+  timeline.on('dataChanged', (data) => setProjectData(data));
 
   const [loading, setLoading] = createSignal(false);
   timeline.on('loading', (l) => setLoading(l));
@@ -74,6 +80,7 @@ const makeTimelineContext = () => {
 
   const value = {
     timeline,
+    projectData,
     loading,
     playing,
     volume,

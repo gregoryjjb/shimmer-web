@@ -1,6 +1,6 @@
 import TimelineAudio from './timeline-audio';
 import TimelineData, { iterateNodes } from './timeline-data';
-import { LayoutNode, LayoutNodeID, ProjectData, TrackID } from './types';
+import { DeepReadonly, LayoutNode, LayoutNodeID, ProjectData, TrackID } from './types';
 
 import colors from './colors';
 import { ArgOf, Command, ComplexCommand, apple, keybinds } from './commands';
@@ -1531,6 +1531,10 @@ DPI scale: ${this.dpiScale}`;
   getData = () => {
     return structuredClone(this.data.data);
   };
+
+  get projectData(): DeepReadonly<ProjectData> {
+    return this.data.data;
+  }
 }
 
 export default Timeline;

@@ -49,6 +49,14 @@ export type Track = {
   locked: boolean;
 };
 
+export type DeepReadonly<T> = T extends (...args: any[]) => any
+  ? T
+  : T extends readonly (infer Item)[]
+    ? readonly DeepReadonly<Item>[]
+    : T extends object
+      ? { readonly [Key in keyof T]: DeepReadonly<T[Key]> }
+      : T;
+
 export interface Project {
   name: string;
   data: ProjectData;

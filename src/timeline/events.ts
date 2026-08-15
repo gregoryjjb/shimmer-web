@@ -1,4 +1,4 @@
-import { ProjectData } from './types';
+import { DeepReadonly, ProjectData } from './types';
 
 type EventMap = Record<string, any>;
 type EventKey<T extends EventMap> = string & keyof T;
@@ -26,6 +26,7 @@ export class TimelineEmitter extends Emitter<{
   render: void;
   loading: boolean;
   autosave: ProjectData;
+  dataChanged: DeepReadonly<ProjectData>;
 }> {
   // constructor() {
   //   super();

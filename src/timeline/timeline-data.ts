@@ -299,6 +299,8 @@ class TimelineData {
       action: 'Initial state',
       data: JSON.stringify(this.data),
     });
+
+    this.emitDataChanged();
   };
 
   /**
@@ -321,6 +323,11 @@ class TimelineData {
     });
 
     this.openedProject?.saveData(this.data);
+    this.emitDataChanged();
+  };
+
+  private emitDataChanged = () => {
+    this.emitter.emit('dataChanged', this.data);
   };
 
   private emit = (action: string) => {
@@ -353,10 +360,10 @@ class TimelineData {
     }
 
     this.data = JSON.parse(snapshot.data);
-    this.openedProject?.saveData(this.data);
-    this.emit(`Undo '${undid.action}'`);
-
     this.rebuildIndexes();
+    this.openedProject?.saveData(this.data);
+    this.emitDataChanged();
+    this.emit(`Undo '${undid.action}'`);
   };
 
   redo = () => {
@@ -367,10 +374,10 @@ class TimelineData {
     }
 
     this.data = JSON.parse(redone.data);
-    this.openedProject?.saveData(this.data);
-    this.emit(`Redo '${redone.action}'`);
-
     this.rebuildIndexes();
+    this.openedProject?.saveData(this.data);
+    this.emitDataChanged();
+    this.emit(`Redo '${redone.action}'`);
   };
 
   binarySearch = (trackID: TrackID, time: number, side?: BinarySearchSide): number | undefined => {
