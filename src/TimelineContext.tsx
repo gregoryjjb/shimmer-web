@@ -95,12 +95,19 @@ const makeTimelineContext = () => {
     timeline.destroy();
   });
 
-  const loadProject = (project: Project) => {
+  const loadProject = async (project: Project) => {
     // TODO: some kind of confirmation dialog?
 
     setProjectName(project.name);
 
-    timeline.load(new OpenedProject(project.name, project.data, project.audio, LocalPersistor));
+    const openedProject = new OpenedProject(
+      project.name,
+      project.data,
+      project.audio,
+      LocalPersistor,
+    );
+
+    await Promise.all([timeline.load(openedProject), openedProject.persist()]);
   };
 
   const value = {

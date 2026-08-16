@@ -74,6 +74,15 @@ export class OpenedProject {
     return this._audio;
   }
 
+  /** Writes the complete in-memory project to its backing persistence. */
+  async persist() {
+    await Promise.all([
+      this.persistor.saveName(this._name),
+      this.persistor.saveData(this._data),
+      this.persistor.saveAudio(this._audio),
+    ]);
+  }
+
   saveData(value: ProjectData) {
     this._data = value;
 

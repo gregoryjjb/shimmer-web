@@ -164,7 +164,7 @@ function Editor() {
             const blankData = newTracks(project.channelCount);
             modal.hide();
 
-            ctx.loadProject({
+            await ctx.loadProject({
               name: project.name,
               // TODO: generate blank projects somewhere else
               data: { version: '2', tracks: blankData },
@@ -179,7 +179,7 @@ function Editor() {
         <OpenProjectForm
           onSubmit={async (payload) => {
             openModal.hide();
-            ctx.loadProject(payload);
+            await ctx.loadProject(payload);
           }}
           onCancel={() => openModal.hide()}
         />
