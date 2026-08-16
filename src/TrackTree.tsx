@@ -3,8 +3,22 @@ import { Icon } from 'solid-heroicons';
 import { lockClosed, lockOpen } from 'solid-heroicons/solid-mini';
 import { useTimeline } from './TimelineContext';
 import { BEAT_FLASH_DURATION_SECONDS, BEAT_TRACK_ID } from './timeline/beat';
+import colors from './timeline/colors';
 import { isOn } from './timeline/timeline-data';
 import { flattenTracks } from './timeline/timeline';
+
+const christmasLights = [
+  { color: '#ff4b3e', core: '#ff9188', glow: 'rgba(255, 75, 62, 0.65)' },
+  { color: '#ff982b', core: '#ffbd70', glow: 'rgba(255, 152, 43, 0.65)' },
+  { color: '#ffd23f', core: '#ffe27d', glow: 'rgba(255, 210, 63, 0.65)' },
+  { color: '#35c759', core: '#82dc98', glow: 'rgba(53, 199, 89, 0.65)' },
+  { color: '#3f7cff', core: '#89a8ff', glow: 'rgba(63, 124, 255, 0.65)' },
+];
+
+const beatLight = {
+  color: colors.emerald[400],
+  glow: 'rgba(52, 211, 153, 0.65)',
+};
 
 const TrackTree: Component = () => {
   const ctx = useTimeline();
@@ -13,6 +27,14 @@ const TrackTree: Component = () => {
   const layout = ctx.timeline.layout;
 
   const rows = createMemo(() => flattenTracks(ctx.projectData().tracks));
+  const colorOffsets = createMemo(() => {
+    let offset = 0;
+    return rows().map((row) => {
+      const rowOffset = offset;
+      if (row.id !== BEAT_TRACK_ID) offset += Array.from(row.id).length;
+      return rowOffset;
+    });
+  });
 
   return (
     <div
@@ -24,7 +46,7 @@ const TrackTree: Component = () => {
     >
       <div style={{ transform: `translateY(-${ctx.pan().y}px)` }}>
         <Index each={rows()}>
-          {(row) => {
+          {(row, rowIndex) => {
             const isBeat = () => row().id === BEAT_TRACK_ID;
             const rowIsOn = createMemo(() => {
               const keyframes = row().keyframes;
@@ -52,20 +74,39 @@ const TrackTree: Component = () => {
                 <span
                   class="min-w-0 flex-1 truncate text-base leading-none"
                   classList={{
-                    'text-cyan-200': rowIsOn() && isBeat(),
-                    'text-yellow-300': rowIsOn() && !isBeat(),
                     'text-zinc-400': !rowIsOn(),
                   }}
                   style={{
-                    'text-shadow': rowIsOn()
-                      ? isBeat()
-                        ? '0 0 6px rgba(147, 197, 253, 0.65)'
-                        : '0 0 6px rgba(253, 224, 71, 0.65)'
-                      : 'none',
+                    color: rowIsOn() && isBeat() ? beatLight.color : undefined,
+                    'text-shadow':
+                      rowIsOn() && isBeat()
+                        ? `0 0 1px white, 0 0 3px ${beatLight.color}, 0 0 7px ${beatLight.glow}`
+                        : 'none',
                   }}
                   title={row().id}
                 >
-                  {row().id}
+                  {rowIsOn() && !isBeat() ? (
+                    <Index each={Array.from(row().id)}>
+                      {(character, index) => {
+                        const light =
+                          christmasLights[
+                            (colorOffsets()[rowIndex] + index) % christmasLights.length
+                          ];
+                        return (
+                          <span
+                            style={{
+                              color: light.core,
+                              'text-shadow': `0 0 1px white, 0 0 3px ${light.color}, 0 0 7px ${light.glow}`,
+                            }}
+                          >
+                            {character()}
+                          </span>
+                        );
+                      }}
+                    </Index>
+                  ) : (
+                    row().id
+                  )}
                 </span>
                 <button
                   type="button"
