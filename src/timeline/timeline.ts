@@ -30,7 +30,6 @@ type DeepPartial<T> = T extends object
   : T;
 
 const lightTheme = {
-  sidebar: colors.white,
   debugText: colors.black,
   ticks: colors.black,
   scrubber: colors.red[500],
@@ -49,7 +48,6 @@ const lightTheme = {
 } as const;
 
 const darkTheme = {
-  sidebar: colors.zinc[900],
   debugText: colors.white,
   ticks: colors.white,
   scrubber: colors.red[500],
@@ -140,7 +138,6 @@ class Timeline {
   private canvas: HTMLCanvasElement;
   private debugDisplay: HTMLPreElement;
   // private lights: HTMLDivElement[] = [];
-  private currentTimeDisplay: HTMLDivElement;
 
   private resizeObserver?: ResizeObserver;
 
@@ -264,8 +261,6 @@ class Timeline {
   }
 
   constructor(options?: TimelineOptions) {
-    const { layout } = this.config;
-
     this.root = document.createElement('div');
     this.root.style.position = 'relative';
 
@@ -280,16 +275,6 @@ class Timeline {
       return false;
     };
     this.root.appendChild(this.canvas);
-
-    this.currentTimeDisplay = document.createElement('div');
-    this.currentTimeDisplay.className =
-      'absolute top-0 left-3 px-1 py-0.5 rounded-sm text-sm border';
-    // this.currentTimeDisplay.style.position = 'absolute';
-    // this.currentTimeDisplay.style.top = '4px';
-    // this.currentTimeDisplay.style.left = '4px';
-    // this.currentTimeDisplay.style.padding = '4px';
-    // this.currentTimeDisplay.style.fontSize = '12px';
-    this.root.appendChild(this.currentTimeDisplay);
 
     this.debugDisplay = document.createElement('pre');
     this.debugDisplay.innerText = 'Foo\nBar';
@@ -353,7 +338,7 @@ class Timeline {
     window.addEventListener('keydown', this.handleKeyDown);
 
     this.canvas.addEventListener('mousedown', this.handleMouseDown);
-    this.canvas.addEventListener('mouseup', this.handleMouseUp);
+    window.addEventListener('mouseup', this.handleMouseUp);
     this.canvas.addEventListener('wheel', this.handleWheel, { passive: false });
   }
 
@@ -489,14 +474,14 @@ class Timeline {
    * Converts an absolute position of pixels on the canvas to the matching time
    */
   private absolutePxToTime = (x: number) => {
-    return this.pxToDuration(x - this.config.layout.sidebarWidth) + this.position;
+    return this.pxToDuration(x) + this.position;
   };
 
   /**
    * Converts a timeline time to the matching absolute position on the canvas
    */
   private absoluteTimeToPx = (seconds: number) => {
-    return (seconds - this.position) * this.pxPerSecond + this.config.layout.sidebarWidth;
+    return (seconds - this.position) * this.pxPerSecond;
   };
 
   private absolutePxToLayoutRow = (y: number): LayoutRow | null => {
@@ -553,15 +538,6 @@ class Timeline {
     ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
 
     const trackRows = flattenTracks(this.data.data.tracks);
-
-    //// Sidebar
-
-    ctx.strokeStyle = theme.channelAlternate;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(layout.sidebarWidth, 0);
-    ctx.lineTo(layout.sidebarWidth, this.canvasHeight);
-    ctx.stroke();
 
     //// Timeline
 
@@ -630,12 +606,11 @@ class Timeline {
 
     //// Waveform
     performance.mark('draw-waveform-start');
-    const waveformX = layout.sidebarWidth;
     const waveformY = layout.timelineHeight;
-    const waveformWidth = Math.max(this.canvasWidth - waveformX, 0);
+    const waveformWidth = this.canvasWidth;
     const waveformHeight = layout.waveformHeight;
 
-    ctx.translate(waveformX, waveformY);
+    ctx.translate(0, waveformY);
 
     const peaks = this.audio.getPeaks(
       waveformWidth,
@@ -688,9 +663,8 @@ class Timeline {
 
     //// Channels and Keyframes
 
-    const channelsX = layout.sidebarWidth;
     const channelsY = waveformY + layout.waveformHeight;
-    const channelsWidth = this.canvasWidth; // - channelsX;
+    const channelsWidth = this.canvasWidth;
     const channelsHeight = channelCount * layout.channelHeight;
 
     // Clip so scrolled channels don't draw over the waveform/timeline
@@ -703,12 +677,12 @@ class Timeline {
 
     // Find hovered tracks
     const hoveredNodeIDs = new Set<string>();
-    const row = this.absolutePxToLayoutRow(this.mouseY);
-    if (row) {
-      for (let child of iterateNodes(this.data.nodeLookup[row.id])) {
-        hoveredNodeIDs.add(child.id);
-      }
-    }
+    // const row = this.absolutePxToLayoutRow(this.mouseY);
+    // if (row) {
+    //   for (let child of iterateNodes(this.data.nodeLookup[row.id])) {
+    //     hoveredNodeIDs.add(child.id);
+    //   }
+    // }
 
     // Draw alternating background colors for channels
     for (let i = 0; i < trackRows.length; i++) {
@@ -892,15 +866,15 @@ class Timeline {
 
     //// Marker
     const scrubberTime = this.audio.currentTime || 0;
-    const scrubberPos = (scrubberTime - this.position) * this.pxPerSecond + layout.sidebarWidth;
+    const scrubberPos = (scrubberTime - this.position) * this.pxPerSecond;
 
     ctx.fillStyle = theme.scrubber;
-    if (scrubberPos < layout.sidebarWidth) {
+    if (scrubberPos < 0) {
       // Left off-screen scrubber indicator triangle
       ctx.beginPath();
-      ctx.moveTo(layout.sidebarWidth + 1, 5);
-      ctx.lineTo(layout.sidebarWidth + 6, 0);
-      ctx.lineTo(layout.sidebarWidth + 6, 10);
+      ctx.moveTo(1, 5);
+      ctx.lineTo(6, 0);
+      ctx.lineTo(6, 10);
       ctx.fill();
     } else if (scrubberPos > this.canvasWidth) {
       // Right off-screen scrubber indicator triangle
@@ -927,16 +901,6 @@ class Timeline {
       // ctx.fill();
       ctx.stroke();
     }
-
-    //// Sidebar
-    ctx.fillStyle = theme.sidebar;
-    ctx.globalAlpha = 0.75;
-    ctx.fillRect(0, 0, layout.sidebarWidth, this.canvasHeight);
-    ctx.globalAlpha = 1;
-
-    // Current time
-    const timeString = stringifyTime(this.audio.currentTime, 'milliseconds');
-    this.currentTimeDisplay.innerHTML = timeString;
 
     // const beats = this.data.data.beats || [];
 
@@ -1232,7 +1196,7 @@ DPI scale: ${this.dpiScale}`;
 
   private updateBoxSelection = (p: Point) => {
     const clamped = {
-      x: clamp(p.x, this.config.layout.sidebarWidth, this.canvasWidth),
+      x: clamp(p.x, 0, this.canvasWidth),
       y: clamp(
         p.y,
         this.config.layout.timelineHeight + this.config.layout.waveformHeight,
@@ -1271,7 +1235,7 @@ DPI scale: ${this.dpiScale}`;
     }
 
     if (this.seeking) {
-      const clamped = Math.min(Math.max(this.config.layout.sidebarWidth, x), this.canvasWidth);
+      const clamped = Math.min(Math.max(0, x), this.canvasWidth);
       const time = this.absolutePxToTime(clamped);
       this.seek(time, e.ctrlKey);
     }
