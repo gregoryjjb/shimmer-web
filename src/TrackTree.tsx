@@ -2,6 +2,7 @@ import { Component, Index, createMemo } from 'solid-js';
 import { Icon } from 'solid-heroicons';
 import { lockClosed, lockOpen } from 'solid-heroicons/solid-mini';
 import { useTimeline } from './TimelineContext';
+import { BEAT_FLASH_DURATION_SECONDS, BEAT_TRACK_ID } from './timeline/beat';
 import { isOn } from './timeline/timeline-data';
 import { flattenTracks } from './timeline/timeline';
 
@@ -15,7 +16,7 @@ const TrackTree: Component = () => {
 
   return (
     <div
-      class="pointer-events-none absolute bottom-0 left-0 z-10 overflow-hidden"
+      class="pointer-events-none absolute bottom-0 left-0 z-10 overflow-hidden bg-slate-950"
       style={{
         top: `${layout.timelineHeight + layout.waveformHeight}px`,
         width: `${layout.sidebarWidth}px`,
@@ -24,9 +25,17 @@ const TrackTree: Component = () => {
       <div style={{ transform: `translateY(-${ctx.pan().y}px)` }}>
         <Index each={rows()}>
           {(row) => {
+            const isBeat = () => row().id === BEAT_TRACK_ID;
             const rowIsOn = createMemo(() => {
               const keyframes = row().keyframes;
-              return keyframes !== undefined && isOn(keyframes, ctx.currentTime());
+              return (
+                keyframes !== undefined &&
+                isOn(
+                  keyframes,
+                  ctx.currentTime(),
+                  isBeat() ? BEAT_FLASH_DURATION_SECONDS : undefined,
+                )
+              );
             });
             const nextLocked = () => !row().locked;
             const action = () => (row().locked ? 'Unlock' : 'Lock');
@@ -43,11 +52,16 @@ const TrackTree: Component = () => {
                 <span
                   class="min-w-0 flex-1 truncate text-base leading-none"
                   classList={{
-                    'text-yellow-300': rowIsOn(),
+                    'text-cyan-200': rowIsOn() && isBeat(),
+                    'text-yellow-300': rowIsOn() && !isBeat(),
                     'text-zinc-400': !rowIsOn(),
                   }}
                   style={{
-                    'text-shadow': rowIsOn() ? '0 0 6px rgba(253, 224, 71, 0.65)' : 'none',
+                    'text-shadow': rowIsOn()
+                      ? isBeat()
+                        ? '0 0 6px rgba(147, 197, 253, 0.65)'
+                        : '0 0 6px rgba(253, 224, 71, 0.65)'
+                      : 'none',
                   }}
                   title={row().id}
                 >

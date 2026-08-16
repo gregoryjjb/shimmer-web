@@ -1,5 +1,6 @@
 import audiobufferToWav from 'audiobuffer-to-wav';
 import { Emitter, TimelineEmitter } from './events';
+import { DeepReadonly } from './types';
 
 type Peaks = {
   mins: Float32Array;
@@ -126,7 +127,12 @@ export default class TimelineAudio extends Emitter<{
 }> {
   private input: HTMLInputElement;
   private element: HTMLAudioElement;
-  private buffer?: AudioBuffer;
+
+  private _buffer?: AudioBuffer;
+
+  get buffer(): DeepReadonly<AudioBuffer> | undefined {
+    return this._buffer;
+  }
 
   private normalizedBuffer?: Float32Array;
 
@@ -223,17 +229,17 @@ export default class TimelineAudio extends Emitter<{
     // );
 
     const context = new AudioContext();
-    this.buffer = await context.decodeAudioData(arrayBuffer);
+    this._buffer = await context.decodeAudioData(arrayBuffer);
 
     // VBR mp3 files get desynced when seeking, so instead of using the original
     // mp3 blob, we convert the decoded PCM data to wav and use that
-    const wav = audiobufferToWav(this.buffer);
+    const wav = audiobufferToWav(this._buffer);
     const wavBlob = new Blob([wav]);
     this.element.src = URL.createObjectURL(wavBlob);
 
     // this.element.src = URL.createObjectURL(blob);
 
-    const raw = this.buffer.getChannelData(0);
+    const raw = this._buffer.getChannelData(0);
 
     // Downsample
     const targetSamplesPerSecond = 1000;
@@ -254,13 +260,13 @@ export default class TimelineAudio extends Emitter<{
     }
 
     // Precompute
-    const peaks1000 = getPeaks(this.normalizedBuffer, this.buffer.duration, {
+    const peaks1000 = getPeaks(this.normalizedBuffer, this._buffer.duration, {
       peaksPerSecond: 1000,
     });
-    const peaks100 = downsamplePeaks(peaks1000, this.buffer.duration, {
+    const peaks100 = downsamplePeaks(peaks1000, this._buffer.duration, {
       peaksPerSecond: 100,
     });
-    const peaks10 = downsamplePeaks(peaks100, this.buffer.duration, {
+    const peaks10 = downsamplePeaks(peaks100, this._buffer.duration, {
       peaksPerSecond: 10,
     });
     this.precomputedPeaks = {
@@ -276,7 +282,7 @@ export default class TimelineAudio extends Emitter<{
   };
 
   getPeaks = (segmentCount: number, start: number, duration: number): Peaks | undefined => {
-    if (!this.buffer) return;
+    if (!this._buffer) return;
 
     // Check the cache!
     const key = [segmentCount, start, duration].join('$');
@@ -293,7 +299,7 @@ export default class TimelineAudio extends Emitter<{
     // Use existing array if we can, to save memory
     const cached = this.cachedPeaks?.mins.length === segmentCount ? this.cachedPeaks : undefined;
 
-    const peaks = downsamplePeaks(source, this.buffer!.duration, {
+    const peaks = downsamplePeaks(source, this._buffer!.duration, {
       peaksCount: segmentCount,
       start,
       duration,
@@ -304,6 +310,18 @@ export default class TimelineAudio extends Emitter<{
     this.cacheKey = key;
     return peaks;
   };
+
+  // getAnalysisInput = () => {
+  //   if (!this._buffer) {
+  //     throw new Error('Audio is not loaded');
+  //   }
+
+  //   // Use a copy because the worker takes ownership of the underlying buffer.
+  //   return {
+  //     samples: new Float32Array(this._buffer.getChannelData(0)),
+  //     sampleRate: this._buffer.sampleRate,
+  //   };
+  // };
 
   get currentTime() {
     return this.element.currentTime;

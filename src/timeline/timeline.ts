@@ -1428,6 +1428,13 @@ DPI scale: ${this.dpiScale}`;
     };
   };
 
+  getAudioBuffer = () => this.audio.buffer;
+
+  replaceBeats = (beats: readonly number[]) => {
+    this.data.replaceBeats(beats);
+    this.requestDraw();
+  };
+
   private commandHandlers: Record<Command, () => void> = {
     play: this.play,
     pause: this.pause,

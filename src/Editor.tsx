@@ -32,6 +32,19 @@ function Editor() {
   const [OpenProjectModal, openModal] = createModal();
   const [LayoutModal, layoutModal] = createModal();
 
+  const beatAnalysisMessage = () => {
+    const analysis = ctx.beatAnalysis();
+
+    switch (analysis.state) {
+      case 'running':
+        return 'Analyzing beats with Essentia…';
+      case 'complete':
+        return `Detected ${analysis.beats.length} beats at ${analysis.bpm.toFixed(1)} BPM`;
+      case 'error':
+        return `Beat analysis failed: ${analysis.message}`;
+    }
+  };
+
   const replaceJSON = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -91,6 +104,16 @@ function Editor() {
           <CommandMenuItem command="undo" />
           <CommandMenuItem command="redo" />
           <MenuItemSpacer />
+          <MenuItem
+            name={
+              ctx.beatAnalysis().state === 'running'
+                ? 'Analyzing beats…'
+                : 'Analyze beats with Essentia'
+            }
+            onClick={() => void ctx.analyzeBeats()}
+            disabled={ctx.loading() || ctx.beatAnalysis().state === 'running'}
+          />
+          <MenuItemSpacer />
           <CommandMenuItem requireSelected command="invert" />
           <CommandMenuItem requireSelected command="align" />
           <CommandMenuItem requireSelected command="snapToCursor" />
@@ -124,7 +147,9 @@ function Editor() {
       </div>
       <TimelineCanvas />
       <div class="border-t border-zinc-400 bg-zinc-800 px-2 py-1 text-sm">
-        <p>{ctx.prompt() || `${ctx.selectedCount()} keyframes selected`}</p>
+        <p>
+          {beatAnalysisMessage() || ctx.prompt() || `${ctx.selectedCount()} keyframes selected`}
+        </p>
       </div>
       {showHelp() && <Help onClose={() => setShowHelp(false)} />}
       {ctx.loading() && (

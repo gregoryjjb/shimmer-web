@@ -192,9 +192,20 @@ export const binarySearch = (
   return found;
 };
 
-export const isOn = (keyframes: readonly Keyframe[], time: number): boolean => {
+export const isOn = (
+  keyframes: readonly Keyframe[],
+  time: number,
+  flashDurationSeconds?: number,
+): boolean => {
   const index = binarySearch(keyframes, time, 'left');
-  return index !== undefined && keyframes[index].value > 0;
+  if (index === undefined) return false;
+
+  const keyframe = keyframes[index];
+  if (flashDurationSeconds !== undefined) {
+    return time - keyframe.ts < flashDurationSeconds;
+  }
+
+  return keyframe.value > 0;
 };
 
 interface UndoSnapshot {
@@ -533,6 +544,25 @@ class TimelineData {
 
     this.insert(BEAT_TRACK_ID, time, 0);
     this.markEdit('Inserted beat');
+  };
+
+  replaceBeats = (times: readonly number[]) => {
+    const beatTrack = this.trackLookup[BEAT_TRACK_ID];
+    if (!beatTrack) {
+      this.emit('Beat track is missing');
+      return;
+    }
+
+    const sorted = times.filter((time) => Number.isFinite(time) && time >= 0).sort((a, b) => a - b);
+    const unique = sorted.filter((time, index) => index === 0 || time - sorted[index - 1] >= 0.001);
+
+    if (unique.length === 0) {
+      this.emit('No beats detected');
+      return;
+    }
+
+    beatTrack.keyframes = unique.map((ts) => ({ ts, value: 0 }));
+    this.markEdit(`Detected ${unique.length} beats`);
   };
 
   selectSingle = (

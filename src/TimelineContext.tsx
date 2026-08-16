@@ -8,6 +8,7 @@ import {
   onMount,
   useContext,
 } from 'solid-js';
+import { createBeatAnalysis, essentiaBeatAnalyzer } from './beat-analysis';
 import { createStoredSignal } from './hooks/createStorageSignal';
 import { LocalPersistor, OpenedProject, Persistor } from './timeline/persist';
 import Timeline from './timeline/timeline';
@@ -16,6 +17,19 @@ import { GomasPersistor } from './timeline/persist/gomas';
 
 const makeTimelineContext = () => {
   const timeline = new Timeline();
+  const beatAnalysis = createBeatAnalysis({
+    analyzer: essentiaBeatAnalyzer,
+    readAudio: () => {
+      const buffer = timeline.getAudioBuffer();
+      if (!buffer) throw new Error(`Can't analyze beats without audio`);
+
+      return {
+        samples: new Float32Array(buffer.getChannelData(0)),
+        sampleRate: buffer.sampleRate,
+      };
+    },
+    applyBeats: timeline.replaceBeats,
+  });
 
   const [projectData, setProjectData] = createSignal<DeepReadonly<ProjectData>>(
     timeline.projectData,
@@ -27,7 +41,10 @@ const makeTimelineContext = () => {
   timeline.on('pan', setPan);
 
   const [loading, setLoading] = createSignal(false);
-  timeline.on('loading', (l) => setLoading(l));
+  timeline.on('loading', (l) => {
+    if (l) beatAnalysis.cancel();
+    setLoading(l);
+  });
 
   const [playing, setPlaying] = createSignal(false);
   timeline.on('play', () => setPlaying(true));
@@ -92,6 +109,8 @@ const makeTimelineContext = () => {
     pan,
     loading,
     playing,
+    beatAnalysis: beatAnalysis.state,
+    analyzeBeats: beatAnalysis.run,
     volume,
     setVolume,
     selectedCount,
