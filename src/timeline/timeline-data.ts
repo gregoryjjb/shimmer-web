@@ -65,6 +65,36 @@ export const newTracks = (count: number): LayoutNode[] => {
             { type: 'track', id: 'Fence 10', keyframes: [], locked: false },
           ],
         },
+        {
+          type: 'group',
+          id: 'Tree left',
+          children: [
+            { type: 'track', id: 'Tree left 1', keyframes: [], locked: false },
+            { type: 'track', id: 'Tree left 2', keyframes: [], locked: false },
+            { type: 'track', id: 'Tree left 3', keyframes: [], locked: false },
+            { type: 'track', id: 'Tree left 4', keyframes: [], locked: false },
+          ],
+        },
+        {
+          type: 'group',
+          id: 'Tree center',
+          children: [
+            { type: 'track', id: 'Tree center 1', keyframes: [], locked: false },
+            { type: 'track', id: 'Tree center 2', keyframes: [], locked: false },
+            { type: 'track', id: 'Tree center 3', keyframes: [], locked: false },
+            { type: 'track', id: 'Tree center 4', keyframes: [], locked: false },
+          ],
+        },
+        {
+          type: 'group',
+          id: 'Tree right',
+          children: [
+            { type: 'track', id: 'Tree right 1', keyframes: [], locked: false },
+            { type: 'track', id: 'Tree right 2', keyframes: [], locked: false },
+            { type: 'track', id: 'Tree right 3', keyframes: [], locked: false },
+            { type: 'track', id: 'Tree right 4', keyframes: [], locked: false },
+          ],
+        },
       ],
     },
   ];

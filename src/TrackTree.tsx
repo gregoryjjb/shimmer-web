@@ -38,7 +38,7 @@ const TrackTree: Component = () => {
 
   return (
     <div
-      class="pointer-events-none absolute bottom-0 left-0 z-10 overflow-hidden"
+      class="pointer-events-none absolute bottom-0 left-0 overflow-hidden"
       style={{
         top: `${layout.timelineHeight + layout.waveformHeight}px`,
         width: '100%',

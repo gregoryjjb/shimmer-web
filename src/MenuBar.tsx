@@ -75,7 +75,7 @@ export const Menu: ParentComponent<{
         {props.name}
       </button>
       {isOpen() && (
-        <div class="absolute z-10 flex flex-col rounded bg-zinc-800 px-1 py-2 shadow-md">
+        <div class="absolute z-20 flex flex-col rounded bg-zinc-800 px-1 py-2 shadow-md">
           {props.children}
         </div>
       )}
