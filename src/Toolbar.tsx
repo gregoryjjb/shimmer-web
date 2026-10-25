@@ -27,6 +27,7 @@ import {
 import { clamp } from './timeline/utils';
 import { useTimeline } from './TimelineContext';
 import GradientButton from './components/GradientButton';
+import VisualizerButton from './visualizer/VisualizerButton';
 
 const tooltip = (command: SimpleCommand) => {
   const name = nameFor(command);
@@ -208,7 +209,7 @@ const Toolbar: Component<{
         path={arrowDownTray}
         onClick={createOnClick('downloadLegacy')}
       />
-      {/* <OpenFile /> */}
+      <VisualizerButton />
     </div>
   );
 };

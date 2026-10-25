@@ -95,6 +95,16 @@ export const newTracks = (count: number): LayoutNode[] => {
             { type: 'track', id: 'Tree right 4', keyframes: [], locked: false },
           ],
         },
+        {
+          type: 'group',
+          id: 'Bushes',
+          children: [
+            { type: 'track', id: 'Bush 1', keyframes: [], locked: false },
+            { type: 'track', id: 'Bush 2', keyframes: [], locked: false },
+            { type: 'track', id: 'Bush 3', keyframes: [], locked: false },
+            { type: 'track', id: 'Bush 4', keyframes: [], locked: false },
+          ],
+        },
       ],
     },
   ];
@@ -140,86 +150,25 @@ export const binarySearch = (
   time: number,
   side?: BinarySearchSide,
 ): number | undefined => {
+  if (array.length === 0) return undefined;
+
+  // Left returns the last timestamp <= time; right returns the first >= time.
+  // Without a side, return the nearest keyframe, preferring the earlier time
+  // when distances tie. Use an upper bound for left and a lower bound otherwise.
   let start = 0;
-  let end = array.length - 1;
-  let found: number | undefined;
-
-  /**
-   * Returns undefined if the given index does not fit the left/right
-   * constraint, otherwise returns the index
-   */
-  const valid = (index: number): number | undefined => {
-    const keyframe = array[index];
-    if (
-      !side ||
-      (side === 'left' && keyframe.ts < time) ||
-      (side === 'right' && keyframe.ts > time)
-    ) {
-      return index;
-    } else {
-      return undefined;
-    }
-  };
-
-  // No keyframes
-  if (array.length === 0) {
-    return undefined;
+  let end = array.length;
+  while (start < end) {
+    const middle = Math.floor((start + end) / 2);
+    const timestamp = array[middle].ts;
+    if (timestamp < time || (side === 'left' && timestamp === time)) start = middle + 1;
+    else end = middle;
   }
 
-  // Only one keyframe
-  if (array.length === 1) {
-    return valid(0);
-  }
-
-  // Out of bounds left side
-  if (array[start].ts > time) {
-    return valid(start);
-  }
-
-  // Out of bounds right side
-  if (array[end].ts < time) {
-    return valid(end);
-  }
-
-  while (found === undefined) {
-    // console.debug('Searching in range', start, end);
-
-    const length = end - start + 1;
-
-    if (length === 1) {
-      found = start;
-    } else if (length === 2) {
-      // Two left, pick the closest one
-      if (side === 'left') {
-        found = start;
-      } else if (side === 'right') {
-        found = end;
-      } else {
-        const left = array[start];
-        const right = array[end];
-
-        const leftDist = time - left.ts;
-        const rightDist = right.ts - time;
-
-        if (leftDist <= rightDist) {
-          found = start;
-        } else {
-          found = end;
-        }
-      }
-    } else {
-      const mid = Math.round((start + end) / 2);
-      const kf = array[mid];
-
-      if (time > kf.ts) {
-        start = mid;
-      } else {
-        end = mid;
-      }
-    }
-  }
-
-  return found;
+  if (side === 'left') return start === 0 ? undefined : start - 1;
+  if (side === 'right') return start === array.length ? undefined : start;
+  if (start === 0) return 0;
+  if (start === array.length) return array.length - 1;
+  return time - array[start - 1].ts <= array[start].ts - time ? start - 1 : start;
 };
 
 export const isOn = (

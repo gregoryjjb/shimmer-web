@@ -50,6 +50,41 @@ describe('binarySearch2', () => {
     const actual = binarySearch(keyframes, 40);
     expect(actual).toBe(4);
   });
+
+  test('side constraints include exact matches consistently for single and multiple keyframes', () => {
+    const single = [{ ts: 10, value: 1 }];
+    const pair = [...single, { ts: 20, value: 0 }];
+    expect(binarySearch(single, 10, 'left')).toBe(0);
+    expect(binarySearch(single, 10, 'right')).toBe(0);
+    expect(binarySearch(pair, 10, 'right')).toBe(0);
+    expect(binarySearch(pair, 20, 'left')).toBe(1);
+  });
+
+  test('directional searches match inclusive bounds across empty arrays, duplicates, and endpoints', () => {
+    for (const times of [[], [10], [10, 20], [0, 10, 20, 30], [10, 10, 10], [0, 10, 10, 20]]) {
+      const frames = times.map((ts) => ({ ts, value: 0 }));
+      for (const time of [-1, 0, 5, 10, 15, 20, 25, 30, 31]) {
+        const before = times
+          .map((ts, index) => ({ ts, index }))
+          .filter((frame) => frame.ts <= time);
+        const after = times.findIndex((ts) => ts >= time);
+        expect(binarySearch(frames, time, 'left'), `left: [${times}] at ${time}`).toBe(
+          before[before.length - 1]?.index,
+        );
+        expect(binarySearch(frames, time, 'right'), `right: [${times}] at ${time}`).toBe(
+          after === -1 ? undefined : after,
+        );
+        const nearest = binarySearch(frames, time);
+        if (times.length === 0) expect(nearest).toBeUndefined();
+        else {
+          expect(nearest).toBeDefined();
+          expect(Math.abs(times[nearest!] - time)).toBe(
+            Math.min(...times.map((ts) => Math.abs(ts - time))),
+          );
+        }
+      }
+    }
+  });
 });
 
 test('insertAuto on a group inserts keyframes on all descendant tracks', () => {
