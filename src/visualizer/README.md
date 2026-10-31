@@ -10,8 +10,12 @@ stays visible while rectangles appear only for tracks that are on at the timelin
 current time, including when seeking or paused. Beat objects use the same brief
 flash as the track tree. Opening or closing the panel does not affect playback.
 Saving visualizer edits refreshes an open panel automatically.
+Visibility, position, and width are saved in localStorage under `shimmer.visualizer.visible`,
+`shimmer.visualizer.position`, and `shimmer.visualizer.width`
+and restored when reopening the app. Height follows the image's aspect ratio.
 
-Open **Edit visualizer** in the show toolbar. Upload a house photo, select a non-group
+Choose **Edit** in the floating panel (or **Set up visualizer** before adding a photo).
+Upload a house photo, select a non-group
 track, and add rectangles. Drag rectangles to move them and their white bottom-right
 corners to resize them. The object list and percentage fields also allow selecting
 and adjusting rectangles with the keyboard. Clicking a rectangle selects its owner

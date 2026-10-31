@@ -5,6 +5,7 @@ import { flattenTracks } from '../timeline/layout';
 import { isOn } from '../timeline/timeline-data';
 import { DeepReadonly, LayoutNode, Tracks } from '../timeline/types';
 import { loadVisualizer } from './storage';
+import { createStoredSignal } from '../hooks/createStorageSignal';
 import { clamp, VisualizerConfig } from './types';
 
 export default function VisualizerPanel(props: {
@@ -34,8 +35,11 @@ export default function VisualizerPanel(props: {
         fromLeft: boolean;
       }
     | undefined;
-  const [position, setPosition] = createSignal({ x: 16, y: 120 });
-  const [width, setWidth] = createSignal(420);
+  const [width, setWidth] = createStoredSignal('shimmer.visualizer.width', 420);
+  const [position, setPosition] = createStoredSignal('shimmer.visualizer.position', {
+    x: window.innerWidth - width() - 16,
+    y: 120,
+  });
   const [aspectRatio, setAspectRatio] = createSignal<number>();
   const [config, setConfig] = createSignal<VisualizerConfig>(Object.create(null));
   const [imageURL, setImageURL] = createSignal('');
@@ -97,7 +101,7 @@ export default function VisualizerPanel(props: {
   });
 
   onMount(() => {
-    constrainPosition(window.innerWidth - panel.getBoundingClientRect().width - 16, 120);
+    constrainPosition(position().x, position().y);
     window.addEventListener('resize', keepInView);
     const observer = new ResizeObserver(keepInView);
     observer.observe(panel);

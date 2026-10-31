@@ -45,6 +45,7 @@ const lights = () =>
   );
 
 beforeEach(() => {
+  localStorage.clear();
   vi.resetAllMocks();
   vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:house'), revokeObjectURL: vi.fn() });
   vi.stubGlobal(
@@ -239,4 +240,41 @@ test('resizes from either corner within viewport limits while playback continues
   right.dispatchEvent(key);
   expect(key.defaultPrevented).toBe(true);
   expect(panelWidth()).toBe(260);
+  const savedPosition = JSON.parse(localStorage.getItem('shimmer.visualizer.position')!);
+  expect(localStorage.getItem('shimmer.visualizer.width')).toBe('260');
+  expect(savedPosition.x).toBe(panelLeft());
+  dispose?.();
+  open();
+  const restored = document.querySelector<HTMLElement>('[aria-label="Live visualizer"]')!;
+  expect(restored.style.getPropertyValue('--panel-width')).toBe('260px');
+  expect(restored.style.getPropertyValue('--panel-x')).toBe(`${savedPosition.x}px`);
+  expect(restored.style.getPropertyValue('--panel-y')).toBe(`${savedPosition.y}px`);
+});
+
+test('restores saved position, persists dragging, and keeps it when reopened', () => {
+  localStorage.setItem('shimmer.visualizer.position', JSON.stringify({ x: 100, y: 80 }));
+  localStorage.setItem('shimmer.visualizer.width', '300');
+  open();
+  const panel = document.querySelector<HTMLElement>('[aria-label="Live visualizer"]')!;
+  expect(panel.style.getPropertyValue('--panel-x')).toBe('100px');
+  expect(panel.style.getPropertyValue('--panel-y')).toBe('80px');
+  panel.setPointerCapture = vi.fn();
+  for (const [type, x, y] of [
+    ['pointerdown', 100, 80],
+    ['pointermove', 150, 110],
+  ] as const) {
+    const event = new MouseEvent(type, { bubbles: true, button: 0, clientX: x, clientY: y });
+    Object.defineProperty(event, 'pointerId', { value: 1 });
+    panel.dispatchEvent(event);
+  }
+  expect(JSON.parse(localStorage.getItem('shimmer.visualizer.position')!)).toEqual({
+    x: 150,
+    y: 110,
+  });
+  expect(localStorage.getItem('shimmer.visualizer.width')).toBe('300');
+  dispose?.();
+  open();
+  const restored = document.querySelector<HTMLElement>('[aria-label="Live visualizer"]')!;
+  expect(restored.style.getPropertyValue('--panel-x')).toBe('150px');
+  expect(restored.style.getPropertyValue('--panel-y')).toBe('110px');
 });

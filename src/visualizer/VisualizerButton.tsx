@@ -2,11 +2,12 @@ import { createSignal, Show } from 'solid-js';
 import { useTimeline } from '../TimelineContext';
 import VisualizerEditor from './VisualizerEditor';
 import VisualizerPanel from './VisualizerPanel';
+import { createStoredSignal } from '../hooks/createStorageSignal';
 
 export default function VisualizerButton() {
   const ctx = useTimeline();
   const [open, setOpen] = createSignal(false);
-  const [showPreview, setShowPreview] = createSignal(false);
+  const [showPreview, setShowPreview] = createStoredSignal('shimmer.visualizer.visible', false);
   const [revision, setRevision] = createSignal(0);
   const edit = () => {
     ctx.timeline.pause();
@@ -14,14 +15,6 @@ export default function VisualizerButton() {
   };
   return (
     <>
-      <button
-        type="button"
-        class="rounded-lg bg-zinc-700 px-3 py-2 text-sm text-zinc-100 hover:bg-zinc-600 disabled:opacity-50"
-        disabled={ctx.loading()}
-        onClick={edit}
-      >
-        Edit visualizer
-      </button>
       <button
         type="button"
         class="rounded-lg bg-zinc-700 px-3 py-2 text-sm text-zinc-100 hover:bg-zinc-600 disabled:opacity-50"
