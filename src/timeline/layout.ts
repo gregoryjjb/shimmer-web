@@ -102,14 +102,52 @@ export const HOUSE_LAYOUT: LayoutNode[] = [
   },
 ];
 
-/** Join the house layout with any additional channels in this show. */
-export function materializeLayout(tracks: DeepReadonly<Tracks>): LayoutNode[] {
+/** Parse a layout JSON array without retaining show data or UI state. */
+export function parseLayout(input: unknown): LayoutNode[] {
+  const raw: unknown = typeof input === 'string' ? JSON.parse(input) : input;
+  if (!Array.isArray(raw)) throw new Error('Layout must be an array');
+  const ids = new Set<string>();
+  const parseNode = (raw: unknown): LayoutNode => {
+    if (!raw || typeof raw !== 'object') throw new Error('Layout nodes must be objects');
+    const node = raw as Record<string, unknown>;
+    if (typeof node.id !== 'string' || !node.id.trim()) throw new Error('Names must not be empty');
+    if (ids.has(node.id)) throw new Error('Duplicate name: ' + node.id);
+    ids.add(node.id);
+    if (node.type === 'track') return { type: 'track', id: node.id };
+    if (node.type !== 'group' || !Array.isArray(node.children)) {
+      throw new Error('Expected a track or a group with children');
+    }
+    if (node.id === BEAT_TRACK_ID) throw new Error('Beat is reserved for the beat track');
+    return { type: 'group', id: node.id, children: node.children.map(parseNode) };
+  };
+  return raw.map(parseNode);
+}
+
+export function validateLayoutTracks(layout: LayoutNode[], tracks: DeepReadonly<Tracks>) {
+  for (const node of iterateNodes(...layout)) {
+    if (node.type === 'group' && Object.prototype.hasOwnProperty.call(tracks, node.id)) {
+      throw new Error('Group name conflicts with a show track: ' + node.id);
+    }
+  }
+}
+
+/** Join the chosen layout with any additional channels in this show. */
+export function materializeLayout(
+  tracks: DeepReadonly<Tracks>,
+  layout = HOUSE_LAYOUT,
+): LayoutNode[] {
   const remaining = new Set(Object.keys(tracks));
   remaining.delete(BEAT_TRACK_ID);
-  for (const node of iterateLeaves(...HOUSE_LAYOUT)) remaining.delete(node.id);
+  let includesBeat = false;
+  for (const node of iterateLeaves(...layout)) {
+    remaining.delete(node.id);
+    if (node.id === BEAT_TRACK_ID) includesBeat = true;
+  }
   return [
-    ...(tracks[BEAT_TRACK_ID] ? [{ type: 'track' as const, id: BEAT_TRACK_ID }] : []),
-    ...HOUSE_LAYOUT,
+    ...(tracks[BEAT_TRACK_ID] && !includesBeat
+      ? [{ type: 'track' as const, id: BEAT_TRACK_ID }]
+      : []),
+    ...layout,
     ...Array.from(remaining)
       .sort()
       .map((id) => ({ type: 'track' as const, id })),

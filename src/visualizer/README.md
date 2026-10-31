@@ -38,21 +38,36 @@ while preserving rectangles, and only saves when you choose **Save and close**.
 **Save and close** persists the draft. Cancel, the close button, and Escape discard
 unsaved changes. Replacing an image preserves the rectangle layout.
 
-The browser has one shared visualizer setup, reusable across shows with the same
-track names. Track IDs are the names displayed in the existing editor. Objects for
-tracks absent from the current show are retained but hidden. Group rows cannot own
-objects. Visualizer data is local to this browser and is not included in show exports.
+The browser has one shared layout document, reusable across shows with the same
+track names. Track IDs are the names displayed in the editor. Objects for tracks
+absent from the current show are retained but hidden. Group rows cannot own objects.
 
-Local storage key `shimmer.visualizer` contains exactly:
+**Layout / Import layout** and **Export layout** read and write the whole document:
 
 ```json
 {
-  "Roof": [{ "x": 0.2, "y": 0.3, "width": 0.1, "height": 0.05, "color": "#ff8800" }]
+  "tree": [{ "type": "track", "id": "Roof" }],
+  "visuals": {
+    "backgroundImage": "data:image/png;base64,...",
+    "trackObjects": {
+      "Roof": [{ "x": 0.2, "y": 0.3, "width": 0.1, "height": 0.05, "color": "#ff8800" }]
+    }
+  }
 }
 ```
 
-Coordinates and dimensions are normalized image fractions (0–1), independent of
-display size; colors are six-digit hex values. The photo is a Blob in IndexedDB,
-database `shimmer-editor`, store `visualizer_images`, key `house`. No image data is
-written to local storage. Storage errors leave the dialog open for retry, and a failed
-configuration write rolls the image back to its previous value.
+The background image is optional and embedded in the JSON so the file is portable.
+Coordinates and dimensions are normalized image fractions (0-1); colors are
+six-digit hex values. Both editors update the same reactive document. Renaming a
+track in the tree carries its object mapping to the new name; removing a track
+removes its objects. Assigning objects to a show-only track adds it to the saved tree.
+Layout edits do not rename show tracks or enter the show's undo history.
+
+The complete document is stored in IndexedDB, database `shimmer-editor`, store
+`layouts`, key `current`. On first load, the previous localStorage tree and object
+mapping and IndexedDB photo are combined into this document. Subsequent loads use
+only the combined document. Failed saves preserve the active layout and keep the
+editor draft open for retry.
+
+Layout documents are separate from show exports. Collapsed groups and floating
+panel visibility, position, and width remain browser preferences in localStorage.

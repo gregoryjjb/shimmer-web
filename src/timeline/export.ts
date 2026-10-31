@@ -1,6 +1,5 @@
 import JSZip from 'jszip';
 import { Keyframe, Project, ProjectData, Track } from './types';
-import { HOUSE_LAYOUT, iterateNodes } from './layout';
 
 export const downloadFile = (name: string, contents: string | Blob) => {
   const file = new File([contents], name, { type: 'text/json' });
@@ -18,12 +17,6 @@ export const downloadFile = (name: string, contents: string | Blob) => {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 };
-
-const reservedNames = new Set(
-  Array.from(iterateNodes(...HOUSE_LAYOUT))
-    .filter((node) => node.type === 'group')
-    .map((node) => node.id),
-);
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -99,8 +92,6 @@ export function parseProjectData(input: unknown): ProjectData {
 
   const entries = Object.entries(tracks).map(([name, raw]): [string, Track] => {
     if (!name.trim()) throw new Error('Track names must not be empty');
-    if (reservedNames.has(name))
-      throw new Error('Track name conflicts with a house group: ' + name);
     if (!isObject(raw) || !Array.isArray(raw.keyframes)) {
       throw new Error('Track ' + name + ' must contain a keyframes array');
     }

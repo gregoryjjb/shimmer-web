@@ -8,7 +8,6 @@ export default function VisualizerButton() {
   const ctx = useTimeline();
   const [open, setOpen] = createSignal(false);
   const [showPreview, setShowPreview] = createStoredSignal('shimmer.visualizer.visible', false);
-  const [revision, setRevision] = createSignal(0);
   const edit = () => {
     ctx.timeline.pause();
     setOpen(true);
@@ -31,7 +30,9 @@ export default function VisualizerButton() {
           currentTime={ctx.currentTime()}
           playing={ctx.playing()}
           loading={ctx.loading()}
-          refreshKey={revision()}
+          visuals={ctx.layout.document().visuals}
+          layoutLoading={ctx.layout.loading()}
+          layoutError={ctx.layout.error()}
           onClose={() => setShowPreview(false)}
           onEdit={edit}
         />
@@ -40,7 +41,8 @@ export default function VisualizerButton() {
         <VisualizerEditor
           layout={ctx.trackLayout()}
           onClose={() => setOpen(false)}
-          onSave={() => setRevision((value) => value + 1)}
+          visuals={ctx.layout.document().visuals}
+          onSave={ctx.layout.updateVisuals}
         />
       </Show>
     </>

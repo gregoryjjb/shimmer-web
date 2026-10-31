@@ -49,7 +49,7 @@ describe('flat show format', () => {
     { version: '3', tracks: { X: {} } },
     { version: '3', tracks: { X: { keyframes: [{ ts: NaN, value: 1 }] } } },
     { version: '3', tracks: { X: { keyframes: [], locked: 'yes' } } },
-    { version: '3', tracks: { Root: { keyframes: [] } } },
+    { version: '3', tracks: { '': { keyframes: [] } } },
   ])('rejects invalid or unsupported data: %j', (input) => {
     expect(() => parseProjectData(input)).toThrow();
   });

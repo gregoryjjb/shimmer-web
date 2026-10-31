@@ -319,12 +319,14 @@ class Timeline {
     // }
 
     this.data = new TimelineData(this.emitter);
-    this.on('collapsedGroupsChanged', () => {
+    const layoutViewChanged = () => {
       this.boxSelection = undefined;
       this.cancelGrab();
       this.cancelScale();
       this.requestDraw();
-    });
+    };
+    this.on('collapsedGroupsChanged', layoutViewChanged);
+    this.on('layoutChanged', layoutViewChanged);
 
     this.audio = new TimelineAudio(this.emitter);
     this.audio.on('loading', (loading: boolean) => {
@@ -1531,6 +1533,12 @@ DPI scale: ${this.dpiScale}`;
   get trackLayout() {
     return this.data.layout;
   }
+
+  get baseLayout() {
+    return this.data.baseLayout;
+  }
+
+  setLayout = (layout: unknown) => this.data.setLayout(layout);
 
   get visibleRows() {
     return this.data.visibleRows;

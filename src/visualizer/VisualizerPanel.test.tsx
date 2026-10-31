@@ -3,10 +3,9 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { createSignal } from 'solid-js';
 import { render } from 'solid-js/web';
 import { LayoutNode, Tracks } from '../timeline/types';
-import { loadVisualizer } from './storage';
+import { LayoutVisuals } from '../layout/document';
+let visuals: LayoutVisuals;
 import VisualizerPanel from './VisualizerPanel';
-
-vi.mock('./storage', () => ({ loadVisualizer: vi.fn() }));
 
 const rectangle = { x: 0.2, y: 0.3, width: 0.1, height: 0.05, color: '#ff8800' };
 const layout: LayoutNode[] = [
@@ -55,16 +54,16 @@ beforeEach(() => {
       disconnect() {}
     },
   );
-  vi.mocked(loadVisualizer).mockResolvedValue({
-    config: {
+  visuals = {
+    trackObjects: {
       Roof: [rectangle, { ...rectangle, x: 0.4 }],
       Door: [rectangle],
       Beat: [rectangle],
       House: [rectangle],
       Missing: [rectangle],
     },
-    image: new Blob(['house']),
-  });
+    backgroundImage: 'data:image/png;base64,aG91c2U=',
+  };
   host = document.createElement('div');
   document.body.append(host);
 });
@@ -80,7 +79,7 @@ function open() {
   const [time, setTime] = createSignal(0);
   const [playing, setPlaying] = createSignal(false);
   const [loading, setLoading] = createSignal(false);
-  const [revision, setRevision] = createSignal(0);
+  const [currentVisuals, setVisuals] = createSignal(visuals);
   const [data, setData] = createSignal(tracks);
   const close = vi.fn();
   const edit = vi.fn();
@@ -92,14 +91,14 @@ function open() {
         currentTime={time()}
         playing={playing()}
         loading={loading()}
-        refreshKey={revision()}
+        visuals={currentVisuals()}
         onClose={close}
         onEdit={edit}
       />
     ),
     host,
   );
-  return { setTime, setPlaying, setLoading, setRevision, setData, close, edit };
+  return { setTime, setPlaying, setLoading, setVisuals, setData, close, edit };
 }
 
 test('shows only active track rectangles at exact transitions and when seeking backward', async () => {
@@ -137,38 +136,24 @@ test('beat rectangles flash for the same duration as the timeline track tree', a
   expect(lights()).toEqual([]);
 });
 
-test('refreshes saved configurations and releases image URLs on replacement and close', async () => {
+test('updates the image and rectangles immediately when shared layout changes', async () => {
   const panel = open();
-  await vi.waitFor(() => expect(document.querySelector('img')).not.toBeNull());
   panel.setTime(1);
-  vi.mocked(loadVisualizer).mockResolvedValue({
-    config: { Roof: [{ ...rectangle, color: '#00ff00' }] },
-    image: new Blob(['new photo']),
+  panel.setVisuals({
+    trackObjects: { Roof: [{ ...rectangle, color: '#00ff00' }] },
+    backgroundImage: 'data:image/png;base64,bmV3',
   });
-  vi.mocked(URL.createObjectURL).mockReturnValue('blob:new-house');
-  panel.setRevision(1);
-  await vi.waitFor(() =>
-    expect(document.querySelector('img')?.getAttribute('src')).toBe('blob:new-house'),
-  );
+  expect(document.querySelector('img')?.getAttribute('src')).toBe('data:image/png;base64,bmV3');
   expect(lights()).toEqual(['Roof']);
   expect(document.querySelector('rect')?.getAttribute('fill')).toBe('#00ff00');
-  expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:house');
-  dispose?.();
-  dispose = undefined;
-  expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:new-house');
+  panel.setVisuals({ trackObjects: {} });
+  expect(document.querySelector('img')).toBeNull();
+  expect(lights()).toEqual([]);
 });
 
-test('offers setup when no image is saved and retries failed loads', async () => {
-  vi.mocked(loadVisualizer).mockRejectedValueOnce(new Error('Storage unavailable'));
+test('offers setup when the shared layout has no image', () => {
+  visuals = { trackObjects: {} };
   const panel = open();
-  await vi.waitFor(() =>
-    expect(document.querySelector('[role="alert"]')?.textContent).toContain('Storage unavailable'),
-  );
-  vi.mocked(loadVisualizer).mockResolvedValue({ config: {}, image: null });
-  Array.from(document.querySelectorAll('button'))
-    .find((button) => button.textContent === 'Retry loading')!
-    .click();
-  await vi.waitFor(() => expect(document.body.textContent).toContain('Set up visualizer'));
   Array.from(document.querySelectorAll('button'))
     .find((button) => button.textContent === 'Set up visualizer')!
     .click();
@@ -197,6 +182,9 @@ test('resizes from either corner within viewport limits while playback continues
   );
   Object.defineProperties(image, { naturalWidth: { value: 1200 }, naturalHeight: { value: 600 } });
   image.dispatchEvent(new Event('load'));
+  playback.setVisuals({ ...visuals, trackObjects: { ...visuals.trackObjects } });
+  // Saving objects with the same background must preserve its measured aspect ratio.
+  expect(panel.querySelectorAll('[aria-label^="Resize visualizer"]')).toHaveLength(2);
   const left = panel.querySelector<HTMLButtonElement>(
     '[aria-label="Resize visualizer from bottom left"]',
   )!;

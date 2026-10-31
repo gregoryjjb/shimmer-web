@@ -4,9 +4,9 @@ import { BEAT_FLASH_DURATION_SECONDS, BEAT_TRACK_ID } from '../timeline/beat';
 import { flattenTracks } from '../timeline/layout';
 import { isOn } from '../timeline/timeline-data';
 import { DeepReadonly, LayoutNode, Tracks } from '../timeline/types';
-import { loadVisualizer } from './storage';
+import { LayoutVisuals } from '../layout/document';
 import { createStoredSignal } from '../hooks/createStorageSignal';
-import { clamp, VisualizerConfig } from './types';
+import { clamp } from './types';
 
 export default function VisualizerPanel(props: {
   layout: readonly DeepReadonly<LayoutNode>[];
@@ -14,14 +14,13 @@ export default function VisualizerPanel(props: {
   currentTime: number;
   playing: boolean;
   loading: boolean;
-  refreshKey: number;
+  visuals: DeepReadonly<LayoutVisuals>;
+  layoutLoading?: boolean;
+  layoutError?: string;
   onClose: () => void;
   onEdit: () => void;
 }) {
   let panel!: HTMLElement;
-  let disposed = false;
-  let loadVersion = 0;
-  let currentURL = '';
   let drag: { pointer: number; x: number; y: number; left: number; top: number } | undefined;
   let resize:
     | {
@@ -41,10 +40,11 @@ export default function VisualizerPanel(props: {
     y: 120,
   });
   const [aspectRatio, setAspectRatio] = createSignal<number>();
-  const [config, setConfig] = createSignal<VisualizerConfig>(Object.create(null));
-  const [imageURL, setImageURL] = createSignal('');
-  const [loading, setLoading] = createSignal(true);
-  const [error, setError] = createSignal('');
+  const config = () => props.visuals.trackObjects;
+  const imageURL = createMemo(() => props.visuals.backgroundImage ?? '');
+  const loading = () => props.layoutLoading ?? false;
+  const [imageError, setError] = createSignal('');
+  const error = () => props.layoutError || imageError();
   const rows = createMemo(() =>
     flattenTracks(props.layout, props.tracks).filter((row) => row.type === 'track'),
   );
@@ -73,31 +73,10 @@ export default function VisualizerPanel(props: {
     constrainPosition(position().x, position().y);
   };
 
-  async function load() {
-    const version = ++loadVersion;
-    setLoading(true);
-    setError('');
-    try {
-      const saved = await loadVisualizer();
-      if (disposed || version !== loadVersion) return;
-      const url = saved.image ? URL.createObjectURL(saved.image) : '';
-      if (currentURL) URL.revokeObjectURL(currentURL);
-      currentURL = url;
-      setAspectRatio(undefined);
-      setConfig(saved.config);
-      setImageURL(url);
-    } catch (cause) {
-      if (!disposed && version === loadVersion) {
-        setError(cause instanceof Error ? cause.message : 'Could not load the visualizer.');
-      }
-    } finally {
-      if (!disposed && version === loadVersion) setLoading(false);
-    }
-  }
-
   createEffect(() => {
-    props.refreshKey;
-    void load();
+    imageURL();
+    setAspectRatio(undefined);
+    setError('');
   });
 
   onMount(() => {
@@ -109,10 +88,6 @@ export default function VisualizerPanel(props: {
       observer.disconnect();
       window.removeEventListener('resize', keepInView);
     });
-  });
-  onCleanup(() => {
-    disposed = true;
-    if (currentURL) URL.revokeObjectURL(currentURL);
   });
 
   function startDrag(event: PointerEvent & { currentTarget: HTMLElement }) {
@@ -242,7 +217,7 @@ export default function VisualizerPanel(props: {
               type="button"
               aria-label="Edit visualizer configuration"
               class="rounded bg-zinc-900/80 px-2 py-1 text-xs hover:bg-zinc-700 disabled:opacity-50"
-              disabled={props.loading}
+              disabled={props.loading || loading() || !!props.layoutError}
               onClick={props.onEdit}
             >
               Edit
@@ -273,13 +248,6 @@ export default function VisualizerPanel(props: {
                   <p role="alert" class="text-red-300">
                     {error()}
                   </p>
-                  <button
-                    type="button"
-                    class="rounded bg-zinc-700 px-3 py-2 hover:bg-zinc-600"
-                    onClick={() => void load()}
-                  >
-                    Retry loading
-                  </button>
                 </div>
               }
             >
@@ -291,7 +259,7 @@ export default function VisualizerPanel(props: {
                     <button
                       type="button"
                       class="rounded bg-indigo-600 px-3 py-2 text-white hover:bg-indigo-700 disabled:opacity-50"
-                      disabled={props.loading}
+                      disabled={props.loading || loading() || !!props.layoutError}
                       onClick={props.onEdit}
                     >
                       Set up visualizer

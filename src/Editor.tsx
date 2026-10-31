@@ -15,6 +15,7 @@ import TimelineCanvas from './TimelineCanvas';
 import { useTimeline } from './TimelineContext';
 import Toolbar from './Toolbar';
 import { RemapChannelsForm } from './RemapChannelsForm';
+import LayoutMenu from './LayoutMenu';
 
 function Editor() {
   const ctx = useTimeline();
@@ -122,6 +123,7 @@ function Editor() {
           <CommandMenuItem requireSelected command="shiftDown" />
           <CommandMenuItem requireSelected command="flipVertically" />
         </Menu>
+        <LayoutMenu />
         <Menu name="Help">
           <MenuItem name="Show help" onClick={() => setShowHelp(true)} />
         </Menu>

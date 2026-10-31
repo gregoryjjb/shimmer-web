@@ -6,9 +6,21 @@ import {
   iterateTracks,
   flattenTracks,
   materializeLayout,
+  HOUSE_LAYOUT,
+  parseLayout,
+  validateLayoutTracks,
 } from './layout';
 import { OpenedProject } from './persist';
-import { Keyframe, LayoutNode, LayoutNodeID, ProjectData, Track, TrackID, Tracks } from './types';
+import {
+  DeepReadonly,
+  Keyframe,
+  LayoutNode,
+  LayoutNodeID,
+  ProjectData,
+  Track,
+  TrackID,
+  Tracks,
+} from './types';
 import { UndoHistory } from './undo';
 import { stringifyTime } from './utils';
 
@@ -101,6 +113,7 @@ class TimelineData {
   private undoHistory: UndoHistory<UndoSnapshot>;
   // Layout view state is intentionally outside the serialized show and undo snapshots.
   private collapsedGroups = new Set<LayoutNodeID>();
+  private _baseLayout = structuredClone(HOUSE_LAYOUT);
 
   constructor(emitter: TimelineEmitter) {
     this.emitter = emitter;
@@ -117,8 +130,21 @@ class TimelineData {
   }
 
   get layout(): LayoutNode[] {
-    return materializeLayout(this.data.tracks);
+    return materializeLayout(this.data.tracks, this._baseLayout);
   }
+
+  get baseLayout(): DeepReadonly<LayoutNode[]> {
+    return this._baseLayout;
+  }
+
+  setLayout = (input: unknown) => {
+    const layout = parseLayout(input);
+    validateLayoutTracks(layout, this.data.tracks);
+    this._baseLayout = layout;
+    this.setCollapsedGroups(this.collapsedGroupIDs);
+    this.emitter.emit('layoutChanged', this.baseLayout);
+    this.emitSelected();
+  };
 
   get collapsedGroupIDs(): readonly LayoutNodeID[] {
     return [...this.collapsedGroups];
@@ -175,6 +201,7 @@ class TimelineData {
 
   /* Load a project for editing; clears undo history */
   load = (project: OpenedProject) => {
+    validateLayoutTracks(this._baseLayout, project.data.tracks);
     this.openedProject = project;
     this.data = structuredClone(project.data);
 
@@ -193,6 +220,7 @@ class TimelineData {
    * Replaces all project data as a single edit action
    */
   replaceAll = (data: ProjectData) => {
+    validateLayoutTracks(this._baseLayout, data.tracks);
     this.data = structuredClone(data);
 
     this.deselectLockedTracks();

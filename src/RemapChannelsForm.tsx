@@ -2,7 +2,7 @@ import { Component, For, Show, createMemo, createSignal } from 'solid-js';
 import GradientButton from './components/GradientButton';
 import { useTimeline } from './TimelineContext';
 import { BEAT_TRACK_ID } from './timeline/beat';
-import { HOUSE_LAYOUT, iterateNodes } from './timeline/layout';
+import { iterateNodes, parseLayout } from './timeline/layout';
 import { remapChannels } from './timeline/remap';
 import { LayoutNode } from './timeline/types';
 
@@ -12,7 +12,7 @@ export const RemapChannelsForm: Component<{
   const ctx = useTimeline();
 
   const sourceData = ctx.timeline.getData().tracks;
-  const targetData = HOUSE_LAYOUT;
+  const targetData = parseLayout(ctx.timeline.baseLayout);
 
   const sourceIDs = Object.keys(sourceData).filter((id) => id !== BEAT_TRACK_ID);
   const targetIDs = collectTrackIDs(targetData).filter((id) => id !== BEAT_TRACK_ID);

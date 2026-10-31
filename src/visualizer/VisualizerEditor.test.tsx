@@ -2,11 +2,12 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { render } from 'solid-js/web';
 import { LayoutNode } from '../timeline/types';
-import { loadVisualizer, saveVisualizer } from './storage';
+import { LayoutVisuals } from '../layout/document';
+import { VisualizerConfig } from './types';
+let visuals: LayoutVisuals;
+const saveVisualizer = vi.fn<(config: VisualizerConfig, image: string) => Promise<void>>();
 import VisualizerEditor from './VisualizerEditor';
 import { serializeRectangle } from './clipboard';
-
-vi.mock('./storage', () => ({ loadVisualizer: vi.fn(), saveVisualizer: vi.fn() }));
 
 const tracks: LayoutNode[] = [
   {
@@ -49,10 +50,10 @@ beforeEach(() => {
   });
   HTMLDialogElement.prototype.showModal = vi.fn();
   HTMLDialogElement.prototype.close = vi.fn();
-  vi.mocked(loadVisualizer).mockResolvedValue({
-    config: Object.create(null),
-    image: new Blob(['photo']),
-  });
+  visuals = {
+    trackObjects: Object.create(null),
+    backgroundImage: 'data:image/png;base64,cGhvdG8=',
+  };
   vi.mocked(saveVisualizer).mockResolvedValue(undefined);
   host = document.createElement('div');
   document.body.append(host);
@@ -67,7 +68,17 @@ afterEach(() => {
 
 async function open() {
   const close = vi.fn();
-  dispose = render(() => <VisualizerEditor layout={tracks} onClose={close} />, host);
+  dispose = render(
+    () => (
+      <VisualizerEditor
+        layout={tracks}
+        visuals={visuals}
+        onSave={(value) => saveVisualizer(value.trackObjects, value.backgroundImage!)}
+        onClose={close}
+      />
+    ),
+    host,
+  );
   await vi.waitFor(() => expect(button('+ Add rectangle').disabled).toBe(false));
   return close;
 }
@@ -101,7 +112,7 @@ test('nested groups are labels and multiple rectangles retain a single track own
 
 test('cancel leaves the previously loaded objects untouched and writes nothing', async () => {
   const config = { Roof: [{ x: 0.2, y: 0.2, width: 0.1, height: 0.1, color: '#ffffff' }] };
-  vi.mocked(loadVisualizer).mockResolvedValue({ config, image: new Blob(['photo']) });
+  visuals = { trackObjects: config, backgroundImage: 'data:image/png;base64,cGhvdG8=' };
   const close = await open();
   button('Rectangle 1').click();
   button('Delete').click();
@@ -163,13 +174,15 @@ test('pasting an image replaces the draft background and saves it with existing 
   const screenshot = new File(['screenshot'], 'clipboard.png', { type: 'image/png' });
   expect(paste(screenshot).defaultPrevented).toBe(true);
   await vi.waitFor(() => expect(button('Save and close').disabled).toBe(false));
-  expect(URL.createObjectURL).toHaveBeenCalledWith(screenshot);
+  expect(document.querySelector('img')?.getAttribute('src')).toBe(
+    'data:image/png;base64,c2NyZWVuc2hvdA==',
+  );
   expect(saveVisualizer).not.toHaveBeenCalled();
   button('Save and close').click();
   await vi.waitFor(() => expect(saveVisualizer).toHaveBeenCalledOnce());
   const [config, image] = vi.mocked(saveVisualizer).mock.calls[0];
   expect(config.Roof).toHaveLength(1);
-  expect(image).toBe(screenshot);
+  expect(image).toBe('data:image/png;base64,c2NyZWVuc2hvdA==');
 });
 
 test('normal text paste is untouched and the image paste handler is removed on close', async () => {
@@ -208,10 +221,10 @@ function sendClipboard(
 
 test('copying then pasting into another track creates independent copies of the copied snapshot', async () => {
   const original = { x: 0.2, y: 0.3, width: 0.15, height: 0.1, color: '#abcdef' };
-  vi.mocked(loadVisualizer).mockResolvedValue({
-    config: { Roof: [original] },
-    image: new Blob(['photo']),
-  });
+  visuals = {
+    trackObjects: { Roof: [original] },
+    backgroundImage: 'data:image/png;base64,cGhvdG8=',
+  };
   await open();
   button('Rectangle 1').click();
   const clipboard = rectangleClipboard();

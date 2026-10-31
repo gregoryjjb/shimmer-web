@@ -3,8 +3,9 @@ import { Portal } from 'solid-js/web';
 import { flattenTracks } from '../timeline/layout';
 import { DeepReadonly, LayoutNode } from '../timeline/types';
 import { readRectangle, serializeRectangle } from './clipboard';
-import { loadVisualizer, saveVisualizer } from './storage';
-import { clamp, constrainObject, VisualizerConfig, VisualizerObject } from './types';
+import { blobToDataURL } from '../files';
+import { LayoutVisuals } from '../layout/document';
+import { clamp, constrainObject, parseConfig, VisualizerConfig, VisualizerObject } from './types';
 
 type Selection = { track: string; index: number };
 type Drag = Selection & {
@@ -18,7 +19,8 @@ type Drag = Selection & {
 export default function VisualizerEditor(props: {
   layout: readonly DeepReadonly<LayoutNode>[];
   onClose: () => void;
-  onSave?: () => void;
+  visuals: DeepReadonly<LayoutVisuals>;
+  onSave: (visuals: LayoutVisuals) => Promise<void>;
 }) {
   let dialog!: HTMLDialogElement;
   let canvas: SVGSVGElement | undefined;
@@ -29,7 +31,6 @@ export default function VisualizerEditor(props: {
   const [config, setConfig] = createSignal<VisualizerConfig>(Object.create(null));
   const [track, setTrack] = createSignal<string>();
   const [selection, setSelection] = createSignal<Selection>();
-  const [image, setImage] = createSignal<Blob>();
   const [imageURL, setImageURL] = createSignal('');
   const [color, setColor] = createSignal('#facc15');
   const [loading, setLoading] = createSignal(true);
@@ -59,23 +60,16 @@ export default function VisualizerEditor(props: {
   const showError = (cause: unknown) =>
     setError(cause instanceof Error ? cause.message : 'Something went wrong. Please try again.');
 
-  async function displayImage(blob: Blob) {
-    const url = URL.createObjectURL(blob);
+  async function displayImage(source: Blob | string) {
+    const url = typeof source === 'string' ? source : await blobToDataURL(source);
+    const preview = new Image();
+    preview.src = url;
     try {
-      const preview = new Image();
-      preview.src = url;
       await preview.decode();
       return url;
     } catch {
-      URL.revokeObjectURL(url);
       throw new Error('This image could not be opened. Try a PNG, JPEG, or WebP image.');
     }
-  }
-
-  function replaceImage(blob: Blob, url: string) {
-    if (imageURL()) URL.revokeObjectURL(imageURL());
-    setImage(blob);
-    setImageURL(url);
   }
 
   async function load() {
@@ -83,14 +77,11 @@ export default function VisualizerEditor(props: {
     setLoadFailed(false);
     setError('');
     try {
-      const saved = await loadVisualizer();
-      const url = saved.image ? await displayImage(saved.image) : '';
-      if (disposed) {
-        if (url) URL.revokeObjectURL(url);
-        return;
-      }
-      setConfig(saved.config);
-      if (saved.image) replaceImage(saved.image, url);
+      const saved = props.visuals;
+      const url = saved.backgroundImage ? await displayImage(saved.backgroundImage) : '';
+      if (disposed) return;
+      setConfig(parseConfig(JSON.stringify(saved.trackObjects)));
+      setImageURL(url);
       setTrack(rows().find((row) => row.type === 'track')?.id);
     } catch (cause) {
       if (!disposed) {
@@ -119,7 +110,6 @@ export default function VisualizerEditor(props: {
   });
   onCleanup(() => {
     disposed = true;
-    if (imageURL()) URL.revokeObjectURL(imageURL());
     dialog.close();
   });
 
@@ -159,7 +149,7 @@ export default function VisualizerEditor(props: {
       void upload(file);
       return;
     }
-    if (isEditingText(event.target) || !image()) return;
+    if (isEditingText(event.target) || !imageURL()) return;
     const name = track();
     if (name === undefined || !rows().some((row) => row.type === 'track' && row.id === name))
       return;
@@ -186,10 +176,9 @@ export default function VisualizerEditor(props: {
       if (!file.type.startsWith('image/')) throw new Error('Please choose an image file.');
       const url = await displayImage(file);
       if (disposed || version !== uploadVersion) {
-        URL.revokeObjectURL(url);
         return;
       }
-      replaceImage(file, url);
+      setImageURL(url);
     } catch (cause) {
       if (!disposed && version === uploadVersion) showError(cause);
     } finally {
@@ -215,7 +204,7 @@ export default function VisualizerEditor(props: {
 
   function add() {
     const name = track();
-    if (name === undefined || busy() || !image()) return;
+    if (name === undefined || busy() || !imageURL()) return;
     const previous = config()[name] ?? [];
     const offset = (previous.length % 8) * 0.025;
     setConfig((value) =>
@@ -310,13 +299,12 @@ export default function VisualizerEditor(props: {
   }
 
   async function save() {
-    const blob = image();
-    if (!blob || busy()) return;
+    const backgroundImage = imageURL();
+    if (!backgroundImage || busy()) return;
     setSaving(true);
     setError('');
     try {
-      await saveVisualizer(config(), blob);
-      props.onSave?.();
+      await props.onSave({ trackObjects: config(), backgroundImage });
       props.onClose();
     } catch (cause) {
       showError(cause);
@@ -455,7 +443,7 @@ export default function VisualizerEditor(props: {
               <span class="text-xs text-zinc-400">Or paste an image with Ctrl+V / ⌘V</span>
               <button
                 class="relative whitespace-nowrap rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-[13px] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-blue-500 hover:bg-zinc-700"
-                disabled={busy() || !image() || track() === undefined}
+                disabled={busy() || !imageURL() || track() === undefined}
                 onClick={add}
               >
                 + Add rectangle
@@ -611,7 +599,7 @@ export default function VisualizerEditor(props: {
           </button>
           <button
             class="relative whitespace-nowrap rounded-lg border border-indigo-500 bg-indigo-600 px-3 py-2 text-[13px] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-blue-500 hover:bg-indigo-700"
-            disabled={busy() || !image()}
+            disabled={busy() || !imageURL()}
             onClick={() => void save()}
           >
             {saving() ? 'Saving…' : 'Save and close'}

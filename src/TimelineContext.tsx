@@ -3,7 +3,6 @@ import {
   ParentComponent,
   createContext,
   createEffect,
-  createMemo,
   createSignal,
   onCleanup,
   onMount,
@@ -16,19 +15,24 @@ import { LocalPersistor } from './timeline/persist/local';
 import Timeline from './timeline/timeline';
 import { DeepReadonly, Project, ProjectData } from './timeline/types';
 import { GomasPersistor } from './timeline/persist/gomas';
-import { materializeLayout } from './timeline/layout';
+import { validateLayoutTracks } from './timeline/layout';
+import { createLayoutState } from './layout/state';
 
 const makeTimelineContext = () => {
   const timeline = new Timeline();
+  const layout = createLayoutState(timeline.setLayout, (tree) =>
+    validateLayoutTracks(tree, timeline.projectData.tracks),
+  );
   const [storedCollapsedGroups, storeCollapsedGroups] = createStoredSignal<readonly string[]>(
     'shimmer.layout.collapsedGroups',
     [],
   );
-  timeline.setCollapsedGroups(storedCollapsedGroups());
+  void layout.ready.then(() => timeline.setCollapsedGroups(storedCollapsedGroups()));
   timeline.on('collapsedGroupsChanged', storeCollapsedGroups);
   const [visibleRows, setVisibleRows] = createSignal(timeline.visibleRows);
   timeline.on('collapsedGroupsChanged', () => setVisibleRows(timeline.visibleRows));
   timeline.on('dataChanged', () => setVisibleRows(timeline.visibleRows));
+  timeline.on('layoutChanged', () => setVisibleRows(timeline.visibleRows));
   const beatAnalysis = createBeatAnalysis({
     analyzer: essentiaBeatAnalyzer,
     readAudio: () => {
@@ -48,7 +52,9 @@ const makeTimelineContext = () => {
     { equals: false },
   );
   timeline.on('dataChanged', (data) => setProjectData(data));
-  const trackLayout = createMemo(() => materializeLayout(projectData().tracks));
+  const [trackLayout, setTrackLayout] = createSignal(timeline.trackLayout);
+  timeline.on('dataChanged', () => setTrackLayout(timeline.trackLayout));
+  timeline.on('layoutChanged', () => setTrackLayout(timeline.trackLayout));
   const [loadError, setLoadError] = createSignal('');
 
   const [pan, setPan] = createSignal(timeline.pan);
@@ -97,7 +103,8 @@ const makeTimelineContext = () => {
       persistence = LocalPersistor;
     }
 
-    OpenedProject.open(persistence)
+    layout.ready
+      .then(() => OpenedProject.open(persistence))
       .then(async (project) => {
         if (timeline.destroyed) return;
 
@@ -138,6 +145,7 @@ const makeTimelineContext = () => {
 
   const value = {
     timeline,
+    layout,
     projectData,
     trackLayout,
     visibleRows,

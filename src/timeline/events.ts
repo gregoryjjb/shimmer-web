@@ -1,4 +1,4 @@
-import { DeepReadonly, LayoutNodeID, ProjectData } from './types';
+import { DeepReadonly, LayoutNode, LayoutNodeID, ProjectData } from './types';
 
 type EventMap = Record<string, any>;
 type EventKey<T extends EventMap> = string & keyof T;
@@ -28,6 +28,7 @@ export class TimelineEmitter extends Emitter<{
   autosave: ProjectData;
   dataChanged: DeepReadonly<ProjectData>;
   collapsedGroupsChanged: readonly LayoutNodeID[];
+  layoutChanged: DeepReadonly<LayoutNode[]>;
   pan: { x: number; y: number };
 }> {
   // constructor() {
