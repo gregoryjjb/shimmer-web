@@ -64,9 +64,8 @@ removes its objects. Assigning objects to a show-only track adds it to the saved
 Layout edits do not rename show tracks or enter the show's undo history.
 
 The complete document is stored in IndexedDB, database `shimmer-editor`, store
-`layouts`, key `current`. On first load, the previous localStorage tree and object
-mapping and IndexedDB photo are combined into this document. Subsequent loads use
-only the combined document. Failed saves preserve the active layout and keep the
+`layouts`, key `current`. If no document is saved, the default layout is used.
+Failed saves preserve the active layout and keep the
 editor draft open for retry.
 
 Layout documents are separate from show exports. Collapsed groups and floating

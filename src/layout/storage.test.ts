@@ -4,13 +4,11 @@ import { defaultLayout, LayoutDocument } from './document';
 
 const stores = vi.hoisted(() => ({
   layouts: { getItem: vi.fn(), setItem: vi.fn() },
-  images: { getItem: vi.fn() },
 }));
 vi.mock('localforage', () => ({
   default: {
     INDEXEDDB: 'asyncStorage',
-    createInstance: ({ storeName }: { storeName: string }) =>
-      storeName === 'layouts' ? stores.layouts : stores.images,
+    createInstance: () => stores.layouts,
   },
 }));
 import { loadLayout, saveLayout } from './storage';
@@ -28,7 +26,6 @@ beforeEach(() => {
   vi.resetAllMocks();
   localStorage.clear();
   stores.layouts.getItem.mockResolvedValue(null);
-  stores.images.getItem.mockResolvedValue(null);
   stores.layouts.setItem.mockResolvedValue(undefined);
 });
 
@@ -42,18 +39,7 @@ test('saves tree, objects and embedded image together under one IndexedDB key', 
   expect(stores.layouts.setItem).toHaveBeenCalledWith('current', document);
   stores.layouts.getItem.mockResolvedValue(document);
   expect(await loadLayout()).toEqual(document);
-  expect(stores.images.getItem).not.toHaveBeenCalled();
   expect(localStorage.length).toBe(0);
-});
-
-test('migrates the existing tree, objects and Blob photo without changing UI preferences', async () => {
-  localStorage.setItem('shimmer.layout', JSON.stringify(document.tree));
-  localStorage.setItem('shimmer.visualizer', JSON.stringify(document.visuals.trackObjects));
-  localStorage.setItem('shimmer.visualizer.width', '600');
-  stores.images.getItem.mockResolvedValue(new Blob(['photo'], { type: 'image/png' }));
-  expect(await loadLayout()).toEqual(document);
-  expect(stores.layouts.setItem).toHaveBeenCalledWith('current', document);
-  expect(localStorage.getItem('shimmer.visualizer.width')).toBe('600');
 });
 
 test('storage errors are surfaced and corrupt saved documents are not replaced by defaults', async () => {
@@ -63,5 +49,4 @@ test('storage errors are surfaced and corrupt saved documents are not replaced b
   stores.layouts.setItem.mockClear();
   await expect(loadLayout()).rejects.toThrow();
   expect(stores.layouts.setItem).not.toHaveBeenCalled();
-  expect(stores.images.getItem).not.toHaveBeenCalled();
 });
