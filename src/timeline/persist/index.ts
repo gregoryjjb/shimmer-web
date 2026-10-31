@@ -11,7 +11,8 @@ export interface Persistor {
   loadName: () => Promise<string>;
   saveName: (value: string) => Promise<void>;
 
-  loadData: () => Promise<ProjectData | undefined>;
+  // Stored data may use an older format; OpenedProject converts it on load.
+  loadData: () => Promise<unknown>;
   saveData: (value: ProjectData) => Promise<void>;
 
   loadAudio: () => Promise<Blob | undefined>;
@@ -37,7 +38,7 @@ export class OpenedProject {
    */
   private autosaveData: DebouncedFunc<Persistor['saveData']>;
 
-  constructor(name: string, data: ProjectData, audio: Blob, persistor: Persistor) {
+  constructor(name: string, data: unknown, audio: Blob, persistor: Persistor) {
     this._name = name;
     this._data = parseProjectData(data);
     this._audio = audio;

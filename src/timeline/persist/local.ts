@@ -16,11 +16,8 @@ async function saveName(value: string): Promise<void> {
   localStorage.setItem('projectName', value);
 }
 
-async function loadData(): Promise<ProjectData | undefined> {
-  const data = (await localforage.getItem('data')) as ProjectData;
-
-  // OpenedProject validates the stored show before exposing it to the editor.
-  return data;
+async function loadData(): Promise<unknown> {
+  return localforage.getItem('data');
 }
 
 async function loadAudio(): Promise<Blob | undefined> {

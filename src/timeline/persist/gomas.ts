@@ -9,13 +9,12 @@ export function GomasPersistor(host: string, name: string) {
       throw new Error('not implemented');
     },
 
-    loadData: async (): Promise<ProjectData | undefined> => {
+    loadData: async (): Promise<unknown> => {
       const url = new URL(`/api/shows/${encodeURIComponent(name)}/data`, host);
 
       const result = await fetch(url.toString()).then((res) => res.json());
 
-      // TODO: zod validation
-      return result as ProjectData;
+      return result;
     },
 
     saveData: async (value: ProjectData) => {

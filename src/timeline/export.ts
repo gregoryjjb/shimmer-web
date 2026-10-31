@@ -41,15 +41,63 @@ function parseKeyframe(raw: unknown): Keyframe {
   return { ts: raw.ts, value: raw.value, ...(raw.selected === true ? { selected: true } : {}) };
 }
 
-/** Read the flat show format. Layout is supplied independently by the editor. */
+/** Convert older file formats before the shared flat-track validation. */
+function upgradeTracks(data: Record<string, unknown>): unknown {
+  if (data.version === '3') return data.tracks;
+  if (data.version !== undefined && data.version !== '2') {
+    throw new Error('Unsupported project data version: ' + data.version);
+  }
+  if (!Array.isArray(data.tracks)) throw new Error('Project data must contain a tracks array');
+
+  const tracks = new Map<string, unknown>();
+  const addTrack = (name: unknown, raw: unknown) => {
+    if (typeof name !== 'string' || !name.trim()) {
+      throw new Error('Track names must be non-empty strings');
+    }
+    if (tracks.has(name)) throw new Error('Duplicate track name: ' + name);
+    tracks.set(name, raw);
+  };
+
+  if (data.version === '2') {
+    const visit = (node: unknown) => {
+      if (!isObject(node)) throw new Error('Layout nodes must be objects');
+      if (node.type === 'group') {
+        if (!Array.isArray(node.children)) throw new Error('Groups must contain a children array');
+        node.children.forEach(visit);
+      } else if (node.type === 'track') {
+        addTrack(node.id, node);
+      } else {
+        throw new Error('Layout node type must be track or group');
+      }
+    };
+    data.tracks.forEach(visit);
+  } else {
+    data.tracks.forEach((raw, index) => {
+      if (!isObject(raw) || !Array.isArray(raw.keyframes)) {
+        throw new Error('Each track must contain a keyframes array');
+      }
+      const keyframes = raw.keyframes.map((keyframe: unknown) => {
+        if (!isObject(keyframe)) throw new Error('Keyframes must be objects');
+        // The original format accepted timestamp aliases and numeric/boolean states.
+        const ts = [keyframe.ts, keyframe.timestamp, keyframe.time].find((v) => v !== undefined);
+        const value = keyframe.value !== undefined ? keyframe.value : keyframe.state;
+        return { ts, value: Number(value), selected: keyframe.selected };
+      });
+      addTrack(raw.name || raw.id || `Track ${index}`, { locked: raw.locked, keyframes });
+    });
+  }
+
+  return Object.fromEntries(tracks);
+}
+
+/** Read any supported show format into version 3. Layout is supplied independently. */
 export function parseProjectData(input: unknown): ProjectData {
   const data: unknown = typeof input === 'string' ? JSON.parse(input) : input;
   if (!isObject(data)) throw new Error('Project data must be an object');
-  if (data.version !== '3')
-    throw new Error('This show uses an unsupported format. Open a version 3 show.');
-  if (!isObject(data.tracks)) throw new Error('Project data must contain a tracks object');
+  const tracks = upgradeTracks(data);
+  if (!isObject(tracks)) throw new Error('Project data must contain a tracks object');
 
-  const entries = Object.entries(data.tracks).map(([name, raw]): [string, Track] => {
+  const entries = Object.entries(tracks).map(([name, raw]): [string, Track] => {
     if (!name.trim()) throw new Error('Track names must not be empty');
     if (reservedNames.has(name))
       throw new Error('Track name conflicts with a house group: ' + name);
