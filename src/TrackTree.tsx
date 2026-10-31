@@ -74,7 +74,8 @@ const TrackTree: Component = () => {
                 <span
                   class="min-w-0 flex-1 truncate text-base leading-none"
                   classList={{
-                    'text-zinc-400': !rowIsOn(),
+                    'text-zinc-400': row().type !== 'group' && !rowIsOn(),
+                    'text-zinc-500 italic': row().type === 'group',
                   }}
                   style={{
                     color: rowIsOn() && isBeat() ? beatLight.color : undefined,

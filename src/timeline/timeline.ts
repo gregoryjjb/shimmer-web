@@ -701,7 +701,7 @@ class Timeline {
         : isGroup
           ? alt
             ? theme.channelGroupAlternate
-            : theme.channelGroup
+            : theme.channelGroupAlternate
           : alt
             ? theme.channelDisabledAlternate
             : theme.channelDisabled;
