@@ -20,6 +20,15 @@ import { materializeLayout } from './timeline/layout';
 
 const makeTimelineContext = () => {
   const timeline = new Timeline();
+  const [storedCollapsedGroups, storeCollapsedGroups] = createStoredSignal<readonly string[]>(
+    'shimmer.layout.collapsedGroups',
+    [],
+  );
+  timeline.setCollapsedGroups(storedCollapsedGroups());
+  timeline.on('collapsedGroupsChanged', storeCollapsedGroups);
+  const [visibleRows, setVisibleRows] = createSignal(timeline.visibleRows);
+  timeline.on('collapsedGroupsChanged', () => setVisibleRows(timeline.visibleRows));
+  timeline.on('dataChanged', () => setVisibleRows(timeline.visibleRows));
   const beatAnalysis = createBeatAnalysis({
     analyzer: essentiaBeatAnalyzer,
     readAudio: () => {
@@ -131,6 +140,7 @@ const makeTimelineContext = () => {
     timeline,
     projectData,
     trackLayout,
+    visibleRows,
     loadError,
     pan,
     loading,

@@ -1,6 +1,6 @@
 import TimelineAudio from './timeline-audio';
 import TimelineData from './timeline-data';
-import { flattenTracks, LayoutRow } from './layout';
+import { LayoutRow } from './layout';
 import { DeepReadonly, LayoutNodeID, ProjectData } from './types';
 import { BEAT_TRACK_ID } from './beat';
 
@@ -314,6 +314,12 @@ class Timeline {
     // }
 
     this.data = new TimelineData(this.emitter);
+    this.on('collapsedGroupsChanged', () => {
+      this.boxSelection = undefined;
+      this.cancelGrab();
+      this.cancelScale();
+      this.requestDraw();
+    });
 
     this.audio = new TimelineAudio(this.emitter);
     this.audio.on('loading', (loading: boolean) => {
@@ -493,7 +499,7 @@ class Timeline {
 
     y = this.screenToContentY(y);
 
-    const rows = flattenTracks(this.data.layout, this.data.data.tracks);
+    const rows = this.data.visibleRows;
 
     for (const row of rows) {
       if (y >= row.startY && y < row.endY) {
@@ -512,7 +518,7 @@ class Timeline {
   };
 
   private get channelCount() {
-    return flattenTracks(this.data.layout).length;
+    return this.data.visibleRows.length;
   }
 
   private getLocalCoordinates = (event: MouseEvent | WheelEvent): { x: number; y: number } => {
@@ -539,7 +545,7 @@ class Timeline {
     ctx.scale(this.dpiScale, this.dpiScale);
     ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
 
-    const trackRows = flattenTracks(this.data.layout, this.data.data.tracks);
+    const trackRows = this.data.visibleRows;
 
     //// Timeline
 
@@ -803,8 +809,8 @@ class Timeline {
 
         for (let i = startIndex; i < track.keyframes.length; i++) {
           const kf = track.keyframes[i];
-          let t = kf.ts + (kf.selected ? this.grabOffset : 0);
-          if (kf.selected && this.scaling) t = this.renderScaled(t);
+          let t = kf.ts + (kf.selected && !row.locked ? this.grabOffset : 0);
+          if (kf.selected && !row.locked && this.scaling) t = this.renderScaled(t);
 
           if (t > cutoffTimeRight) {
             // Quit early if we're over the right edge
@@ -1276,7 +1282,7 @@ DPI scale: ${this.dpiScale}`;
             startTime: this.absolutePxToTime(this.boxSelection.start.x),
             endTime: this.absolutePxToTime(this.boxSelection.end.x),
             keepExisting: this.boxSelection.keepExisting,
-            trackIDs: flattenTracks(this.data.layout, this.data.data.tracks)
+            trackIDs: this.data.visibleRows
               .filter((t) => t.type === 'track' && this.trackIsBoxSelected(t))
               .map((t) => t.id),
           });
@@ -1475,7 +1481,7 @@ DPI scale: ${this.dpiScale}`;
   };
 
   trackIsBoxSelected = (track: LayoutRow) => {
-    if (!this.boxSelection) return false;
+    if (!this.boxSelection || track.locked) return false;
 
     const start = this.screenToContentY(this.boxSelection.start.y);
     const end = this.screenToContentY(this.boxSelection.end.y);
@@ -1496,6 +1502,15 @@ DPI scale: ${this.dpiScale}`;
   get trackLayout() {
     return this.data.layout;
   }
+
+  get visibleRows() {
+    return this.data.visibleRows;
+  }
+
+  setCollapsedGroups = (ids: readonly LayoutNodeID[]) => this.data.setCollapsedGroups(ids);
+
+  setGroupCollapsed = (id: LayoutNodeID, collapsed: boolean) =>
+    this.data.setGroupCollapsed(id, collapsed);
 
   get layout() {
     return this.config.layout;

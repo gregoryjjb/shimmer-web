@@ -1,11 +1,10 @@
-import { Component, Index, createMemo } from 'solid-js';
+import { Component, Index, Show, createMemo } from 'solid-js';
 import { Icon } from 'solid-heroicons';
-import { lockClosed, lockOpen } from 'solid-heroicons/solid-mini';
+import { chevronDown, chevronRight, lockClosed, lockOpen } from 'solid-heroicons/solid-mini';
 import { useTimeline } from './TimelineContext';
 import { BEAT_FLASH_DURATION_SECONDS, BEAT_TRACK_ID } from './timeline/beat';
 import colors from './timeline/colors';
 import { isOn } from './timeline/timeline-data';
-import { flattenTracks } from './timeline/layout';
 
 const christmasLights = [
   { color: '#ff4b3e', core: '#ff9188', glow: 'rgba(255, 75, 62, 0.65)' },
@@ -26,7 +25,7 @@ const TrackTree: Component = () => {
   // during runtime then we need to make it reactive
   const layout = ctx.timeline.layout;
 
-  const rows = createMemo(() => flattenTracks(ctx.trackLayout(), ctx.projectData().tracks));
+  const rows = ctx.visibleRows;
   const colorOffsets = createMemo(() => {
     let offset = 0;
     return rows().map((row) => {
@@ -71,6 +70,17 @@ const TrackTree: Component = () => {
                   'padding-left': `${8 + row().depth * 10}px`,
                 }}
               >
+                <Show when={row().type === 'group'} fallback={<span class="w-5 shrink-0" />}>
+                  <button
+                    type="button"
+                    class="pointer-events-auto shrink-0 rounded p-0.5 hover:bg-zinc-600/80"
+                    aria-label={`${row().collapsed ? 'Expand' : 'Collapse'} group ${row().id}`}
+                    aria-expanded={!row().collapsed}
+                    onClick={() => ctx.timeline.setGroupCollapsed(row().id, !row().collapsed)}
+                  >
+                    <Icon path={row().collapsed ? chevronRight : chevronDown} class="h-4 w-4" />
+                  </button>
+                </Show>
                 <span
                   class="min-w-0 flex-1 truncate text-base leading-none"
                   classList={{
@@ -111,7 +121,8 @@ const TrackTree: Component = () => {
                 </span>
                 <button
                   type="button"
-                  class="pointer-events-auto shrink-0 rounded p-1 transition-colors hover:bg-zinc-600/80"
+                  class="pointer-events-auto shrink-0 rounded p-1 transition-colors hover:bg-zinc-600/80 disabled:opacity-40"
+                  disabled={row().type === 'group' && !row().hasVisibleTracks}
                   classList={{
                     'text-zinc-500 hover:text-white': !row().locked,
                     'text-rose-300': row().locked,

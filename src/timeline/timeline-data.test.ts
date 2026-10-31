@@ -174,6 +174,164 @@ describe('show editing with a separate house layout', () => {
   });
 });
 
+describe('collapsed layout groups', () => {
+  test('collapse preserves data, selection, redo history, and nested collapse state', () => {
+    const { data, emitter, project } = makeData({
+      'Roof 1': track(1, true),
+      Extra: track(2, true),
+    });
+    data.moveSelected(1);
+    data.undo();
+    const saved = structuredClone(data.data);
+    const save = vi.spyOn(project, 'saveData');
+    const changed = vi.fn();
+    const selected = vi.fn();
+    emitter.on('dataChanged', changed);
+    emitter.on('selected', selected);
+    data.setGroupCollapsed('Roof parkview', true);
+    data.setGroupCollapsed('Roof', true);
+    expect(data.data).toEqual(saved);
+    expect(save).not.toHaveBeenCalled();
+    expect(changed).not.toHaveBeenCalled();
+    expect(selected).toHaveBeenLastCalledWith(1);
+    data.redo();
+    expect(data.data.tracks['Roof 1'].keyframes[0].ts).toBe(2);
+    expect(data.collapsedGroupIDs).toEqual(['Roof parkview', 'Roof']);
+    data.undo();
+    expect(data.data).toEqual(saved);
+    data.setGroupCollapsed('Roof', false);
+    expect(data.visibleRows.find((row) => row.id === 'Roof parkview')?.collapsed).toBe(true);
+    expect(data.visibleRows.some((row) => row.id === 'Roof 1')).toBe(false);
+    data.setGroupCollapsed('Roof parkview', false);
+    expect(data.data.tracks['Roof 1'].keyframes[0].selected).toBe(true);
+    expect(selected).toHaveBeenLastCalledWith(2);
+  });
+
+  test('visible rows have contiguous coordinates while full layout remains available', () => {
+    const { data } = makeData();
+    const count = data.visibleRows.length;
+    data.setCollapsedGroups(['Roof parkview', 'Roof 1', 'Missing']);
+    expect(data.collapsedGroupIDs).toEqual(['Roof parkview']);
+    expect(data.visibleRows).toHaveLength(count - 8);
+    data.visibleRows.forEach((row, i) => {
+      expect(row.startY).toBe(i * 30);
+      expect(row.endY).toBe((i + 1) * 30);
+    });
+    expect(flattenTracks(data.layout)).toHaveLength(count);
+  });
+
+  test.each([
+    ['move', (data: TimelineData) => data.moveSelected(2)],
+    ['scale', (data: TimelineData) => data.scaleSelected(0, 2)],
+    ['delete', (data: TimelineData) => data.deleteSelected()],
+    ['invert', (data: TimelineData) => data.invertSelected()],
+    ['duplicate', (data: TimelineData) => data.duplicateSelected()],
+    ['align', (data: TimelineData) => data.alignSelected()],
+    ['snap', (data: TimelineData) => data.snapTo(10)],
+    ['space', (data: TimelineData) => data.equallySpaceSelected()],
+    ['dedup', (data: TimelineData) => data.dedup()],
+    ['select all', (data: TimelineData) => data.selectAll(true)],
+    ['deselect all', (data: TimelineData) => data.selectAll(false)],
+    ['select single', (data: TimelineData) => data.selectSingle('Extra', 1, 0.1, false)],
+    [
+      'box select',
+      (data: TimelineData) =>
+        data.boxSelect({
+          startTime: 0,
+          endTime: 2,
+          trackIDs: ['Extra', 'Roof 1', 'Locked'],
+          keepExisting: false,
+        }),
+    ],
+  ])('%s skips hidden and locked tracks, preserving their selections', (_name, operation) => {
+    const frames = [1, 1.0001, 4, 9].map((ts) => ({ ts, value: 1, selected: true }));
+    const { data } = makeData({
+      'Roof 1': { locked: false, keyframes: structuredClone(frames) },
+      Extra: { locked: false, keyframes: structuredClone(frames) },
+      Locked: { locked: true, keyframes: structuredClone(frames) },
+    });
+    // Exercise even a retained selection on a locked track.
+    data.data.tracks.Locked.keyframes[0].selected = true;
+    data.setGroupCollapsed('Roof', true);
+    const hidden = structuredClone(data.data.tracks['Roof 1']);
+    const locked = structuredClone(data.data.tracks.Locked);
+    operation(data);
+    expect(data.data.tracks['Roof 1']).toEqual(hidden);
+    expect(data.data.tracks.Locked).toEqual(locked);
+  });
+
+  test('shifts across collapsed groups and locked tracks without moving hidden selections', () => {
+    const { data } = makeData({
+      'Roof 8': track(8, true),
+      'Roof 9': track(9, true),
+      'Fence 1': { ...track(10), locked: true },
+    });
+    data.setGroupCollapsed('Roof hamilton', true);
+    data.shiftSelected('down');
+    expect(data.data.tracks['Roof 8'].keyframes).toEqual([]);
+    expect(data.data.tracks['Fence 2'].keyframes[0].ts).toBe(8);
+    expect(data.data.tracks['Roof 9'].keyframes).toEqual(track(9, true).keyframes);
+    data.shiftSelected('up');
+    expect(data.data.tracks['Roof 8'].keyframes[0].ts).toBe(8);
+  });
+
+  test('flip uses visible unlocked order and ignores hidden selections', () => {
+    const { data } = makeData({
+      'Roof 8': track(8, true),
+      'Roof 9': track(9, true),
+      'Fence 1': { ...track(10), locked: true },
+      'Fence 2': track(11, true),
+    });
+    data.setGroupCollapsed('Roof hamilton', true);
+    data.flipSelected();
+    expect(data.data.tracks['Roof 8'].keyframes[0].ts).toBe(11);
+    expect(data.data.tracks['Fence 2'].keyframes[0].ts).toBe(8);
+    expect(data.data.tracks['Roof 9'].keyframes).toEqual(track(9, true).keyframes);
+  });
+
+  test('group insertion and locking only affect visible descendants', () => {
+    const { data } = makeData({
+      'Roof 1': track(1, true),
+      'Roof 9': { ...track(9), locked: true },
+    });
+    data.setGroupCollapsed('Roof parkview', true);
+    data.insertAuto('Roof', 5, 1);
+    expect(data.data.tracks['Roof 1'].keyframes).toEqual(track(1, true).keyframes);
+    expect(data.data.tracks['Roof 2']).toBeUndefined();
+    expect(data.data.tracks['Roof 9'].keyframes).toHaveLength(1);
+    expect(data.data.tracks['Roof 10'].keyframes).toEqual([{ ts: 5, value: 1 }]);
+    data.setNodeLocked('Roof', true);
+    expect(data.data.tracks['Roof 1']).toEqual(track(1, true));
+    expect(data.visibleRows.find((row) => row.id === 'Roof')?.locked).toBe(true);
+    data.setNodeLocked('Roof', false);
+    expect(data.data.tracks['Roof 9'].locked).toBe(false);
+    data.insertAuto('Roof parkview', 6, 1);
+    expect(data.data.tracks['Roof 1']).toEqual(track(1, true));
+  });
+
+  test('hidden selections do not determine selected bounds or snapping', () => {
+    const { data } = makeData({ 'Roof 1': track(100, true), Extra: track(5, true) });
+    data.setGroupCollapsed('Roof', true);
+    expect(data.firstLastSelected()).toEqual({ first: 5, last: 5 });
+    expect(data.findNearest(99)?.ts).toBe(5);
+    data.selectAll(false);
+    expect(data.firstLastSelected()).toEqual({ first: 0, last: 0 });
+    expect(data.data.tracks['Roof 1'].keyframes[0].selected).toBe(true);
+  });
+
+  test('beat insertion and replacement respect an existing track lock', () => {
+    const { data } = makeData({ Beat: { ...track(1), locked: true } });
+    data.insertBeat(2);
+    data.replaceBeats([3, 4]);
+    expect(data.data.tracks.Beat.keyframes.map((kf) => kf.ts)).toEqual([1]);
+    data.setNodeLocked('Beat', false);
+    data.insertBeat(2);
+    expect(data.data.tracks.Beat.keyframes.map((kf) => kf.ts)).toEqual([1, 2]);
+    data.replaceBeats([3, 4]);
+    expect(data.data.tracks.Beat.keyframes.map((kf) => kf.ts)).toEqual([3, 4]);
+  });
+});
+
 describe('binarySearch2', () => {
   test('simple', () => {
     const actual = binarySearch(keyframes, 16);

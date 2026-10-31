@@ -190,14 +190,15 @@ export type LayoutRow = {
   startY: number;
   endY: number;
   locked: boolean;
+  collapsed?: boolean;
+  hasVisibleTracks?: boolean;
   keyframes?: DeepReadonly<Keyframe[]>;
 };
 
 export function flattenTracks(
   nodes: readonly DeepReadonly<LayoutNode>[],
   tracks: DeepReadonly<Tracks> = {},
-  depth = 0,
-  y = 0,
+  collapsedGroups: ReadonlySet<LayoutNodeID> = new Set(),
 ): LayoutRow[] {
   const result: LayoutRow[] = [];
 
@@ -205,9 +206,14 @@ export function flattenTracks(
   const groupHeight = 30;
   const trackHeight = 30;
 
-  let currentY = y;
+  let currentY = 0;
 
-  function traverse(node: DeepReadonly<LayoutNode>, currentDepth: number): boolean {
+  function allLocked(node: DeepReadonly<LayoutNode>): boolean {
+    if (node.type === 'track') return tracks[node.id]?.locked ?? false;
+    return node.children.length > 0 && node.children.every(allLocked);
+  }
+
+  function traverse(node: DeepReadonly<LayoutNode>, currentDepth: number): boolean | null {
     if (node.type === 'track') {
       const track = tracks[node.id];
       result.push({
@@ -229,15 +235,25 @@ export function flattenTracks(
       startY: currentY,
       endY: (currentY += groupHeight),
       locked: false,
+      collapsed: collapsedGroups.has(node.id),
+      hasVisibleTracks: false,
     };
     result.push(row);
 
-    const childLockStates = node.children.map((child) => traverse(child, currentDepth + 1));
+    if (row.collapsed) {
+      row.locked = allLocked(node);
+      return null;
+    }
+
+    const childLockStates = node.children
+      .map((child) => traverse(child, currentDepth + 1))
+      .filter((locked): locked is boolean => locked !== null);
+    row.hasVisibleTracks = childLockStates.length > 0;
     row.locked = childLockStates.length > 0 && childLockStates.every(Boolean);
-    return row.locked;
+    return row.hasVisibleTracks ? row.locked : null;
   }
 
-  nodes.forEach((node) => traverse(node, depth));
+  nodes.forEach((node) => traverse(node, 0));
 
   return result;
 }
