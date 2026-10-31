@@ -3,6 +3,11 @@ import TimelineData from './timeline-data';
 import { LayoutRow } from './layout';
 import { DeepReadonly, LayoutNodeID, ProjectData } from './types';
 import { BEAT_TRACK_ID } from './beat';
+import {
+  drawKeyframeSummary,
+  groupKeyframeSpans,
+  KEYFRAME_SUMMARY_RADIUS,
+} from './keyframe-summary';
 
 import colors from './colors';
 import { ArgOf, Command, ComplexCommand, apple, keybinds } from './commands';
@@ -784,9 +789,33 @@ class Timeline {
     if (this.data) {
       const cutoffTimeLeft = this.absolutePxToTime(0 - layout.keyframeSize / 2);
       const cutoffTimeRight = this.absolutePxToTime(this.canvasWidth + layout.keyframeSize / 2);
+      const nodes = this.data.nodeLookup;
 
       trackRows.forEach((row, i) => {
-        if (row.type === 'group') return; // Groups
+        // Draw squiggle line summaries for collapsed groups
+        if (row.type === 'group') {
+          if (
+            row.collapsed &&
+            this.contentToScreenY(row.endY) >= channelsY &&
+            this.contentToScreenY(row.startY) <= this.canvasHeight
+          ) {
+            const spans = groupKeyframeSpans(
+              nodes[row.id],
+              this.data.data.tracks,
+              this.absolutePxToTime(-KEYFRAME_SUMMARY_RADIUS),
+              this.absolutePxToTime(this.canvasWidth + KEYFRAME_SUMMARY_RADIUS),
+              this.absoluteTimeToPx,
+            );
+            drawKeyframeSummary(
+              ctx,
+              spans,
+              (row.startY + row.endY) / 2,
+              this.canvasWidth,
+              theme.waveform,
+            );
+          }
+          return;
+        }
 
         const y = row.startY + layout.channelHeight * 0.5;
         // const y = layout.channelHeight * i + layout.channelHeight * 0.5;
