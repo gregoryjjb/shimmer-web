@@ -3,7 +3,7 @@ import FileInput from './components/FileInput';
 import GradientButton from './components/GradientButton';
 
 const NewProjectForm: Component<{
-  onSubmit?: (result: { name: string; file: File; channelCount: number }) => void;
+  onSubmit?: (result: { name: string; file: File }) => void;
 }> = (props) => {
   const nameInvalidRegex = /[<>/\\:"|?*\n]/m;
   const [name, setName] = createSignal('');
@@ -12,7 +12,6 @@ const NewProjectForm: Component<{
     if (invalid) return `cannot contain: ${nameInvalidRegex.toString()}`;
   });
 
-  const [channelCount, setChannelCount] = createSignal(8);
   const [file, setFile] = createSignal<File>();
 
   return (
@@ -27,7 +26,6 @@ const NewProjectForm: Component<{
         props.onSubmit?.({
           name: name().trim(),
           file: f,
-          channelCount: channelCount(),
         });
       }}
     >
@@ -45,21 +43,6 @@ const NewProjectForm: Component<{
             value={name()}
             class="w-full rounded bg-zinc-700 p-2 hover:bg-zinc-600 focus:bg-zinc-600"
             onInput={(e) => setName(e.target.value)}
-          />
-        </div>
-
-        <div class="flex flex-1 flex-col">
-          <label for="channel-count" class="mb-1 text-sm font-semibold">
-            Number of channels
-          </label>
-          <input
-            id="channel-count"
-            type="number"
-            min="1"
-            step="1"
-            value={channelCount()}
-            class="w-full rounded bg-zinc-700 p-2 hover:bg-zinc-600 focus:bg-zinc-600"
-            onInput={(e) => setChannelCount(parseInt(e.target.value))}
           />
         </div>
       </div>

@@ -1,114 +1,18 @@
 import { TimelineEmitter } from './events';
-import { BEAT_TRACK_ID, createBeatTrack, ensureBeatTrackFirst } from './beat';
+import { BEAT_TRACK_ID, createBeatTrack } from './beat';
+import {
+  iterateLeaves,
+  iterateNodes,
+  iterateTracks,
+  iterateUnlockedTracks,
+  materializeLayout,
+} from './layout';
 import { OpenedProject } from './persist';
-import { Keyframe, LayoutNode, LayoutNodeID, ProjectData, Track, TrackID } from './types';
+import { Keyframe, LayoutNode, LayoutNodeID, ProjectData, Track, TrackID, Tracks } from './types';
 import { UndoHistory } from './undo';
 import { stringifyTime } from './utils';
 
-export const newTracks = (count: number): LayoutNode[] => {
-  // TODO: don't hardcode the default layout template
-  return [
-    createBeatTrack(),
-    {
-      type: 'group',
-      id: 'Root',
-      children: [
-        {
-          type: 'group',
-          id: 'Roof',
-          children: [
-            {
-              type: 'group',
-              id: 'Roof parkview',
-              children: [
-                { type: 'track', id: 'Roof 1', keyframes: [], locked: false },
-                { type: 'track', id: 'Roof 2', keyframes: [], locked: false },
-                { type: 'track', id: 'Roof 3', keyframes: [], locked: false },
-                { type: 'track', id: 'Roof 4', keyframes: [], locked: false },
-                { type: 'track', id: 'Roof 5', keyframes: [], locked: false },
-                { type: 'track', id: 'Roof 6', keyframes: [], locked: false },
-                { type: 'track', id: 'Roof 7', keyframes: [], locked: false },
-                { type: 'track', id: 'Roof 8', keyframes: [], locked: false },
-              ],
-            },
-            {
-              type: 'group',
-              id: 'Roof hamilton',
-              children: [
-                { type: 'track', id: 'Roof 9', keyframes: [], locked: false },
-                { type: 'track', id: 'Roof 10', keyframes: [], locked: false },
-                { type: 'track', id: 'Roof 11', keyframes: [], locked: false },
-                { type: 'track', id: 'Roof 12', keyframes: [], locked: false },
-                { type: 'track', id: 'Roof 13', keyframes: [], locked: false },
-                { type: 'track', id: 'Roof 14', keyframes: [], locked: false },
-                { type: 'track', id: 'Roof 15', keyframes: [], locked: false },
-                { type: 'track', id: 'Roof 16', keyframes: [], locked: false },
-                { type: 'track', id: 'Roof 17', keyframes: [], locked: false },
-                { type: 'track', id: 'Roof 18', keyframes: [], locked: false },
-              ],
-            },
-          ],
-        },
-        {
-          type: 'group',
-          id: 'Fence',
-          children: [
-            { type: 'track', id: 'Fence 1', keyframes: [], locked: false },
-            { type: 'track', id: 'Fence 2', keyframes: [], locked: false },
-            { type: 'track', id: 'Fence 3', keyframes: [], locked: false },
-            { type: 'track', id: 'Fence 4', keyframes: [], locked: false },
-            { type: 'track', id: 'Fence 5', keyframes: [], locked: false },
-            { type: 'track', id: 'Fence 6', keyframes: [], locked: false },
-            { type: 'track', id: 'Fence 7', keyframes: [], locked: false },
-            { type: 'track', id: 'Fence 8', keyframes: [], locked: false },
-            { type: 'track', id: 'Fence 9', keyframes: [], locked: false },
-            { type: 'track', id: 'Fence 10', keyframes: [], locked: false },
-          ],
-        },
-        {
-          type: 'group',
-          id: 'Tree left',
-          children: [
-            { type: 'track', id: 'Tree left 1', keyframes: [], locked: false },
-            { type: 'track', id: 'Tree left 2', keyframes: [], locked: false },
-            { type: 'track', id: 'Tree left 3', keyframes: [], locked: false },
-            { type: 'track', id: 'Tree left 4', keyframes: [], locked: false },
-          ],
-        },
-        {
-          type: 'group',
-          id: 'Tree center',
-          children: [
-            { type: 'track', id: 'Tree center 1', keyframes: [], locked: false },
-            { type: 'track', id: 'Tree center 2', keyframes: [], locked: false },
-            { type: 'track', id: 'Tree center 3', keyframes: [], locked: false },
-            { type: 'track', id: 'Tree center 4', keyframes: [], locked: false },
-          ],
-        },
-        {
-          type: 'group',
-          id: 'Tree right',
-          children: [
-            { type: 'track', id: 'Tree right 1', keyframes: [], locked: false },
-            { type: 'track', id: 'Tree right 2', keyframes: [], locked: false },
-            { type: 'track', id: 'Tree right 3', keyframes: [], locked: false },
-            { type: 'track', id: 'Tree right 4', keyframes: [], locked: false },
-          ],
-        },
-        {
-          type: 'group',
-          id: 'Bushes',
-          children: [
-            { type: 'track', id: 'Bush 1', keyframes: [], locked: false },
-            { type: 'track', id: 'Bush 2', keyframes: [], locked: false },
-            { type: 'track', id: 'Bush 3', keyframes: [], locked: false },
-            { type: 'track', id: 'Bush 4', keyframes: [], locked: false },
-          ],
-        },
-      ],
-    },
-  ];
-};
+export const newTracks = (): Tracks => ({ [BEAT_TRACK_ID]: createBeatTrack() });
 
 const compareKeyframes = (a: Keyframe, b: Keyframe): number => {
   if (a.ts < b.ts) return -1;
@@ -123,25 +27,6 @@ const setSelected = (kf: Keyframe, selected: boolean) => {
     delete kf.selected;
   }
 };
-
-// export const mapJSONToMemory = (dataJSON: ShowDataJSON) => {
-//   const tracks: Track[] = dataJSON.tracks.map((c) => {
-//     const track: Track = {
-//       name: c.id,
-//       keyframes: [],
-//     };
-//     for (let k of c.keyframes) {
-//       track.keyframes.push({
-//         ts: k.time,
-//         value: !!k.state ? 1 : 0,
-//         selected: false,
-//       });
-//     }
-//     return track;
-//   });
-
-//   return tracks;
-// };
 
 type BinarySearchSide = 'left' | 'right';
 
@@ -203,7 +88,7 @@ const perfEvent = (event: string) => {
 export interface BoxSelection {
   startTime: number;
   endTime: number;
-  tracks: Track[];
+  trackIDs: TrackID[];
   keepExisting: boolean;
 }
 
@@ -219,8 +104,8 @@ class TimelineData {
     this.emitter = emitter;
 
     this.data = {
-      version: '2',
-      tracks: [],
+      version: '3',
+      tracks: {},
     };
 
     this.undoHistory = new UndoHistory(100, {
@@ -229,69 +114,38 @@ class TimelineData {
     });
   }
 
-  private _channels: Track[] | undefined;
+  get layout(): LayoutNode[] {
+    return materializeLayout(this.data.tracks);
+  }
 
-  /**
-   * Returns a flat list of all tracks in the project
-   */
+  iterateTracks = () => iterateTracks(this.layout, this.data.tracks);
+
+  /** Stored show tracks, independent of layout positions. */
   get channels() {
-    if (!this._channels) {
-      this._channels = [];
-
-      const queue: LayoutNode[] = [];
-
-      queue.push(...this.data.tracks);
-
-      while (queue.length > 0) {
-        const next = queue.pop();
-        if (!next) break;
-
-        if (next.type === 'group') {
-          // Push in reverse order so they are iterated over immediately
-          queue.push(...[...next.children].reverse());
-        } else {
-          this._channels.push(next);
-        }
-      }
-    }
-
-    return this._channels;
+    return Object.values(this.data.tracks);
   }
 
-  // TODO: clear this every time the tracks are modified (not the keyframes)
-  private _trackLookup: Record<TrackID, Track> | undefined;
-  private _nodeLookup: Record<LayoutNodeID, LayoutNode> | undefined;
-
-  get trackLookup() {
-    return this._trackLookup ?? {};
+  get nodeLookup(): Record<LayoutNodeID, LayoutNode> {
+    return Object.fromEntries(Array.from(iterateNodes(...this.layout), (node) => [node.id, node]));
   }
 
-  get nodeLookup() {
-    return this._nodeLookup ?? {};
+  private ensureTrack(id: TrackID): Track {
+    return (this.data.tracks[id] ??=
+      id === BEAT_TRACK_ID ? createBeatTrack() : { keyframes: [], locked: false });
   }
 
-  private rebuildIndexes() {
-    this._channels = undefined;
-
-    this._trackLookup = {};
-    this._nodeLookup = {};
-
-    for (let next of iterateNodes(...this.data.tracks)) {
-      this._nodeLookup[next.id] = next;
-      if (next.type === 'track') {
-        this._trackLookup[next.id] = next;
-      }
-    }
+  /** Include empty layout positions when performing vertical edits. */
+  private get editableTrackIDs(): TrackID[] {
+    return Array.from(iterateLeaves(...this.layout))
+      .filter((node) => !this.data.tracks[node.id]?.locked)
+      .map((node) => node.id);
   }
 
   /* Load a project for editing; clears undo history */
   load = (project: OpenedProject) => {
     this.openedProject = project;
     this.data = structuredClone(project.data);
-    this.data.tracks = ensureBeatTrackFirst(this.data.tracks);
 
-    // Clear indexes
-    this.rebuildIndexes();
     this.deselectLockedTracks();
 
     this.undoHistory = new UndoHistory(100, {
@@ -300,6 +154,7 @@ class TimelineData {
     });
 
     this.emitDataChanged();
+    this.emitSelected();
   };
 
   /**
@@ -307,12 +162,10 @@ class TimelineData {
    */
   replaceAll = (data: ProjectData) => {
     this.data = structuredClone(data);
-    this.data.tracks = ensureBeatTrackFirst(this.data.tracks);
 
-    this.rebuildIndexes();
     this.deselectLockedTracks();
 
-    this.takeUndoSnapshot('Replaced all data');
+    this.markEdit('Replaced all data');
   };
 
   private takeUndoSnapshot = (action: string) => {
@@ -344,7 +197,7 @@ class TimelineData {
 
   private emitSelected = () => {
     let count = 0;
-    for (const track of this.unlockedTracks) {
+    for (const { track } of this.unlockedTracks) {
       for (const keyframe of track.keyframes) {
         if (keyframe.selected) count++;
       }
@@ -361,7 +214,6 @@ class TimelineData {
     }
 
     this.data = JSON.parse(snapshot.data);
-    this.rebuildIndexes();
     this.openedProject?.saveData(this.data);
     this.emitDataChanged();
     this.emit(`Undo '${undid.action}'`);
@@ -375,14 +227,13 @@ class TimelineData {
     }
 
     this.data = JSON.parse(redone.data);
-    this.rebuildIndexes();
     this.openedProject?.saveData(this.data);
     this.emitDataChanged();
     this.emit(`Redo '${redone.action}'`);
   };
 
   binarySearch = (trackID: TrackID, time: number, side?: BinarySearchSide): number | undefined => {
-    const array = this.trackLookup[trackID]?.keyframes;
+    const array = this.data.tracks[trackID]?.keyframes;
     if (!array) return undefined;
 
     return binarySearch(array, time, side);
@@ -395,7 +246,7 @@ class TimelineData {
   findNearest = (time: number): Keyframe | undefined => {
     let found: Keyframe | undefined;
 
-    for (const track of iterateLeaves(...this.data.tracks)) {
+    for (const { track } of this.iterateTracks()) {
       const index = binarySearch(track.keyframes, time);
       if (index === undefined) {
         continue;
@@ -418,7 +269,7 @@ class TimelineData {
     let first = Number.POSITIVE_INFINITY;
     let last = 0;
 
-    for (const track of this.unlockedTracks) {
+    for (const { track } of this.unlockedTracks) {
       for (const keyframe of track.keyframes) {
         if (keyframe.selected) {
           if (keyframe.ts < first) first = keyframe.ts;
@@ -433,15 +284,16 @@ class TimelineData {
   };
 
   private insert = (trackID: TrackID, time: number, value: number) => {
-    this.trackLookup[trackID].keyframes.push({
+    const track = this.ensureTrack(trackID);
+    track.keyframes.push({
       ts: time,
       value,
     });
-    this.trackLookup[trackID].keyframes.sort(compareKeyframes);
+    track.keyframes.sort(compareKeyframes);
   };
 
   private get unlockedTracks() {
-    return iterateUnlockedLeaves(...this.data.tracks);
+    return iterateUnlockedTracks(this.layout, this.data.tracks);
   }
 
   private deselectLockedTracks = () => {
@@ -466,7 +318,9 @@ class TimelineData {
     if (!node) return;
 
     let changed = 0;
-    for (const track of iterateLeaves(node)) {
+    for (const leaf of iterateLeaves(node)) {
+      if (!locked && !this.data.tracks[leaf.id]) continue;
+      const track = this.ensureTrack(leaf.id);
       if (locked) {
         for (const keyframe of track.keyframes) {
           if (!keyframe.selected) continue;
@@ -493,26 +347,24 @@ class TimelineData {
     const node = this.nodeLookup[nodeID];
     if (!node) return;
 
-    const trackIDs = Array.from(iterateUnlockedLeaves(node), (track) => track.id);
+    const unlockedTrackIDs = Array.from(iterateLeaves(node))
+      .filter((leaf) => !this.data.tracks[leaf.id]?.locked)
+      .map((leaf) => leaf.id);
 
-    if (trackIDs.length === 0) {
+    if (unlockedTrackIDs.length === 0) {
       this.emit('No unlocked tracks to insert into');
       return;
     }
 
-    for (const id of trackIDs) {
+    for (const id of unlockedTrackIDs) {
       this.insert(id, time, value);
     }
 
-    this.markEdit(`Inserted ${trackIDs.length} keyframe(s)`);
+    this.markEdit(`Inserted ${unlockedTrackIDs.length} keyframe(s)`);
   };
 
   insertBeat = (time: number) => {
-    const beatTrack = this.trackLookup[BEAT_TRACK_ID];
-    if (!beatTrack) {
-      this.emit('Beat track is missing');
-      return;
-    }
+    const beatTrack = this.ensureTrack(BEAT_TRACK_ID);
 
     const nearestIndex = binarySearch(beatTrack.keyframes, time);
     const nearest = nearestIndex === undefined ? undefined : beatTrack.keyframes[nearestIndex];
@@ -526,12 +378,6 @@ class TimelineData {
   };
 
   replaceBeats = (times: readonly number[]) => {
-    const beatTrack = this.trackLookup[BEAT_TRACK_ID];
-    if (!beatTrack) {
-      this.emit('Beat track is missing');
-      return;
-    }
-
     const sorted = times.filter((time) => Number.isFinite(time) && time >= 0).sort((a, b) => a - b);
     const unique = sorted.filter((time, index) => index === 0 || time - sorted[index - 1] >= 0.001);
 
@@ -540,6 +386,7 @@ class TimelineData {
       return;
     }
 
+    const beatTrack = this.ensureTrack(BEAT_TRACK_ID);
     beatTrack.keyframes = unique.map((ts) => ({ ts, value: 0 }));
     this.markEdit(`Detected ${unique.length} beats`);
   };
@@ -551,7 +398,7 @@ class TimelineData {
     keepExisting: boolean,
   ): number | undefined => {
     const p = perfEvent('selectSingle');
-    const track = this.trackLookup[trackID];
+    const track = this.data.tracks[trackID];
 
     if (!track || track.locked) {
       if (!keepExisting) this.selectAll(false);
@@ -592,44 +439,38 @@ class TimelineData {
 
   selectAll = (selected: boolean) => {
     let anyStateChanged = false;
-    const tracks = selected ? this.unlockedTracks : this.channels;
 
-    if (selected && this.deselectLockedTracks() > 0) {
-      anyStateChanged = true;
-    }
+    for (const track of Object.values(this.data.tracks)) {
+      const shouldSelect = selected && !track.locked;
 
-    for (const track of tracks) {
       for (const keyframe of track.keyframes) {
-        if (keyframe.selected !== selected) {
+        if (!!keyframe.selected !== shouldSelect) {
           anyStateChanged = true;
         }
 
-        setSelected(keyframe, selected);
+        setSelected(keyframe, shouldSelect);
       }
     }
 
     if (anyStateChanged) {
-      const msg = selected ? 'Select all' : 'Deselect all';
-      this.markEdit(msg);
+      this.markEdit(selected ? 'Select all' : 'Deselect all');
     }
   };
 
-  boxSelect = ({ startTime, endTime, tracks, keepExisting }: BoxSelection) => {
+  boxSelect = ({ startTime, endTime, trackIDs, keepExisting }: BoxSelection) => {
     let anyStateChanged = false;
-    const selectableTrackIDs = new Set(
-      tracks.filter((track) => !track.locked).map((track) => track.id),
-    );
+    const selectableTrackIDs = new Set(trackIDs);
 
-    for (const track of this.channels) {
+    for (const [trackID, track] of Object.entries(this.data.tracks)) {
       for (const keyframe of track.keyframes) {
         const shouldSelect =
           !track.locked &&
-          ((selectableTrackIDs.has(track.id) &&
+          ((selectableTrackIDs.has(trackID) &&
             keyframe.ts >= startTime &&
             keyframe.ts <= endTime) ||
             (keepExisting && !!keyframe.selected));
 
-        if (shouldSelect != keyframe.selected) {
+        if (shouldSelect !== !!keyframe.selected) {
           setSelected(keyframe, shouldSelect);
           anyStateChanged = true;
         }
@@ -643,7 +484,7 @@ class TimelineData {
   deleteSelected = () => {
     let count = 0;
 
-    for (const track of this.unlockedTracks) {
+    for (const { track } of this.unlockedTracks) {
       track.keyframes = track.keyframes.filter((k) => {
         if (k.selected) count++;
         return !k.selected;
@@ -660,7 +501,7 @@ class TimelineData {
   invertSelected = () => {
     let count = 0;
 
-    for (const track of this.unlockedTracks) {
+    for (const { track } of this.unlockedTracks) {
       for (const keyframe of track.keyframes) {
         if (keyframe.selected) {
           keyframe.value = keyframe.value === 0 ? 1 : 0;
@@ -680,75 +521,56 @@ class TimelineData {
    * Shift the selected keyframes up or down a channel
    */
   shiftSelected = (direction: 'up' | 'down') => {
+    const ids = this.editableTrackIDs;
     const offset = direction === 'up' ? -1 : 1;
-    let count = 0;
-
-    const channels = Array.from(this.unlockedTracks);
-
-    for (let i = 0; i < channels.length; i++) {
-      const track = channels[i];
-      const selected = track.keyframes.find((k) => k.selected);
-      const newIndex = i + offset;
-
-      if (selected) count++;
-
-      if (selected && (newIndex < 0 || newIndex >= channels.length)) {
-        this.emit('Cannot shift keyframes, no more room');
-        return;
-      }
-    }
-    if (count === 0) {
+    const selected = ids.map(
+      (id) => this.data.tracks[id]?.keyframes.filter((k) => k.selected) ?? [],
+    );
+    if (!selected.some((frames) => frames.length)) {
       this.emit('No keyframes selected');
       return;
     }
-
-    // Grab selected
-    const selected = channels.map((track) => track.keyframes.filter((k) => k.selected));
-
-    // Delete selected
-    for (const track of channels) {
-      track.keyframes = track.keyframes.filter((k) => !k.selected);
+    if (
+      selected.some((frames, i) => frames.length && (i + offset < 0 || i + offset >= ids.length))
+    ) {
+      this.emit('Cannot shift keyframes, no more room');
+      return;
     }
-
-    // Re-insert shifted
-    channels.forEach((track, i) => {
-      const toInsert = selected[i - offset];
-      if (!toInsert) return;
-
-      track.keyframes.push(...toInsert);
-      track.keyframes.sort(compareKeyframes);
+    for (const id of ids) {
+      const track = this.data.tracks[id];
+      if (track) track.keyframes = track.keyframes.filter((k) => !k.selected);
+    }
+    selected.forEach((frames, i) => {
+      if (!frames.length) return;
+      const target = this.ensureTrack(ids[i + offset]);
+      target.keyframes.push(...frames);
+      target.keyframes.sort(compareKeyframes);
     });
-
-    this.markEdit(`Shifted keyframes ${direction}`);
+    this.markEdit('Shifted keyframes ' + direction);
   };
 
-  /**
-   * Flip selected keyframes vertically across channels
-   */
+  /** Mirror selected keyframes across their first and last layout positions. */
   flipSelected = () => {
-    const channels = Array.from(this.unlockedTracks);
-
-    const selected = channels.map((track) => track.keyframes.filter((kf) => kf.selected));
-
-    const startIndex = selected.findIndex((kfs) => kfs.length > 0);
-    const toFlip = selected.filter((kfs) => kfs.length > 0);
-
-    if (toFlip.length < 2) {
+    const ids = this.editableTrackIDs;
+    const selected = ids.map(
+      (id) => this.data.tracks[id]?.keyframes.filter((k) => k.selected) ?? [],
+    );
+    const occupied = selected.flatMap((frames, i) => (frames.length ? [i] : []));
+    if (occupied.length < 2) {
       this.emit('Must have 2 or more channels of keyframes selected to flip');
       return;
     }
-
-    // Delete selected
-    for (const track of channels) {
+    const first = occupied[0];
+    const last = occupied[occupied.length - 1];
+    for (const i of occupied) {
+      const track = this.data.tracks[ids[i]];
       track.keyframes = track.keyframes.filter((k) => !k.selected);
     }
-
-    toFlip.reverse().forEach((keyframes, i) => {
-      const channel = i + startIndex;
-      channels[channel].keyframes.push(...keyframes);
-      channels[channel].keyframes.sort(compareKeyframes);
-    });
-
+    for (const i of occupied) {
+      const target = this.ensureTrack(ids[first + last - i]);
+      target.keyframes.push(...selected[i]);
+      target.keyframes.sort(compareKeyframes);
+    }
     this.markEdit('Flipped keyframes');
   };
 
@@ -758,7 +580,7 @@ class TimelineData {
   moveSelected = (time: number) => {
     let count = 0;
 
-    for (const track of this.unlockedTracks) {
+    for (const { track } of this.unlockedTracks) {
       let tcount = 0;
       for (const keyframe of track.keyframes) {
         if (keyframe.selected) {
@@ -782,7 +604,7 @@ class TimelineData {
   scaleSelected = (pivotTime: number, scaleFactor: number) => {
     let count = 0;
 
-    for (const track of this.unlockedTracks) {
+    for (const { track } of this.unlockedTracks) {
       let tcount = 0;
       for (const keyframe of track.keyframes) {
         if (keyframe.selected) {
@@ -806,7 +628,7 @@ class TimelineData {
   duplicateSelected = () => {
     let count = 0;
 
-    for (const track of this.unlockedTracks) {
+    for (const { track } of this.unlockedTracks) {
       const duplicated: Keyframe[] = [];
       for (const keyframe of track.keyframes) {
         if (keyframe.selected) {
@@ -831,7 +653,7 @@ class TimelineData {
   };
 
   alignSelected = () => {
-    const channels = Array.from(this.unlockedTracks);
+    const channels = Array.from(this.unlockedTracks, ({ track }) => track);
 
     const selectedIndexes: number[][] = channels.map(() => []);
 
@@ -846,13 +668,14 @@ class TimelineData {
       });
     });
 
-    const count = selectedIndexes.map((is) => is.length).reduce((lens, len) => lens + len);
+    const count = selectedIndexes.map((is) => is.length).reduce((lens, len) => lens + len, 0);
     const avg = timeSum / count;
 
     selectedIndexes.forEach((indexes, channel) => {
       indexes.forEach((i) => {
         channels[channel].keyframes[i].ts = avg;
       });
+      channels[channel].keyframes.sort(compareKeyframes);
     });
 
     if (count) {
@@ -867,7 +690,7 @@ class TimelineData {
    */
   snapTo = (time: number) => {
     let count = 0;
-    for (let track of this.unlockedTracks) {
+    for (let { track } of this.unlockedTracks) {
       let tcount = 0;
       track.keyframes.forEach((kf) => {
         if (kf.selected) {
@@ -890,7 +713,7 @@ class TimelineData {
   };
 
   equallySpaceSelected = () => {
-    const keyframes = Array.from(this.unlockedTracks).flatMap((track) =>
+    const keyframes = Array.from(this.unlockedTracks).flatMap(({ track }) =>
       track.keyframes.filter((kf) => kf.selected),
     );
 
@@ -930,6 +753,7 @@ class TimelineData {
       batch.forEach((kf) => (kf.ts = start + increment * i));
     });
 
+    for (const { track } of this.unlockedTracks) track.keyframes.sort(compareKeyframes);
     this.markEdit(`Spaced ${keyframes.length} keyframes`);
   };
 
@@ -938,7 +762,7 @@ class TimelineData {
     const threshold = 0.001; // 1ms
     const markedForDeletion: Record<TrackID, number[]> = {};
 
-    for (const track of this.unlockedTracks) {
+    for (const { track, node } of this.unlockedTracks) {
       let lastTimestamp: number | undefined;
 
       track.keyframes.forEach((kf, j) => {
@@ -946,11 +770,13 @@ class TimelineData {
           if (lastTimestamp === undefined) {
             lastTimestamp = kf.ts;
           } else if (kf.ts - lastTimestamp < threshold) {
-            if (!markedForDeletion[track.id]) {
-              markedForDeletion[track.id] = [];
+            if (!markedForDeletion[node.id]) {
+              markedForDeletion[node.id] = [];
             }
 
-            markedForDeletion[track.id].push(j);
+            markedForDeletion[node.id].push(j);
+          } else {
+            lastTimestamp = kf.ts;
           }
         }
       });
@@ -958,7 +784,7 @@ class TimelineData {
 
     const count = Object.values(markedForDeletion)
       .map((is) => is.length)
-      .reduce((lens, len) => lens + len);
+      .reduce((lens, len) => lens + len, 0);
 
     if (count) {
       this.delete(markedForDeletion);
@@ -971,92 +797,13 @@ class TimelineData {
   // Deletes the provided indexes (array of indexes by channel)
   private delete = (indexes: Record<TrackID, number[]>) => {
     Object.entries(indexes).forEach(([trackID, indexes]) => {
-      const track = this.trackLookup[trackID];
+      const track = this.data.tracks[trackID];
 
       for (let ii = indexes.length - 1; ii >= 0; ii--) {
-        track.keyframes.splice(indexes[ii]);
+        track.keyframes.splice(indexes[ii], 1);
       }
     });
   };
 }
-
-/**
- * Iterates over all nodes in the tree, including groups
- */
-export function iterateNodes(...nodes: LayoutNode[]) {
-  return {
-    *[Symbol.iterator]() {
-      const queue: LayoutNode[] = [];
-
-      queue.push(...nodes);
-
-      while (queue.length > 0) {
-        const next = queue.pop();
-        if (!next) break;
-
-        yield next;
-
-        if (next.type === 'group') {
-          // Push in reverse order so they are iterated over immediately
-          queue.push(...[...next.children].reverse());
-        }
-      }
-    },
-  };
-}
-
-/**
- * Iterates over all leaf nodes (tracks)
- */
-export function iterateLeaves(...nodes: LayoutNode[]) {
-  return {
-    *[Symbol.iterator]() {
-      for (let next of iterateNodes(...nodes)) {
-        if (next.type === 'track') {
-          yield next;
-        }
-      }
-    },
-  };
-}
-
-/**
- * Iterates over all unlocked leaf nodes (tracks)
- */
-export function iterateUnlockedLeaves(...nodes: LayoutNode[]) {
-  return {
-    *[Symbol.iterator]() {
-      for (const track of iterateLeaves(...nodes)) {
-        if (!track.locked) {
-          yield track;
-        }
-      }
-    },
-  };
-}
-
-interface ActionResult {
-  changed: boolean;
-}
-
-type ActionFunc = (...args: any) => ActionResult;
-
-type ActionArgs = {
-  insert: {
-    channel: number;
-    time: number;
-    value: number;
-  };
-  select: {
-    channel: number;
-    time: number;
-    tolerance: number;
-  };
-};
-type Action = keyof ActionArgs;
-
-interface ActionReturns<T> extends ActionResult {}
-
-type ActionHandler<T extends Action> = (action: T, args: ActionArgs[T]) => boolean;
 
 export default TimelineData;

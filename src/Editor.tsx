@@ -1,4 +1,3 @@
-import JSZip from 'jszip';
 import { Component, createEffect } from 'solid-js';
 import './App.css';
 import { ModalTitle, createModal } from './components/Modal';
@@ -10,12 +9,12 @@ import NewProjectForm from './NewProjectForm';
 import OpenProjectForm from './OpenProjectForm';
 import { SampleProjectButton } from './SampleProjectButton';
 import { Command, SimpleCommand, keybindFor, nameFor } from './timeline/commands';
-import { downloadFile, parseProjectData } from './timeline/export';
+import { downloadFile, parseProjectData, projectToBlob } from './timeline/export';
 import { newTracks } from './timeline/timeline-data';
 import TimelineCanvas from './TimelineCanvas';
 import { useTimeline } from './TimelineContext';
 import Toolbar from './Toolbar';
-import { UpgradeLayoutForm } from './UpgradeLayoutForm';
+import { RemapChannelsForm } from './RemapChannelsForm';
 
 function Editor() {
   const ctx = useTimeline();
@@ -66,11 +65,8 @@ function Editor() {
   };
 
   const exportZip = async () => {
-    const zip = new JSZip();
     const dump = await ctx.timeline.export();
-    zip.file('data.json', JSON.stringify(dump.data));
-    zip.file('audio.mp3', dump.audio);
-    const content = await zip.generateAsync({ type: 'blob' });
+    const content = await projectToBlob(dump);
     const filename = `${ctx.projectName() || 'Untitled project'}.shmr`;
     downloadFile(filename, content);
   };
@@ -98,7 +94,7 @@ function Editor() {
           <MenuItem name="Download" onClick={exportZip} />
           <MenuItemSpacer />
           <MenuItem name="Replace JSON" onClick={replaceJSON} />
-          <MenuItem name="Upgrade layout" onClick={() => layoutModal.show()} />
+          <MenuItem name="Remap channels" onClick={() => layoutModal.show()} />
         </Menu>
         <Menu name="Edit">
           <CommandMenuItem command="undo" />
@@ -143,6 +139,11 @@ function Editor() {
         <p class="-mx-2 -my-1 rounded-md bg-transparent px-2 py-1 text-white transition-colors hover:bg-zinc-800 focus:bg-zinc-700 focus:outline-none">
           {ctx.projectName()}
         </p>
+        {ctx.loadError() && (
+          <p role="alert" class="text-sm text-rose-300">
+            {ctx.loadError()} Create a new show or open the sample to continue.
+          </p>
+        )}
         <Toolbar />
       </div>
       <TimelineCanvas />
@@ -161,13 +162,13 @@ function Editor() {
         <ModalTitle>New project</ModalTitle>
         <NewProjectForm
           onSubmit={async (project) => {
-            const blankData = newTracks(project.channelCount);
+            const blankData = newTracks();
             modal.hide();
 
             await ctx.loadProject({
               name: project.name,
               // TODO: generate blank projects somewhere else
-              data: { version: '2', tracks: blankData },
+              data: { version: '3', tracks: blankData },
               audio: project.file,
             });
           }}
@@ -178,16 +179,16 @@ function Editor() {
         <ModalTitle>Open project</ModalTitle>
         <OpenProjectForm
           onSubmit={async (payload) => {
-            openModal.hide();
             await ctx.loadProject(payload);
+            openModal.hide();
           }}
           onCancel={() => openModal.hide()}
         />
       </OpenProjectModal>
 
       <LayoutModal>
-        <ModalTitle>Upgrade layout</ModalTitle>
-        <UpgradeLayoutForm onClose={() => layoutModal.hide()} />
+        <ModalTitle>Remap channels</ModalTitle>
+        <RemapChannelsForm onClose={() => layoutModal.hide()} />
       </LayoutModal>
     </div>
   );

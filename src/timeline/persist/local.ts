@@ -19,11 +19,7 @@ async function saveName(value: string): Promise<void> {
 async function loadData(): Promise<ProjectData | undefined> {
   const data = (await localforage.getItem('data')) as ProjectData;
 
-  // TODO: replace with zod validation?
-  // if (!data) return;
-  // if (!data.tracks) return;
-  // if (!data.beats) return;
-
+  // OpenedProject validates the stored show before exposing it to the editor.
   return data;
 }
 

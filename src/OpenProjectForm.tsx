@@ -7,10 +7,10 @@ import { parseProjectData, projectFromFile } from './timeline/export';
 import { Project } from './timeline/types';
 
 const OpenProjectForm: Component<{
-  onSubmit?: (result: Project) => void;
+  onSubmit?: (result: Project) => void | Promise<void>;
   onCancel?: () => void;
 }> = (props) => {
-  const [legacy, setLegacy] = createSignal(false);
+  const [separateFiles, setSeparateFiles] = createSignal(false);
 
   const [zipFile, setZipFile] = createSignal<File>();
   const [jsonFile, setJsonFile] = createSignal<File>();
@@ -25,7 +25,7 @@ const OpenProjectForm: Component<{
         e.preventDefault();
 
         try {
-          if (legacy()) {
+          if (separateFiles()) {
             // Handle audio+json separately
             const audio = audioFile();
             if (!audio) {
@@ -41,7 +41,7 @@ const OpenProjectForm: Component<{
             const data = parseProjectData(await fileToString(datafile));
 
             setErr('');
-            props.onSubmit?.({
+            await props.onSubmit?.({
               name,
               audio,
               data,
@@ -56,7 +56,7 @@ const OpenProjectForm: Component<{
             const project = await projectFromFile(f);
 
             setErr('');
-            props.onSubmit?.(project);
+            await props.onSubmit?.(project);
           }
         } catch (e) {
           console.error(e);
@@ -65,10 +65,10 @@ const OpenProjectForm: Component<{
       }}
     >
       <label class="text-sm font-semibold text-zinc-300 accent-indigo-400">
-        Use legacy format
-        <input type="checkbox" class="ml-2" onChange={(e) => setLegacy(e.target.checked)} />
+        Open JSON and audio separately
+        <input type="checkbox" class="ml-2" onChange={(e) => setSeparateFiles(e.target.checked)} />
       </label>
-      <div class={clsx('flex h-32 w-full flex-row gap-4', legacy() ? 'flex' : 'hidden')}>
+      <div class={clsx('flex h-32 w-full flex-row gap-4', separateFiles() ? 'flex' : 'hidden')}>
         <FileInput
           class="flex-1"
           label="Select json file"
@@ -91,7 +91,7 @@ const OpenProjectForm: Component<{
       <FileInput
         label="Select .shmr file"
         accept=".shmr"
-        class={clsx('h-32 w-full', legacy() && 'hidden')}
+        class={clsx('h-32 w-full', separateFiles() && 'hidden')}
         onChange={(f) => {
           setZipFile(() => f);
           setErr('');

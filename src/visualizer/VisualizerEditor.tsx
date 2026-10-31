@@ -1,6 +1,6 @@
 import { createMemo, createSignal, For, Index, onCleanup, onMount, Show } from 'solid-js';
 import { Portal } from 'solid-js/web';
-import { flattenTracks } from '../timeline/timeline';
+import { flattenTracks } from '../timeline/layout';
 import { DeepReadonly, LayoutNode } from '../timeline/types';
 import { readRectangle, serializeRectangle } from './clipboard';
 import { loadVisualizer, saveVisualizer } from './storage';
@@ -16,7 +16,7 @@ type Drag = Selection & {
 };
 
 export default function VisualizerEditor(props: {
-  tracks: readonly DeepReadonly<LayoutNode>[];
+  layout: readonly DeepReadonly<LayoutNode>[];
   onClose: () => void;
   onSave?: () => void;
 }) {
@@ -25,7 +25,7 @@ export default function VisualizerEditor(props: {
   let disposed = false;
   let uploadVersion = 0;
   let drag: Drag | undefined;
-  const rows = createMemo(() => flattenTracks(props.tracks));
+  const rows = createMemo(() => flattenTracks(props.layout));
   const [config, setConfig] = createSignal<VisualizerConfig>(Object.create(null));
   const [track, setTrack] = createSignal<string>();
   const [selection, setSelection] = createSignal<Selection>();

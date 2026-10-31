@@ -3,6 +3,7 @@ import {
   ParentComponent,
   createContext,
   createEffect,
+  createMemo,
   createSignal,
   onCleanup,
   onMount,
@@ -10,10 +11,12 @@ import {
 } from 'solid-js';
 import { createBeatAnalysis, essentiaBeatAnalyzer } from './beat-analysis';
 import { createStoredSignal } from './hooks/createStorageSignal';
-import { LocalPersistor, OpenedProject, Persistor } from './timeline/persist';
+import { OpenedProject, Persistor } from './timeline/persist';
+import { LocalPersistor } from './timeline/persist/local';
 import Timeline from './timeline/timeline';
 import { DeepReadonly, Project, ProjectData } from './timeline/types';
 import { GomasPersistor } from './timeline/persist/gomas';
+import { materializeLayout } from './timeline/layout';
 
 const makeTimelineContext = () => {
   const timeline = new Timeline();
@@ -36,6 +39,8 @@ const makeTimelineContext = () => {
     { equals: false },
   );
   timeline.on('dataChanged', (data) => setProjectData(data));
+  const trackLayout = createMemo(() => materializeLayout(projectData().tracks));
+  const [loadError, setLoadError] = createSignal('');
 
   const [pan, setPan] = createSignal(timeline.pan);
   timeline.on('pan', setPan);
@@ -83,12 +88,22 @@ const makeTimelineContext = () => {
       persistence = LocalPersistor;
     }
 
-    OpenedProject.open(persistence).then((project) => {
-      if (timeline.destroyed) return;
+    OpenedProject.open(persistence)
+      .then(async (project) => {
+        if (timeline.destroyed) return;
 
-      timeline.load(project);
-      setProjectName(project.name);
-    });
+        await timeline.load(project);
+        setProjectName(project.name);
+      })
+      .catch((error) => {
+        if (
+          !timeline.destroyed &&
+          String(error) !== 'Error: missing data' &&
+          String(error) !== 'Error: missing audio'
+        ) {
+          setLoadError(String(error));
+        }
+      });
   });
 
   onCleanup(() => {
@@ -107,12 +122,16 @@ const makeTimelineContext = () => {
       LocalPersistor,
     );
 
-    await Promise.all([timeline.load(openedProject), openedProject.persist()]);
+    await timeline.load(openedProject);
+    await openedProject.persist();
+    setLoadError('');
   };
 
   const value = {
     timeline,
     projectData,
+    trackLayout,
+    loadError,
     pan,
     loading,
     playing,

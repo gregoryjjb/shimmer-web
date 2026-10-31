@@ -13,11 +13,11 @@ const tracks: LayoutNode[] = [
     type: 'group',
     id: 'House',
     children: [
-      { type: 'track', id: 'Roof', keyframes: [], locked: false },
+      { type: 'track', id: 'Roof' },
       {
         type: 'group',
         id: 'Windows',
-        children: [{ type: 'track', id: 'Left window', keyframes: [], locked: false }],
+        children: [{ type: 'track', id: 'Left window' }],
       },
     ],
   },
@@ -67,7 +67,7 @@ afterEach(() => {
 
 async function open() {
   const close = vi.fn();
-  dispose = render(() => <VisualizerEditor tracks={tracks} onClose={close} />, host);
+  dispose = render(() => <VisualizerEditor layout={tracks} onClose={close} />, host);
   await vi.waitFor(() => expect(button('+ Add rectangle').disabled).toBe(false));
   return close;
 }

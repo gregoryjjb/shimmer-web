@@ -2,39 +2,30 @@ import { Component, For, Show, createMemo, createSignal } from 'solid-js';
 import GradientButton from './components/GradientButton';
 import { useTimeline } from './TimelineContext';
 import { BEAT_TRACK_ID } from './timeline/beat';
-import { iterateNodes, newTracks } from './timeline/timeline-data';
-import { Keyframe, LayoutNode, ProjectData, Track } from './timeline/types';
+import { HOUSE_LAYOUT, iterateNodes } from './timeline/layout';
+import { remapChannels } from './timeline/remap';
+import { LayoutNode } from './timeline/types';
 
-export const UpgradeLayoutForm: Component<{
+export const RemapChannelsForm: Component<{
   onClose?: () => void;
 }> = (props) => {
   const ctx = useTimeline();
 
   const sourceData = ctx.timeline.getData().tracks;
-  const targetData = newTracks(0);
+  const targetData = HOUSE_LAYOUT;
 
-  const sourceIDs = collectTrackIDs(sourceData).filter((id) => id !== BEAT_TRACK_ID);
+  const sourceIDs = Object.keys(sourceData).filter((id) => id !== BEAT_TRACK_ID);
   const targetIDs = collectTrackIDs(targetData).filter((id) => id !== BEAT_TRACK_ID);
 
   const defaultMapping = {
     [BEAT_TRACK_ID]: BEAT_TRACK_ID,
-    ...Object.fromEntries(targetIDs.map((targetID, index) => [targetID, sourceIDs[index]])),
+    ...Object.fromEntries(
+      targetIDs.map((targetID) => [targetID, sourceIDs.includes(targetID) ? targetID : undefined]),
+    ),
   } as Record<string, string | undefined>;
 
-  // Mapping from new track to old track (tracks only, not groups!)
+  // Mapping from house channel to source show channel.
   const [mapping, setMapping] = createSignal<Record<string, string | undefined>>(defaultMapping);
-
-  const assignmentsBySource = createMemo(() => {
-    const grouped: Record<string, string[]> = {};
-
-    for (const [targetID, sourceID] of Object.entries(mapping())) {
-      if (!sourceID) continue;
-      grouped[sourceID] ??= [];
-      grouped[sourceID].push(targetID);
-    }
-
-    return grouped;
-  });
 
   return (
     <form
@@ -42,19 +33,15 @@ export const UpgradeLayoutForm: Component<{
       onSubmit={(e) => {
         e.preventDefault();
 
-        const upgraded = upgradeLayout({
-          sourceData,
-          targetData,
-          mapping: mapping(),
-        });
+        const upgraded = { version: '3' as const, tracks: remapChannels(sourceData, mapping()) };
 
         ctx.timeline.replaceData(upgraded);
         props.onClose?.();
       }}
     >
       <p class="text-sm text-zinc-300">
-        Choose which existing node ID should feed each node in the new layout. You can reuse the
-        same source more than once.
+        Copy existing animation into house channels. Assigned targets are replaced; unassigned
+        channels and source tracks are kept. You can reuse a source more than once.
       </p>
 
       <div class="grid min-h-0 flex-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
@@ -65,9 +52,7 @@ export const UpgradeLayoutForm: Component<{
           <div class="min-h-0 overflow-y-auto pr-1">
             <Show
               when={sourceIDs.length > 0}
-              fallback={
-                <p class="text-sm text-zinc-400">No track IDs found in the current layout.</p>
-              }
+              fallback={<p class="text-sm text-zinc-400">No tracks found in this show.</p>}
             >
               <div class="flex flex-wrap gap-2">
                 <For each={sourceIDs}>
@@ -81,7 +66,9 @@ export const UpgradeLayoutForm: Component<{
         </div>
 
         <div class="flex min-h-0 flex-col rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
-          <h2 class="mb-3 text-sm font-semibold text-zinc-100">{targetIDs.length} new tracks</h2>
+          <h2 class="mb-3 text-sm font-semibold text-zinc-100">
+            {targetIDs.length} house channels
+          </h2>
           <div class="flex min-h-0 flex-col gap-3 overflow-y-auto pr-1">
             <For each={targetData}>
               {(node) => (
@@ -112,26 +99,6 @@ export const UpgradeLayoutForm: Component<{
           </div>
         </div>
       </div>
-
-      {/* <div class="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
-        <h2 class="mb-2 text-sm font-semibold text-zinc-100">Mapping summary</h2>
-        <Show
-          when={Object.keys(assignmentsBySource()).length > 0}
-          fallback={<p class="text-sm text-zinc-400">No target nodes have been assigned yet.</p>}
-        >
-          <div class="flex flex-col gap-2 text-sm text-zinc-300">
-            <For each={Object.entries(assignmentsBySource())}>
-              {([sourceID, mappedTargets]) => (
-                <p>
-                  <span class="font-medium text-zinc-100">{sourceID}</span>
-                  {' -> '}
-                  {mappedTargets.join(', ')}
-                </p>
-              )}
-            </For>
-          </div>
-        </Show>
-      </div> */}
 
       <div class="flex w-full items-center justify-end gap-3">
         <button
@@ -272,49 +239,4 @@ function collectTrackIDs(nodes: LayoutNode[]) {
   }
 
   return ids;
-}
-
-function upgradeLayout({
-  sourceData,
-  targetData,
-  mapping,
-}: {
-  sourceData: LayoutNode[];
-  targetData: LayoutNode[];
-  mapping: Record<string, string | undefined>;
-}): ProjectData {
-  const sourceTrackByID: Record<string, Track> = {};
-
-  for (const track of iterateNodes(...sourceData)) {
-    if (track.type === 'track') {
-      sourceTrackByID[track.id] = track;
-    }
-  }
-
-  return {
-    version: '2',
-    tracks: targetData.map((node) => cloneMappedNode(node, sourceTrackByID, mapping)),
-  };
-}
-
-function cloneMappedNode(
-  node: LayoutNode,
-  sourceTrackByID: Record<string, Track>,
-  mapping: Record<string, string | undefined>,
-): LayoutNode {
-  if (node.type === 'group') {
-    return {
-      ...node,
-      children: node.children.map((child) => cloneMappedNode(child, sourceTrackByID, mapping)),
-    };
-  }
-
-  const oldID = mapping[node.id];
-  const sourceTrack = oldID ? sourceTrackByID[oldID] : undefined;
-
-  return {
-    ...node,
-    keyframes: sourceTrack ? sourceTrack.keyframes.map((keyframe) => ({ ...keyframe })) : [],
-    locked: sourceTrack?.locked ?? node.locked,
-  };
 }

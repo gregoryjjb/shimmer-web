@@ -5,7 +5,7 @@ import { useTimeline } from './TimelineContext';
 import { BEAT_FLASH_DURATION_SECONDS, BEAT_TRACK_ID } from './timeline/beat';
 import colors from './timeline/colors';
 import { isOn } from './timeline/timeline-data';
-import { flattenTracks } from './timeline/timeline';
+import { flattenTracks } from './timeline/layout';
 
 const christmasLights = [
   { color: '#ff4b3e', core: '#ff9188', glow: 'rgba(255, 75, 62, 0.65)' },
@@ -26,7 +26,7 @@ const TrackTree: Component = () => {
   // during runtime then we need to make it reactive
   const layout = ctx.timeline.layout;
 
-  const rows = createMemo(() => flattenTracks(ctx.projectData().tracks));
+  const rows = createMemo(() => flattenTracks(ctx.trackLayout(), ctx.projectData().tracks));
   const colorOffsets = createMemo(() => {
     let offset = 0;
     return rows().map((row) => {

@@ -1,14 +1,15 @@
 import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import { BEAT_FLASH_DURATION_SECONDS, BEAT_TRACK_ID } from '../timeline/beat';
-import { flattenTracks } from '../timeline/timeline';
+import { flattenTracks } from '../timeline/layout';
 import { isOn } from '../timeline/timeline-data';
-import { DeepReadonly, LayoutNode } from '../timeline/types';
+import { DeepReadonly, LayoutNode, Tracks } from '../timeline/types';
 import { loadVisualizer } from './storage';
 import { clamp, VisualizerConfig } from './types';
 
 export default function VisualizerPanel(props: {
-  tracks: readonly DeepReadonly<LayoutNode>[];
+  layout: readonly DeepReadonly<LayoutNode>[];
+  tracks: DeepReadonly<Tracks>;
   currentTime: number;
   playing: boolean;
   loading: boolean;
@@ -40,7 +41,9 @@ export default function VisualizerPanel(props: {
   const [imageURL, setImageURL] = createSignal('');
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal('');
-  const rows = createMemo(() => flattenTracks(props.tracks).filter((row) => row.type === 'track'));
+  const rows = createMemo(() =>
+    flattenTracks(props.layout, props.tracks).filter((row) => row.type === 'track'),
+  );
 
   const constrainPosition = (x: number, y: number) => {
     const bounds = panel.getBoundingClientRect();
@@ -287,7 +290,7 @@ export default function VisualizerPanel(props: {
                       disabled={props.loading}
                       onClick={props.onEdit}
                     >
-                      Set up
+                      Set up visualizer
                     </button>
                   </div>
                 }

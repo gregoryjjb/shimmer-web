@@ -1,14 +1,178 @@
-import { expect, test, describe } from 'vitest';
+import { expect, test, describe, vi } from 'vitest';
 
 import { TimelineEmitter } from './events';
-import TimelineData, { binarySearch } from './timeline-data';
-import { Keyframe } from './types';
+import TimelineData, { binarySearch, newTracks } from './timeline-data';
+import { Keyframe, Tracks } from './types';
+import { flattenTracks, iterateLeaves } from './layout';
+import { OpenedProject, Persistor } from './persist';
 
 const keyframes = [0, 10, 20, 30, 40, 50, 60, 70].map<Keyframe>((n) => ({
   selected: false,
   ts: n,
   value: 0,
 }));
+
+function makeData(tracks: Tracks = {}) {
+  const emitter = new TimelineEmitter();
+  const data = new TimelineData(emitter);
+  const saveData = vi.fn();
+  const persistor: Persistor = {
+    saveData,
+    loadData: async () => undefined,
+    saveName: async () => {},
+    loadName: async () => '',
+    saveAudio: async () => {},
+    loadAudio: async () => undefined,
+  };
+  const project = new OpenedProject('Test', { version: '3', tracks }, new Blob(), persistor);
+  project.autosave = false;
+  data.load(project);
+  return { data, emitter, project };
+}
+
+const track = (ts: number, selected = false) => ({
+  locked: false,
+  keyframes: [{ ts, value: 1, selected }],
+});
+
+describe('show editing with a separate house layout', () => {
+  test('empty shows render without creating stored house tracks', () => {
+    const { data } = makeData();
+    expect(data.channels).toEqual([]);
+    expect(
+      flattenTracks(data.layout, data.data.tracks).find((row) => row.id === 'Roof 1'),
+    ).toMatchObject({ keyframes: [], locked: false });
+    expect(data.findNearest(1)).toBeUndefined();
+    expect(() => data.selectAll(true)).not.toThrow();
+    expect(() => data.alignSelected()).not.toThrow();
+    expect(() => data.dedup()).not.toThrow();
+    expect(data.data.tracks).toEqual({});
+  });
+
+  test('group insertion creates only descendants and skips locked channels', () => {
+    const { data } = makeData({ 'Roof 2': { locked: true, keyframes: [] } });
+    data.insertAuto('Roof parkview', 12.5, 1);
+    expect(Object.keys(data.data.tracks)).toHaveLength(8);
+    expect(data.data.tracks['Roof 1'].keyframes).toEqual([{ ts: 12.5, value: 1 }]);
+    expect(data.data.tracks['Roof 2'].keyframes).toEqual([]);
+    expect(data.data.tracks['Roof 9']).toBeUndefined();
+    data.undo();
+    expect(Object.keys(data.data.tracks)).toEqual(['Roof 2']);
+    data.redo();
+    expect(data.data.tracks['Roof 1'].keyframes).toHaveLength(1);
+  });
+
+  test('locking a group leaves unrelated tracks alone and clears selection', () => {
+    const { data } = makeData({ 'Roof 1': track(1, true), 'Fence 1': track(2, true) });
+    data.setNodeLocked('Roof parkview', true);
+    expect(data.data.tracks['Roof 1'].locked).toBe(true);
+    expect(data.data.tracks['Roof 1'].keyframes[0].selected).toBeUndefined();
+    expect(data.data.tracks['Roof 8'].locked).toBe(true);
+    expect(data.data.tracks['Fence 1'].locked).toBe(false);
+    expect(data.data.tracks['Fence 1'].keyframes[0].selected).toBe(true);
+  });
+
+  test('shifts into empty rows in display order and restores sparse data on undo', () => {
+    const { data } = makeData({ 'Roof 1': track(1, true), Z: track(5), A: track(4) });
+    data.shiftSelected('down');
+    expect(data.data.tracks['Roof 1'].keyframes).toEqual([]);
+    expect(data.data.tracks['Roof 2'].keyframes[0].ts).toBe(1);
+    data.undo();
+    expect(data.data.tracks['Roof 2']).toBeUndefined();
+    const ids = Array.from(iterateLeaves(...data.layout), (node) => node.id);
+    expect(ids.slice(-2)).toEqual(['A', 'Z']);
+    expect(ids).toEqual(
+      flattenTracks(data.layout)
+        .filter((row) => row.type === 'track')
+        .map((row) => row.id),
+    );
+  });
+
+  test('flip preserves gaps between selected rows', () => {
+    const { data } = makeData({
+      'Roof 1': track(1, true),
+      'Roof 3': track(3, true),
+      'Roof 4': track(4, true),
+    });
+    data.flipSelected();
+    expect(data.data.tracks['Roof 1'].keyframes[0].ts).toBe(4);
+    expect(data.data.tracks['Roof 2'].keyframes[0].ts).toBe(3);
+    expect(data.data.tracks['Roof 3'].keyframes).toEqual([]);
+    expect(data.data.tracks['Roof 4'].keyframes[0].ts).toBe(1);
+  });
+
+  test('box selection uses IDs, preserves additive selection, and respects locks', () => {
+    const { data, emitter } = makeData({
+      'Roof 1': track(1),
+      Extra: track(8, true),
+      'Roof 2': { ...track(1), locked: true },
+    });
+    const edit = vi.fn();
+    emitter.on('edit', edit);
+    const box = {
+      startTime: 1,
+      endTime: 2,
+      trackIDs: ['Roof 1', 'Roof 1', 'Roof 2', 'Missing'],
+      keepExisting: true,
+    };
+    data.boxSelect(box);
+    expect(data.data.tracks['Roof 1'].keyframes[0].selected).toBe(true);
+    expect(data.data.tracks.Extra.keyframes[0].selected).toBe(true);
+    expect(!!data.data.tracks['Roof 2'].keyframes[0].selected).toBe(false);
+    data.boxSelect(box);
+    expect(edit).toHaveBeenCalledTimes(1);
+    data.boxSelect({ ...box, keepExisting: false });
+    expect(data.data.tracks.Extra.keyframes[0].selected).toBeUndefined();
+    expect(data.data.tracks.Missing).toBeUndefined();
+  });
+
+  test('select all includes unmatched channels and avoids no-op history', () => {
+    const { data, emitter } = makeData({ Extra: track(1), Locked: { ...track(2), locked: true } });
+    const edit = vi.fn();
+    emitter.on('edit', edit);
+    data.selectAll(false);
+    expect(edit).not.toHaveBeenCalled();
+    data.selectAll(true);
+    expect(data.data.tracks.Extra.keyframes[0].selected).toBe(true);
+    expect(data.data.tracks.Locked.keyframes[0].selected).toBeUndefined();
+    data.selectAll(true);
+    expect(edit).toHaveBeenCalledTimes(1);
+  });
+
+  test('Beat can be created by insertion or analysis and occurs once', () => {
+    expect(newTracks().Beat).toEqual({ keyframes: [], locked: true });
+    const { data } = makeData();
+    data.insertBeat(1);
+    expect(data.data.tracks.Beat.keyframes).toEqual([{ ts: 1, value: 0 }]);
+    expect(
+      Array.from(iterateLeaves(...data.layout)).filter((node) => node.id === 'Beat'),
+    ).toHaveLength(1);
+    data.undo();
+    expect(data.data.tracks.Beat).toBeUndefined();
+    data.replaceBeats([3, 1, 1, NaN]);
+    expect(data.data.tracks.Beat.keyframes).toEqual([
+      { ts: 1, value: 0 },
+      { ts: 3, value: 0 },
+    ]);
+  });
+
+  test('dedup removes only duplicate frames, preserving later animation', () => {
+    const { data } = makeData({
+      Extra: {
+        locked: false,
+        keyframes: [
+          { ts: 1, value: 1, selected: true },
+          { ts: 1.0001, value: 1, selected: true },
+          { ts: 3, value: 0 },
+        ],
+      },
+    });
+    data.dedup();
+    expect(data.data.tracks.Extra.keyframes.map((k) => k.ts)).toEqual([1, 3]);
+    data.undo();
+    expect(data.data.tracks.Extra.keyframes).toHaveLength(3);
+  });
+});
 
 describe('binarySearch2', () => {
   test('simple', () => {
@@ -85,33 +249,4 @@ describe('binarySearch2', () => {
       }
     }
   });
-});
-
-test('insertAuto on a group inserts keyframes on all descendant tracks', () => {
-  const data = new TimelineData(new TimelineEmitter());
-
-  data.replaceAll({
-    version: '2',
-    tracks: [
-      {
-        type: 'group',
-        id: 'group-a',
-        children: [
-          { type: 'track', id: 'track-1', keyframes: [], locked: false },
-          {
-            type: 'group',
-            id: 'nested-group',
-            children: [{ type: 'track', id: 'track-2', keyframes: [], locked: false }],
-          },
-        ],
-      },
-      { type: 'track', id: 'track-3', keyframes: [], locked: false },
-    ],
-  });
-
-  data.insertAuto('group-a', 12.5, 1);
-
-  expect(data.trackLookup['track-1'].keyframes).toEqual([{ ts: 12.5, value: 1 }]);
-  expect(data.trackLookup['track-2'].keyframes).toEqual([{ ts: 12.5, value: 1 }]);
-  expect(data.trackLookup['track-3'].keyframes).toEqual([]);
 });

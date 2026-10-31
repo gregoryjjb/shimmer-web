@@ -1,54 +1,3 @@
-export type ShowJSON = {
-  id: number;
-  name: string;
-};
-
-export type ShowDataJSON = {
-  tracks: ShowTrackJSON[];
-};
-
-export type ShowTrackJSON = {
-  id: string;
-  keyframes: ShowKeyframeJSON[];
-};
-
-export type ShowKeyframeJSON = {
-  time: number;
-  state: number;
-};
-
-export type TrackGroup = {
-  name: string;
-  tracks: (Track | TrackGroup)[];
-};
-
-export type Keyframe = {
-  ts: number;
-  value: number;
-  selected?: boolean;
-};
-
-export type LayoutNode = Group | Track;
-
-export type LayoutNodeID = string;
-
-export type TrackID = LayoutNodeID;
-
-export type Group = {
-  type: 'group';
-  id: string;
-
-  children: LayoutNode[];
-};
-
-export type Track = {
-  type: 'track';
-  id: string;
-
-  keyframes: Keyframe[];
-  locked: boolean;
-};
-
 export type DeepReadonly<T> = T extends (...args: any[]) => any
   ? T
   : T extends readonly (infer Item)[]
@@ -56,6 +5,37 @@ export type DeepReadonly<T> = T extends (...args: any[]) => any
     : T extends object
       ? { readonly [Key in keyof T]: DeepReadonly<T[Key]> }
       : T;
+
+export type Keyframe = {
+  ts: number;
+  value: number;
+  selected?: boolean;
+};
+
+export type LayoutNode = LayoutGroup | LayoutTrack;
+
+export type LayoutNodeID = string;
+
+export type TrackID = LayoutNodeID;
+
+export type LayoutGroup = {
+  type: 'group';
+  id: string;
+
+  children: LayoutNode[];
+};
+
+export type LayoutTrack = {
+  type: 'track';
+  id: string;
+};
+
+export type Track = {
+  keyframes: Keyframe[];
+  locked: boolean;
+};
+
+export type Tracks = Record<TrackID, Track>;
 
 export interface Project {
   name: string;
@@ -67,6 +47,6 @@ export interface Project {
  * ProjectData is the stuff that gets saved as json
  */
 export interface ProjectData {
-  version: '2';
-  tracks: LayoutNode[];
+  version: '3';
+  tracks: Tracks;
 }

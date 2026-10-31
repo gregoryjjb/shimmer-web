@@ -3,8 +3,6 @@ import { debounce, DebouncedFunc } from 'lodash-es';
 import { parseProjectData } from '../export';
 import { ProjectData } from '../types';
 
-export { LocalPersistor } from './local';
-
 /**
  * A Persistor is something capable of loading and saving
  * projects (i.e. either locally or to a remote server)

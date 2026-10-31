@@ -33,6 +33,7 @@ export default function VisualizerButton() {
       </button>
       <Show when={showPreview()}>
         <VisualizerPanel
+          layout={ctx.trackLayout()}
           tracks={ctx.projectData().tracks}
           currentTime={ctx.currentTime()}
           playing={ctx.playing()}
@@ -44,7 +45,7 @@ export default function VisualizerButton() {
       </Show>
       <Show when={open()}>
         <VisualizerEditor
-          tracks={ctx.projectData().tracks}
+          layout={ctx.trackLayout()}
           onClose={() => setOpen(false)}
           onSave={() => setRevision((value) => value + 1)}
         />

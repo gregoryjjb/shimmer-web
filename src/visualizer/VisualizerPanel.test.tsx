@@ -2,40 +2,41 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { createSignal } from 'solid-js';
 import { render } from 'solid-js/web';
-import { LayoutNode } from '../timeline/types';
+import { LayoutNode, Tracks } from '../timeline/types';
 import { loadVisualizer } from './storage';
 import VisualizerPanel from './VisualizerPanel';
 
 vi.mock('./storage', () => ({ loadVisualizer: vi.fn() }));
 
 const rectangle = { x: 0.2, y: 0.3, width: 0.1, height: 0.05, color: '#ff8800' };
-const tracks: LayoutNode[] = [
+const layout: LayoutNode[] = [
   {
     type: 'group',
     id: 'House',
     children: [
-      {
-        type: 'track',
-        id: 'Roof',
-        locked: true,
-        keyframes: [
-          { ts: 1, value: 1 },
-          { ts: 3, value: 0 },
-        ],
-      },
-      {
-        type: 'track',
-        id: 'Door',
-        locked: false,
-        keyframes: [
-          { ts: 2, value: 1 },
-          { ts: 4, value: 0 },
-        ],
-      },
+      { type: 'track', id: 'Roof' },
+      { type: 'track', id: 'Door' },
     ],
   },
-  { type: 'track', id: 'Beat', locked: true, keyframes: [{ ts: 5, value: 1 }] },
+  { type: 'track', id: 'Beat' },
 ];
+const tracks: Tracks = {
+  Roof: {
+    locked: true,
+    keyframes: [
+      { ts: 1, value: 1 },
+      { ts: 3, value: 0 },
+    ],
+  },
+  Door: {
+    locked: false,
+    keyframes: [
+      { ts: 2, value: 1 },
+      { ts: 4, value: 0 },
+    ],
+  },
+  Beat: { locked: true, keyframes: [{ ts: 5, value: 1 }] },
+};
 let dispose: (() => void) | undefined;
 let host: HTMLDivElement;
 const lights = () =>
@@ -85,6 +86,7 @@ function open() {
   dispose = render(
     () => (
       <VisualizerPanel
+        layout={layout}
         tracks={data()}
         currentTime={time()}
         playing={playing()}
@@ -118,7 +120,7 @@ test('shows only active track rectangles at exact transitions and when seeking b
   panel.setLoading(true);
   expect(lights()).toEqual([]);
   panel.setLoading(false);
-  panel.setData([]);
+  panel.setData({});
   expect(lights()).toEqual([]);
   expect(document.querySelector('img')).not.toBeNull();
 });

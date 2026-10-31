@@ -1,5 +1,6 @@
 import JSZip from 'jszip';
-import { Group, Keyframe, LayoutNode, Project, ProjectData, Track } from './types';
+import { Keyframe, Project, ProjectData, Track } from './types';
+import { HOUSE_LAYOUT, iterateNodes } from './layout';
 
 export const downloadFile = (name: string, contents: string | Blob) => {
   const file = new File([contents], name, { type: 'text/json' });
@@ -18,209 +19,64 @@ export const downloadFile = (name: string, contents: string | Blob) => {
   URL.revokeObjectURL(url);
 };
 
-const stringify = (v: any): string => {
-  if (v === undefined) return '';
-  return String(v);
-};
+const reservedNames = new Set(
+  Array.from(iterateNodes(...HOUSE_LAYOUT))
+    .filter((node) => node.type === 'group')
+    .map((node) => node.id),
+);
 
-const coalesce = (...v: any[]): any => {
-  for (let i = 0; i < v.length; i++) {
-    if (v[i] !== undefined) return v[i];
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+function parseKeyframe(raw: unknown): Keyframe {
+  if (
+    !isObject(raw) ||
+    typeof raw.ts !== 'number' ||
+    !Number.isFinite(raw.ts) ||
+    typeof raw.value !== 'number' ||
+    !Number.isFinite(raw.value)
+  ) {
+    throw new Error('Each keyframe must have finite numeric ts and value fields');
   }
-};
+  return { ts: raw.ts, value: raw.value, ...(raw.selected === true ? { selected: true } : {}) };
+}
 
-const parseKeyframe = (raw: any, path: string): Keyframe => {
-  if (typeof raw !== 'object' || raw === null) {
-    throw new Error(`${path} is not an object`);
-  }
+/** Read the flat show format. Layout is supplied independently by the editor. */
+export function parseProjectData(input: unknown): ProjectData {
+  const data: unknown = typeof input === 'string' ? JSON.parse(input) : input;
+  if (!isObject(data)) throw new Error('Project data must be an object');
+  if (data.version !== '3')
+    throw new Error('This show uses an unsupported format. Open a version 3 show.');
+  if (!isObject(data.tracks)) throw new Error('Project data must contain a tracks object');
 
-  const ts = raw.ts;
-  if (typeof ts !== 'number') {
-    throw new Error(`${path}.ts must be a number`);
-  }
-
-  const value = raw.value;
-  if (typeof value !== 'number') {
-    throw new Error(`${path}.value must be a number`);
-  }
-
-  const keyframe: Keyframe = { ts, value };
-  if (typeof raw.selected === 'boolean' && raw.selected) {
-    keyframe.selected = true;
-  }
-  return keyframe;
-};
-
-const parseLocked = (raw: any, path: string): boolean => {
-  if (raw.locked === undefined) return false;
-  if (typeof raw.locked !== 'boolean') {
-    throw new Error(`${path}.locked must be a boolean`);
-  }
-  return raw.locked;
-};
-
-const parseTrack = (raw: any, path: string): Track => {
-  if (typeof raw !== 'object' || raw === null) {
-    throw new Error(`${path} is not an object`);
-  }
-
-  const id = raw.id;
-  if (typeof id !== 'string' || id.length === 0) {
-    throw new Error(`${path}.id must be a non-empty string`);
-  }
-  console.log('Parsed track', id);
-
-  if (!Array.isArray(raw.keyframes)) {
-    throw new Error(`${path}.keyframes must be an array`);
-  }
-
-  const keyframes = raw.keyframes.map((kf: any, i: number) =>
-    parseKeyframe(kf, `${path}.keyframes[${i}]`),
-  );
-
-  return { type: 'track', id, keyframes, locked: parseLocked(raw, path) };
-};
-
-const parseGroup = (raw: any, path: string): Group => {
-  if (typeof raw !== 'object' || raw === null) {
-    throw new Error(`${path} is not an object`);
-  }
-
-  const id = raw.id;
-  if (typeof id !== 'string' || id.length === 0) {
-    throw new Error(`${path}.id must be a non-empty string`);
-  }
-  console.log('Parsed group', id);
-
-  if (!Array.isArray(raw.children)) {
-    throw new Error(`${path}.children must be an array`);
-  }
-
-  const children = raw.children.map((child: any, i: number) =>
-    parseLayoutNode(child, `${path}.children[${i}]`),
-  );
-
-  return { type: 'group', id, children };
-};
-
-const parseLayoutNode = (raw: any, path: string): LayoutNode => {
-  if (typeof raw !== 'object' || raw === null) {
-    throw new Error(`${path} is not an object`);
-  }
-
-  if (raw.type === 'track') {
-    return parseTrack(raw, path);
-  } else if (raw.type === 'group') {
-    return parseGroup(raw, path);
-  }
-
-  throw new Error(`${path}.type must be 'track' or 'group', got '${raw.type}'`);
-};
-
-const collectIds = (nodes: LayoutNode[]): string[] => {
-  const ids: string[] = [];
-  for (const node of nodes) {
-    ids.push(node.id);
-    if (node.type === 'group') {
-      ids.push(...collectIds(node.children));
+  const entries = Object.entries(data.tracks).map(([name, raw]): [string, Track] => {
+    if (!name.trim()) throw new Error('Track names must not be empty');
+    if (reservedNames.has(name))
+      throw new Error('Track name conflicts with a house group: ' + name);
+    if (!isObject(raw) || !Array.isArray(raw.keyframes)) {
+      throw new Error('Track ' + name + ' must contain a keyframes array');
     }
-  }
-  return ids;
-};
-
-const validateUniqueIds = (nodes: LayoutNode[]) => {
-  const ids = collectIds(nodes);
-  const seen = new Set<string>();
-  for (const id of ids) {
-    if (seen.has(id)) {
-      console.log('Failing nodes', nodes);
-      throw new Error(`Duplicate node ID: '${id}'`);
+    if (raw.locked !== undefined && typeof raw.locked !== 'boolean') {
+      throw new Error('Track ' + name + ' locked must be a boolean');
     }
-    seen.add(id);
-  }
-};
+    return [
+      name,
+      {
+        locked: raw.locked ?? false,
+        keyframes: raw.keyframes.map(parseKeyframe).sort((a, b) => a.ts - b.ts),
+      },
+    ];
+  });
+  return { version: '3', tracks: Object.fromEntries(entries) };
+}
 
-/**
- * Parses any version of a project data object and returns
- * a valid ProjectData. Unversioned (old format) data is silently
- * upgraded to the current format.
- */
-export const parseProjectData = (data: any): ProjectData => {
-  if (typeof data === 'string') {
-    data = JSON.parse(data);
-  }
-
-  if (typeof data !== 'object' || data === null) {
-    throw new Error('Project data must be an object');
-  }
-
-  // Old format: no version field — silently upgrade
-  if (data.version === undefined) {
-    console.log('Upgrading old format data');
-
-    if (!Array.isArray(data.tracks)) {
-      throw new Error('Project data missing tracks array');
-    }
-
-    const tracks: Track[] = data.tracks.map((trackIn: any, i: number) => {
-      if (typeof trackIn !== 'object' || trackIn === null) {
-        throw new Error(`tracks[${i}] is not an object`);
-      }
-
-      if (!Array.isArray(trackIn.keyframes)) {
-        throw new Error(`tracks[${i}].keyframes must be an array`);
-      }
-
-      const keyframes = trackIn.keyframes.map((kf: any, j: number) => {
-        const ts = coalesce(kf.ts, kf.timestamp, kf.time);
-        if (typeof ts !== 'number') {
-          throw new Error(`tracks[${i}].keyframes[${j}] missing or invalid timestamp`);
-        }
-
-        const valueIn = coalesce(kf.value, kf.state);
-        if (valueIn === undefined) {
-          throw new Error(`tracks[${i}].keyframes[${j}] missing value or state field`);
-        }
-        const value = Number(valueIn);
-        if (isNaN(value)) {
-          throw new Error(`tracks[${i}].keyframes[${j}] value is not a valid number`);
-        }
-
-        const keyframe: Keyframe = { ts, value };
-        if (typeof kf.selected === 'boolean' && kf.selected) {
-          keyframe.selected = true;
-        }
-        return keyframe;
-      });
-
-      return {
-        type: 'track' as const,
-        id: trackIn.name || trackIn.id || `Track ${i}`,
-        keyframes,
-        locked: parseLocked(trackIn, `tracks[${i}]`),
-      };
-    });
-
-    validateUniqueIds(tracks);
-    return { version: '2', tracks };
-  }
-
-  // Current format: strict parsing
-  if (data.version !== '2') {
-    throw new Error(`Unknown project data version: '${data.version}'`);
-  }
-
-  if (!Array.isArray(data.tracks)) {
-    throw new Error('Project data missing tracks array');
-  }
-
-  const tracks: LayoutNode[] = data.tracks.map((node: any, i: number) =>
-    parseLayoutNode(node, `tracks[${i}]`),
-  );
-
-  validateUniqueIds(tracks);
-  return { version: '2', tracks };
-};
+/** The archive contains show data and audio only. */
+export async function projectToBlob(project: Project): Promise<Blob> {
+  const zip = new JSZip();
+  zip.file('data.json', JSON.stringify(parseProjectData(project.data)));
+  zip.file('audio.mp3', project.audio);
+  return zip.generateAsync({ type: 'blob' });
+}
 
 export const projectFromFile = async (file: File): Promise<Project> => {
   const name = file.name.replace(/\.[^\.]*$/, '');

@@ -1,6 +1,7 @@
 import TimelineAudio from './timeline-audio';
-import TimelineData, { iterateNodes } from './timeline-data';
-import { DeepReadonly, Keyframe, LayoutNode, LayoutNodeID, ProjectData } from './types';
+import TimelineData from './timeline-data';
+import { flattenTracks, LayoutRow } from './layout';
+import { DeepReadonly, LayoutNodeID, ProjectData } from './types';
 import { BEAT_TRACK_ID } from './beat';
 
 import colors from './colors';
@@ -401,6 +402,7 @@ class Timeline {
       this.openedProject = project;
     } catch (err) {
       console.error('Loading:', err);
+      throw err;
     } finally {
       console.log(`Loaded in ${performance.now() - start}ms`);
       this.emitter.emit('loading', false);
@@ -491,7 +493,7 @@ class Timeline {
 
     y = this.screenToContentY(y);
 
-    const rows = flattenTracks(this.data.data.tracks);
+    const rows = flattenTracks(this.data.layout, this.data.data.tracks);
 
     for (const row of rows) {
       if (y >= row.startY && y < row.endY) {
@@ -510,7 +512,7 @@ class Timeline {
   };
 
   private get channelCount() {
-    return this.data.channels.length || 0;
+    return flattenTracks(this.data.layout).length;
   }
 
   private getLocalCoordinates = (event: MouseEvent | WheelEvent): { x: number; y: number } => {
@@ -527,7 +529,7 @@ class Timeline {
     const theme = colors.dark;
 
     // Compute needed height of canvas
-    const channelCount = this.data.channels?.length || 0;
+    const channelCount = this.channelCount;
     const totalHeight =
       layout.timelineHeight + layout.waveformHeight + channelCount * layout.channelHeight;
 
@@ -537,7 +539,7 @@ class Timeline {
     ctx.scale(this.dpiScale, this.dpiScale);
     ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
 
-    const trackRows = flattenTracks(this.data.data.tracks);
+    const trackRows = flattenTracks(this.data.layout, this.data.data.tracks);
 
     //// Timeline
 
@@ -796,7 +798,8 @@ class Timeline {
 
         const boxSelectingChannel = this.trackIsBoxSelected(row);
 
-        const track = this.data.trackLookup[row.id];
+        const track = this.data.data.tracks[row.id];
+        if (!track) return;
 
         for (let i = startIndex; i < track.keyframes.length; i++) {
           const kf = track.keyframes[i];
@@ -1273,13 +1276,9 @@ DPI scale: ${this.dpiScale}`;
             startTime: this.absolutePxToTime(this.boxSelection.start.x),
             endTime: this.absolutePxToTime(this.boxSelection.end.x),
             keepExisting: this.boxSelection.keepExisting,
-            tracks: flattenTracks(this.data.data.tracks)
-              .map((t) => {
-                return t.type === 'track' && this.trackIsBoxSelected(t)
-                  ? this.data.trackLookup[t.id]
-                  : undefined;
-              })
-              .filter((t) => !!t),
+            trackIDs: flattenTracks(this.data.layout, this.data.data.tracks)
+              .filter((t) => t.type === 'track' && this.trackIsBoxSelected(t))
+              .map((t) => t.id),
           });
         }
 
@@ -1472,8 +1471,7 @@ DPI scale: ${this.dpiScale}`;
   };
 
   hasExistingData = () => {
-    return true;
-    return this.data.channels.find((t) => t.keyframes.length > 0) !== undefined;
+    return this.data.channels.some((track) => track.keyframes.length > 0);
   };
 
   trackIsBoxSelected = (track: LayoutRow) => {
@@ -1493,6 +1491,10 @@ DPI scale: ${this.dpiScale}`;
 
   get projectData(): DeepReadonly<ProjectData> {
     return this.data.data;
+  }
+
+  get trackLayout() {
+    return this.data.layout;
   }
 
   get layout() {
@@ -1517,60 +1519,3 @@ DPI scale: ${this.dpiScale}`;
 }
 
 export default Timeline;
-
-export type LayoutRow = {
-  type: 'track' | 'group';
-  id: LayoutNodeID;
-  depth: number;
-  startY: number;
-  endY: number;
-  locked: boolean;
-  keyframes?: DeepReadonly<Keyframe[]>;
-};
-
-export function flattenTracks(
-  nodes: readonly DeepReadonly<LayoutNode>[],
-  depth = 0,
-  y = 0,
-): LayoutRow[] {
-  const result: LayoutRow[] = [];
-
-  // Need to be real constants
-  const groupHeight = 30;
-  const trackHeight = 30;
-
-  let currentY = y;
-
-  function traverse(node: DeepReadonly<LayoutNode>, currentDepth: number): boolean {
-    if (node.type === 'track') {
-      result.push({
-        type: 'track',
-        id: node.id,
-        depth: currentDepth,
-        startY: currentY,
-        endY: (currentY += trackHeight),
-        locked: node.locked,
-        keyframes: node.keyframes,
-      });
-      return node.locked;
-    }
-
-    const row: LayoutRow = {
-      type: 'group',
-      id: node.id,
-      depth: currentDepth,
-      startY: currentY,
-      endY: (currentY += groupHeight),
-      locked: false,
-    };
-    result.push(row);
-
-    const childLockStates = node.children.map((child) => traverse(child, currentDepth + 1));
-    row.locked = childLockStates.length > 0 && childLockStates.every(Boolean);
-    return row.locked;
-  }
-
-  nodes.forEach((node) => traverse(node, depth));
-
-  return result;
-}
