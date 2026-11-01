@@ -3,7 +3,7 @@ import { Portal } from 'solid-js/web';
 import { flattenTracks } from '../timeline/layout';
 import { DeepReadonly, LayoutNode } from '../timeline/types';
 import { readRectangle, serializeRectangle } from './clipboard';
-import { blobToDataURL } from '../files';
+import { optimizeBackgroundImage } from './background-image';
 import { LayoutVisuals } from '../layout/document';
 import { clamp, constrainObject, parseConfig, VisualizerConfig, VisualizerObject } from './types';
 
@@ -60,8 +60,7 @@ export default function VisualizerEditor(props: {
   const showError = (cause: unknown) =>
     setError(cause instanceof Error ? cause.message : 'Something went wrong. Please try again.');
 
-  async function displayImage(source: Blob | string) {
-    const url = typeof source === 'string' ? source : await blobToDataURL(source);
+  async function displayImage(url: string) {
     const preview = new Image();
     preview.src = url;
     try {
@@ -174,7 +173,7 @@ export default function VisualizerEditor(props: {
     setError('');
     try {
       if (!file.type.startsWith('image/')) throw new Error('Please choose an image file.');
-      const url = await displayImage(file);
+      const url = await displayImage(await optimizeBackgroundImage(file));
       if (disposed || version !== uploadVersion) {
         return;
       }

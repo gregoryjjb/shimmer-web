@@ -8,6 +8,9 @@ let visuals: LayoutVisuals;
 const saveVisualizer = vi.fn<(config: VisualizerConfig, image: string) => Promise<void>>();
 import VisualizerEditor from './VisualizerEditor';
 import { serializeRectangle } from './clipboard';
+import { optimizeBackgroundImage } from './background-image';
+
+vi.mock('./background-image', () => ({ optimizeBackgroundImage: vi.fn() }));
 
 const tracks: LayoutNode[] = [
   {
@@ -37,6 +40,7 @@ const trackButton = (name: string) =>
 
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(optimizeBackgroundImage).mockResolvedValue('data:image/webp;base64,d2VicA==');
   vi.stubGlobal(
     'Image',
     class {
@@ -174,15 +178,42 @@ test('pasting an image replaces the draft background and saves it with existing 
   const screenshot = new File(['screenshot'], 'clipboard.png', { type: 'image/png' });
   expect(paste(screenshot).defaultPrevented).toBe(true);
   await vi.waitFor(() => expect(button('Save and close').disabled).toBe(false));
+  expect(optimizeBackgroundImage).toHaveBeenCalledWith(screenshot);
   expect(document.querySelector('img')?.getAttribute('src')).toBe(
-    'data:image/png;base64,c2NyZWVuc2hvdA==',
+    'data:image/webp;base64,d2VicA==',
   );
   expect(saveVisualizer).not.toHaveBeenCalled();
   button('Save and close').click();
   await vi.waitFor(() => expect(saveVisualizer).toHaveBeenCalledOnce());
   const [config, image] = vi.mocked(saveVisualizer).mock.calls[0];
   expect(config.Roof).toHaveLength(1);
-  expect(image).toBe('data:image/png;base64,c2NyZWVuc2hvdA==');
+  expect(image).toBe('data:image/webp;base64,d2VicA==');
+});
+
+test('uploads are optimized, and compression failures preserve the current background', async () => {
+  await open();
+  expect(optimizeBackgroundImage).not.toHaveBeenCalled();
+  const input = document.querySelector<HTMLInputElement>('input[type=file]')!;
+  const file = new File(['photo'], 'house.jpg', { type: 'image/jpeg' });
+  Object.defineProperty(input, 'files', { value: [file] });
+  vi.mocked(optimizeBackgroundImage).mockRejectedValueOnce(new Error('Cannot encode WebP'));
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+  await vi.waitFor(() =>
+    expect(document.querySelector('[role=alert]')?.textContent).toContain('Cannot encode WebP'),
+  );
+  expect(document.querySelector('img')?.getAttribute('src')).toBe(visuals.backgroundImage);
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+  await vi.waitFor(() =>
+    expect(document.querySelector('img')?.getAttribute('src')).toBe(
+      'data:image/webp;base64,d2VicA==',
+    ),
+  );
+  expect(optimizeBackgroundImage).toHaveBeenLastCalledWith(file);
+  button('Save and close').click();
+  await vi.waitFor(() =>
+    expect(saveVisualizer).toHaveBeenCalledWith({}, 'data:image/webp;base64,d2VicA=='),
+  );
+  expect(optimizeBackgroundImage).toHaveBeenCalledTimes(2);
 });
 
 test('normal text paste is untouched and the image paste handler is removed on close', async () => {

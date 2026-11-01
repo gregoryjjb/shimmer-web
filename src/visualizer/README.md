@@ -37,6 +37,10 @@ while preserving rectangles, and only saves when you choose **Save and close**.
 
 **Save and close** persists the draft. Cancel, the close button, and Escape discard
 unsaved changes. Replacing an image preserves the rectangle layout.
+Uploaded and pasted backgrounds are resized to at most approximately one megapixel,
+preserving aspect ratio without enlarging smaller images, and encoded as WebP at
+quality 0.65. The compressed image is previewed and saved; existing backgrounds
+are not recompressed on load or save.
 
 The browser has one shared layout document, reusable across shows with the same
 track names. Track IDs are the names displayed in the editor. Objects for tracks
