@@ -31,8 +31,32 @@ test('failed saves leave the shared document and timeline intact, and can be ret
   expect(state.document()).toEqual(initial);
   expect(timeline.baseLayout).toEqual(initial.tree);
   await state.replace(replacement);
-  expect(state.document()).toEqual(replacement);
+  expect(state.document()).toMatchObject(replacement);
   expect(timeline.baseLayout).toEqual(replacement.tree);
+});
+
+test('each save stamps the stored and shared document, while loading preserves its timestamp', async () => {
+  const saved = { ...initial, updatedAt: '2026-01-01T00:00:00.000Z' };
+  vi.mocked(loadLayout).mockResolvedValue(saved);
+  const state = createLayoutState(
+    () => {},
+    () => {},
+  );
+  await state.ready;
+  expect(state.document()).toEqual(saved);
+  expect(saveLayout).not.toHaveBeenCalled();
+  vi.useFakeTimers({ toFake: ['Date'] });
+  try {
+    for (const time of ['2026-11-08T12:00:00.000Z', '2026-11-08T12:01:00.000Z']) {
+      vi.setSystemTime(new Date(time));
+      await state.replace(saved);
+      expect(state.document()).toEqual({ ...saved, updatedAt: time });
+      expect(saveLayout).toHaveBeenLastCalledWith(state.document());
+    }
+    expect(saved.updatedAt).toBe('2026-01-01T00:00:00.000Z');
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 test('saves the combined layout without changing show data or undo', async () => {

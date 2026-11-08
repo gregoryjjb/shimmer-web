@@ -46,6 +46,7 @@ absent from the current show are retained but hidden. Group rows cannot own obje
 
 ```json
 {
+  "updatedAt": "2026-11-08T12:00:00.000Z",
   "tree": [{ "type": "track", "id": "Roof" }],
   "visuals": {
     "backgroundImage": "data:image/png;base64,...",
@@ -57,6 +58,9 @@ absent from the current show are retained but hidden. Group rows cannot own obje
 ```
 
 The background image is optional and embedded in the JSON so the file is portable.
+Saving editor changes sets `updatedAt` using `new Date().toISOString()`.
+Importing, loading, and exporting preserve that timestamp. Invalid or missing
+timestamps are left undefined.
 Coordinates and dimensions are normalized image fractions (0-1); colors are
 six-digit hex values. The editor saves one combined document. Renaming a
 track in the tree carries its object mapping to the new name; removing a track

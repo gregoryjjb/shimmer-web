@@ -52,7 +52,7 @@ export default function LayoutMenu() {
           event.currentTarget.value = '';
           if (!file) return;
           try {
-            await ctx.layout.replace(await fileToString(file));
+            await ctx.layout.replace(await fileToString(file), { preserveUpdatedAt: true });
           } catch (error) {
             setError(error instanceof Error ? error.message : String(error));
             errorModal.show();

@@ -137,6 +137,26 @@ test('imports JSON and leaves the existing layout intact on invalid input', asyn
   expect(data.baseLayout).toEqual([{ type: 'track', id: 'New' }]);
 });
 
+test('imports and exports the original timestamp, leaving invalid or missing timestamps undefined', async () => {
+  const input = host.querySelector<HTMLInputElement>('input[type=file]')!;
+  for (const updatedAt of ['2025-03-04T05:06:07.000Z', 'invalid', undefined]) {
+    vi.mocked(saveLayout).mockClear();
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [new File([JSON.stringify({ tree: initial, updatedAt })], 'layout.json')],
+    });
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    await vi.waitFor(() => expect(saveLayout).toHaveBeenCalledTimes(1));
+    const expected = updatedAt === 'invalid' ? undefined : updatedAt;
+    expect(layoutState.document().updatedAt).toBe(expected);
+    expect(vi.mocked(saveLayout).mock.calls[0][0].updatedAt).toBe(expected);
+    button('Layout').click();
+    button('Export layout').click();
+    const exported = JSON.parse(vi.mocked(downloadFile).mock.lastCall![1] as string);
+    expect(exported.updatedAt).toBe(expected);
+  }
+});
+
 test('edits names and nesting, with save and cancel isolated from show data', async () => {
   open();
   drag('Extra', 'Garden');

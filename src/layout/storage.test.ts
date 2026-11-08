@@ -15,6 +15,7 @@ import { loadLayout, saveLayout } from './storage';
 
 const rectangle = { x: 0.2, y: 0.3, width: 0.1, height: 0.05, color: '#ff8800' };
 const document: LayoutDocument = {
+  updatedAt: '2026-11-08T12:00:00.000Z',
   tree: [{ type: 'track', id: 'Roof' }],
   visuals: {
     backgroundImage: 'data:image/png;base64,cGhvdG8=',

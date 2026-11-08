@@ -19,11 +19,12 @@ export function createLayoutState(
     .catch((cause) => setError(String(cause)))
     .finally(() => setLoading(false));
   let pending = Promise.resolve();
-  const replace = (input: unknown) => {
+  const replace = (input: unknown, options: { preserveUpdatedAt?: boolean } = {}) => {
     const result = pending.then(async () => {
       await ready;
       const next = parseLayoutDocument(input);
       validateTree(next.tree);
+      if (!options.preserveUpdatedAt) next.updatedAt = new Date().toISOString();
       await saveLayout(next);
       applyTree(next.tree);
       setDocument(next);

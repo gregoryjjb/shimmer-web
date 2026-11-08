@@ -8,6 +8,7 @@ export type LayoutVisuals = {
 };
 
 export type LayoutDocument = {
+  updatedAt?: string;
   tree: LayoutNode[];
   visuals: LayoutVisuals;
 };
@@ -21,6 +22,10 @@ export function parseLayoutDocument(input: unknown): LayoutDocument {
   const raw = typeof input === 'string' ? JSON.parse(input) : input;
   if (!raw || typeof raw !== 'object' || Array.isArray(raw))
     throw new Error('Expected a layout document with a tree and visuals');
+  const updatedAt =
+    typeof raw.updatedAt === 'string' && Number.isFinite(Date.parse(raw.updatedAt))
+      ? raw.updatedAt
+      : undefined;
   const tree = parseLayout(raw.tree);
   const visuals = raw.visuals ?? { trackObjects: {} };
   if (!visuals || typeof visuals !== 'object' || Array.isArray(visuals))
@@ -38,6 +43,7 @@ export function parseLayoutDocument(input: unknown): LayoutDocument {
     if (!tracks.has(name)) throw new Error('Visualizer track is missing from the tree: ' + name);
   }
   return {
+    ...(updatedAt === undefined ? {} : { updatedAt }),
     tree,
     visuals: { ...(backgroundImage === undefined ? {} : { backgroundImage }), trackObjects },
   };
