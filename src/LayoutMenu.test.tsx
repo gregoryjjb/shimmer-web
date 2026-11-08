@@ -13,7 +13,7 @@ vi.mock('./layout/storage', () => ({ loadLayout: vi.fn(), saveLayout: vi.fn() })
 let layoutState: ReturnType<typeof createLayoutState>;
 
 vi.mock('./TimelineContext', () => ({
-  useTimeline: () => ({ timeline: data, layout: layoutState }),
+  useTimeline: () => ({ timeline: { pause: vi.fn() }, layout: layoutState }),
 }));
 vi.mock('./timeline/export', async (original) => ({
   ...(await original<object>()),
@@ -34,7 +34,9 @@ const open = () => {
 };
 const saveAndClose = async () => {
   button('Save').click();
-  await vi.waitFor(() => expect(button('Save')).toBeUndefined());
+  await vi.waitFor(() =>
+    expect(document.querySelector('dialog[aria-labelledby="layout-editor-title"]')).toBeNull(),
+  );
 };
 const initial = [
   { type: 'group', id: 'Garden', children: [{ type: 'track', id: 'Lamp' }] },
@@ -73,6 +75,15 @@ function drag(
 }
 
 beforeEach(async () => {
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      disconnect() {}
+    },
+  );
+  HTMLDialogElement.prototype.showModal = vi.fn();
+  HTMLDialogElement.prototype.close = vi.fn();
   data = new TimelineData(new TimelineEmitter());
   vi.mocked(loadLayout).mockResolvedValue({
     tree: parseLayout(initial),
@@ -97,6 +108,7 @@ afterEach(() => {
   dispose();
   host.remove();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 test('exports the chosen layout without unmatched show channels', () => {
@@ -231,7 +243,7 @@ test('renaming and removing a track updates its visual mapping and export keeps 
     backgroundImage: 'data:image/png;base64,cGhvdG8=',
     trackObjects: { Lamp: [{ x: 0.2, y: 0.3, width: 0.1, height: 0.05, color: '#ff8800' }] },
   };
-  await layoutState.updateVisuals(visuals);
+  await layoutState.replace({ tree: layoutState.document().tree, visuals });
   open();
   const input = Array.from(document.querySelectorAll<HTMLInputElement>('input')).find(
     (input) => input.value === 'Lamp',

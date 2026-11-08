@@ -1,6 +1,6 @@
 import { createSignal, Show } from 'solid-js';
 import { useTimeline } from '../TimelineContext';
-import VisualizerEditor from './VisualizerEditor';
+import LayoutEditor from '../LayoutEditor';
 import VisualizerPanel from './VisualizerPanel';
 import { createStoredSignal } from '../hooks/createStorageSignal';
 
@@ -38,11 +38,10 @@ export default function VisualizerButton() {
         />
       </Show>
       <Show when={open()}>
-        <VisualizerEditor
-          layout={ctx.trackLayout()}
+        <LayoutEditor
+          layout={ctx.layout.document()}
           onClose={() => setOpen(false)}
-          visuals={ctx.layout.document().visuals}
-          onSave={ctx.layout.updateVisuals}
+          onSave={ctx.layout.replace}
         />
       </Show>
     </>

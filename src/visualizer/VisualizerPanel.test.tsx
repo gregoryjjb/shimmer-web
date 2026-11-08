@@ -155,7 +155,7 @@ test('offers setup when the shared layout has no image', () => {
   visuals = { trackObjects: {} };
   const panel = open();
   Array.from(document.querySelectorAll('button'))
-    .find((button) => button.textContent === 'Set up visualizer')!
+    .find((button) => button.textContent === 'Edit layout')!
     .click();
   expect(panel.edit).toHaveBeenCalledOnce();
   document.querySelector<HTMLButtonElement>('[aria-label="Close visualizer panel"]')!.click();

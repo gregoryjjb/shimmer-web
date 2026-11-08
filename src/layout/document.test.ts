@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { parseLayoutDocument, withTree, withVisuals } from './document';
+import { parseLayoutDocument } from './document';
 
 const rectangle = { x: 0.2, y: 0.3, width: 0.1, height: 0.05, color: '#ff8800' };
 const document = parseLayoutDocument({
@@ -38,30 +38,6 @@ test('rejects invalid trees, objects, missing tracks and nonportable image refer
     { ...document, visuals: { trackObjects: { Roof: [{ ...rectangle, width: -1 }] } } },
   ])
     expect(() => parseLayoutDocument(invalid)).toThrow();
-});
-
-test('tree editing moves mappings with renamed tracks and removes deleted mappings', () => {
-  const renamed = withTree(document, [{ type: 'track', id: 'New roof' }], { 'New roof': 'Roof' });
-  expect(renamed.visuals).toEqual({
-    ...document.visuals,
-    trackObjects: { 'New roof': [rectangle] },
-  });
-  expect(document.visuals.trackObjects.Roof).toEqual([rectangle]);
-  const deleted = withTree(renamed, [], {});
-  expect(deleted.visuals).toEqual({
-    backgroundImage: document.visuals.backgroundImage,
-    trackObjects: {},
-  });
-});
-
-test('saving visuals promotes only show-only tracks with objects into the saved tree', () => {
-  const updated = withVisuals(document, {
-    ...document.visuals,
-    trackObjects: { ...document.visuals.trackObjects, Extra: [rectangle], Empty: [] },
-  });
-  expect(updated.tree).toEqual([...document.tree, { type: 'track', id: 'Extra' }]);
-  expect(updated.visuals.trackObjects.Extra).toEqual([rectangle]);
-  expect(updated.visuals.trackObjects.Empty).toBeUndefined();
 });
 
 test('prototype-like track names remain ordinary mapping keys', () => {

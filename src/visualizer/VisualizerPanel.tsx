@@ -215,7 +215,7 @@ export default function VisualizerPanel(props: {
           <Show when={imageURL()}>
             <button
               type="button"
-              aria-label="Edit visualizer configuration"
+              aria-label="Edit layout"
               class="rounded bg-zinc-900/80 px-2 py-1 text-xs hover:bg-zinc-700 disabled:opacity-50"
               disabled={props.loading || loading() || !!props.layoutError}
               onClick={props.onEdit}
@@ -262,7 +262,7 @@ export default function VisualizerPanel(props: {
                       disabled={props.loading || loading() || !!props.layoutError}
                       onClick={props.onEdit}
                     >
-                      Set up visualizer
+                      Edit layout
                     </button>
                   </div>
                 }

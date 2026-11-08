@@ -1,4 +1,4 @@
-import { HOUSE_LAYOUT, iterateLeaves, iterateNodes, parseLayout } from '../timeline/layout';
+import { HOUSE_LAYOUT, iterateLeaves, parseLayout } from '../timeline/layout';
 import { DeepReadonly, LayoutNode } from '../timeline/types';
 import { parseConfig, VisualizerConfig } from '../visualizer/types';
 
@@ -41,46 +41,4 @@ export function parseLayoutDocument(input: unknown): LayoutDocument {
     tree,
     visuals: { ...(backgroundImage === undefined ? {} : { backgroundImage }), trackObjects },
   };
-}
-
-/** Add show-only tracks when visualizer objects make them part of the saved layout. */
-export function withVisuals(
-  document: DeepReadonly<LayoutDocument>,
-  visuals: LayoutVisuals,
-): LayoutDocument {
-  const tree = parseLayout(document.tree);
-  const names = new Set([...iterateNodes(...tree)].map((node) => node.id));
-  for (const [id, objects] of Object.entries(visuals.trackObjects)) {
-    if (objects.length && !names.has(id)) tree.push({ type: 'track', id });
-  }
-  const tracks = new Set([...iterateLeaves(...tree)].map((node) => node.id));
-  return parseLayoutDocument({
-    tree,
-    visuals: {
-      ...visuals,
-      trackObjects: Object.fromEntries(
-        Object.entries(visuals.trackObjects).filter(
-          ([id, objects]) => tracks.has(id) || objects.length,
-        ),
-      ),
-    },
-  });
-}
-
-/** Origins map each surviving track's new name to its name when editing began. */
-export function withTree(
-  document: DeepReadonly<LayoutDocument>,
-  tree: LayoutNode[],
-  origins: Record<string, string>,
-): LayoutDocument {
-  const trackObjects = Object.fromEntries(
-    [...iterateLeaves(...tree)].flatMap((node) => {
-      const original = Object.prototype.hasOwnProperty.call(origins, node.id)
-        ? origins[node.id]
-        : node.id;
-      const objects = document.visuals.trackObjects[original];
-      return objects ? [[node.id, objects]] : [];
-    }),
-  );
-  return parseLayoutDocument({ tree, visuals: { ...document.visuals, trackObjects } });
 }

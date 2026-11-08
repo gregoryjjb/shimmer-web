@@ -35,7 +35,7 @@ test('failed saves leave the shared document and timeline intact, and can be ret
   expect(timeline.baseLayout).toEqual(replacement.tree);
 });
 
-test('tree and visual updates share the latest document without changing show data or undo', async () => {
+test('saves the combined layout without changing show data or undo', async () => {
   const timeline = new TimelineData(new TimelineEmitter());
   const state = createLayoutState(timeline.setLayout, (tree) =>
     validateLayoutTracks(tree, timeline.data.tracks),
@@ -46,12 +46,13 @@ test('tree and visual updates share the latest document without changing show da
     tracks: { Roof: { locked: false, keyframes: [{ ts: 1, value: 1 }] } },
   });
   const show = JSON.stringify(timeline.data);
-  const visualUpdate = state.updateVisuals({
-    backgroundImage: 'data:image/png;base64,cGhvdG8=',
-    trackObjects: { Roof: [rectangle] },
+  await state.replace({
+    tree: [{ type: 'track', id: 'New roof' }],
+    visuals: {
+      backgroundImage: 'data:image/png;base64,cGhvdG8=',
+      trackObjects: { 'New roof': [rectangle] },
+    },
   });
-  const treeUpdate = state.updateTree([{ type: 'track', id: 'New roof' }], { 'New roof': 'Roof' });
-  await Promise.all([visualUpdate, treeUpdate]);
   expect(state.document().visuals.trackObjects).toEqual({ 'New roof': [rectangle] });
   expect(JSON.stringify(timeline.data)).toBe(show);
   await state.replace({ tree: [], visuals: { trackObjects: {} } });

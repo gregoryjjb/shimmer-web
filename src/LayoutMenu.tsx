@@ -1,14 +1,14 @@
-import { createSignal } from 'solid-js';
+import { createSignal, Show } from 'solid-js';
 import { Menu, MenuItem } from './MenuBar';
 import { ModalTitle, createModal } from './components/Modal';
 import { useTimeline } from './TimelineContext';
 import { downloadFile } from './timeline/export';
 import { fileToString } from './files';
-import LayoutEditorForm from './LayoutEditorForm';
+import LayoutEditor from './LayoutEditor';
 
 export default function LayoutMenu() {
   const ctx = useTimeline();
-  const [EditModal, editor] = createModal();
+  const [editing, setEditing] = createSignal(false);
   const [ErrorModal, errorModal] = createModal();
   const [error, setError] = createSignal('');
   let input!: HTMLInputElement;
@@ -34,7 +34,10 @@ export default function LayoutMenu() {
             if (ctx.layout.error()) {
               setError(ctx.layout.error());
               errorModal.show();
-            } else editor.show();
+            } else {
+              ctx.timeline.pause();
+              setEditing(true);
+            }
           }}
         />
       </Menu>
@@ -56,17 +59,13 @@ export default function LayoutMenu() {
           }
         }}
       />
-      <EditModal>
-        <ModalTitle>Edit layout</ModalTitle>
-        <LayoutEditorForm
-          layout={ctx.layout.document().tree}
-          onCancel={editor.hide}
-          onSave={async (tree, origins) => {
-            await ctx.layout.updateTree(tree, origins);
-            editor.hide();
-          }}
+      <Show when={editing()}>
+        <LayoutEditor
+          layout={ctx.layout.document()}
+          onClose={() => setEditing(false)}
+          onSave={ctx.layout.replace}
         />
-      </EditModal>
+      </Show>
       <ErrorModal>
         <ModalTitle>Import layout</ModalTitle>
         <p role="alert" class="text-sm text-rose-400">

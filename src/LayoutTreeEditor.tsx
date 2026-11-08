@@ -1,18 +1,16 @@
 import { Index, Show, createMemo, createSignal } from 'solid-js';
 import { Icon } from 'solid-heroicons';
 import { bars_3, folder, folderPlus, musicalNote, plus, trash } from 'solid-heroicons/solid-mini';
-import GradientButton from './components/GradientButton';
-import { parseLayout } from './timeline/layout';
-import { DeepReadonly, LayoutNode } from './timeline/types';
+import { DraftNode } from './layout/draft';
 
-type Row = { node: LayoutNode; path: number[] };
+type Row = { node: DraftNode; path: number[] };
 type DropPosition = 'before' | 'inside' | 'after';
 type DropTarget = { path: number[]; position: DropPosition } | 'root';
 
 const within = (path: number[], parent: number[]) =>
   parent.length <= path.length && parent.every((index, i) => path[i] === index);
 
-function siblingsAt(nodes: LayoutNode[], path: number[]) {
+function siblingsAt(nodes: DraftNode[], path: number[]) {
   for (const index of path.slice(0, -1)) {
     const node = nodes[index];
     if (node.type !== 'group') throw new Error('Expected a group');
@@ -21,21 +19,13 @@ function siblingsAt(nodes: LayoutNode[], path: number[]) {
   return nodes;
 }
 
-export default function LayoutEditorForm(props: {
-  layout: DeepReadonly<LayoutNode[]>;
-  onSave: (layout: LayoutNode[], origins: Record<string, string>) => void | Promise<void>;
-  onCancel: () => void;
+export default function LayoutTreeEditor(props: {
+  tree: DraftNode[];
+  onChange: (tree: DraftNode[]) => void;
+  selectedTrack?: string;
+  onSelect: (key: string | undefined) => void;
+  createKey: () => string;
 }) {
-  const initial = parseLayout(props.layout);
-  const rememberOrigins = (nodes: LayoutNode[]) =>
-    nodes.forEach((node) => {
-      if (node.type === 'group') rememberOrigins(node.children);
-      else (node as LayoutNode & { originalId: string }).originalId = node.id;
-    });
-  rememberOrigins(initial);
-  const [draft, setDraft] = createSignal(initial);
-  const [saving, setSaving] = createSignal(false);
-  const [error, setError] = createSignal('');
   const [dragged, setDragged] = createSignal<number[]>();
   const [dropTarget, setDropTarget] = createSignal<DropTarget>();
   const clearDrag = () => {
@@ -44,20 +34,19 @@ export default function LayoutEditorForm(props: {
   };
   const rows = createMemo(() => {
     const result: Row[] = [];
-    const visit = (nodes: LayoutNode[], path: number[]) =>
+    const visit = (nodes: DraftNode[], path: number[]) =>
       nodes.forEach((node, index) => {
         const childPath = [...path, index];
         result.push({ node, path: childPath });
         if (node.type === 'group') visit(node.children, childPath);
       });
-    visit(draft(), []);
+    visit(props.tree, []);
     return result;
   });
-  const edit = (change: (nodes: LayoutNode[]) => void) => {
-    const nodes = structuredClone(draft());
+  const edit = (change: (nodes: DraftNode[]) => void) => {
+    const nodes = structuredClone(props.tree);
     change(nodes);
-    setDraft(nodes);
-    setError('');
+    props.onChange(nodes);
   };
   const add = (type: 'group' | 'track', parent?: number[]) => {
     const names = new Set(rows().map(({ node }) => node.id));
@@ -65,10 +54,14 @@ export default function LayoutEditorForm(props: {
     let number = 1;
     while (names.has(`${prefix} ${number}`)) number++;
     const id = `${prefix} ${number}`;
+    const key = props.createKey();
     edit((nodes) => {
       const children = parent ? siblingsAt(nodes, [...parent, 0]) : nodes;
-      children.push(type === 'group' ? { type, id, children: [] } : { type, id });
+      children.push(
+        type === 'group' ? { type, id, key, children: [] } : { type, id, key, objects: [] },
+      );
     });
+    if (type === 'track') props.onSelect(key);
   };
   const targetAt = (
     event: DragEvent & { currentTarget: HTMLDivElement },
@@ -141,38 +134,18 @@ export default function LayoutEditorForm(props: {
   );
 
   return (
-    <form
-      class="flex min-h-0 flex-col gap-4"
-      inert={saving()}
+    <aside
+      aria-label="Layout tree"
+      class="flex min-h-0 flex-col gap-3 border-r border-zinc-800 p-3 max-md:max-h-[30vh] max-md:border-b max-md:border-r-0"
       onKeyDown={(event) => {
-        event.stopPropagation();
-        if (event.key === 'Escape') {
-          if (dragged()) clearDrag();
-          else if (!saving()) props.onCancel();
-        }
-      }}
-      onSubmit={async (event) => {
-        event.preventDefault();
-        if (saving()) return;
-        setSaving(true);
-        try {
-          const origins = Object.fromEntries(
-            rows()
-              .filter((row) => row.node.type === 'track')
-              .flatMap(({ node }) => {
-                const original = (node as LayoutNode & { originalId?: string }).originalId;
-                return original === undefined ? [] : [[node.id, original]];
-              }),
-          );
-          await props.onSave(parseLayout(draft()), origins);
-        } catch (error) {
-          setError(error instanceof Error ? error.message : String(error));
-        } finally {
-          setSaving(false);
+        if (event.key === 'Escape' && dragged()) {
+          event.preventDefault();
+          event.stopPropagation();
+          clearDrag();
         }
       }}
     >
-      <div class="min-h-0 overflow-auto rounded-lg border border-zinc-800 p-2">
+      <div class="min-h-0 flex-1 overflow-auto">
         <Index each={rows()}>
           {(row) => {
             const index = () => row().path[row().path.length - 1];
@@ -196,9 +169,10 @@ export default function LayoutEditorForm(props: {
                 data-drop-position={indicator()}
                 classList={{
                   'bg-indigo-500/20 ring-1 ring-inset ring-indigo-400': indicator() === 'inside',
+                  'bg-indigo-500/20': row().node.key === props.selectedTrack,
                   'opacity-40': !!dragged() && within(row().path, dragged()!),
                 }}
-                style={{ 'padding-left': `${(row().path.length - 1) * 20}px` }}
+                style={{ 'padding-left': `${(row().path.length - 1) * 16}px` }}
                 onDragOver={(event) => dragOver(event, row())}
                 onDrop={(event) => drop(event, row())}
                 onDragLeave={(event) => {
@@ -209,7 +183,7 @@ export default function LayoutEditorForm(props: {
                 <Show when={indicator() === 'before' || indicator() === 'after'}>
                   <div
                     class="pointer-events-none absolute right-0 h-0.5 bg-indigo-400"
-                    style={{ left: `${indicatorDepth() * 20}px` }}
+                    style={{ left: `${indicatorDepth() * 16}px` }}
                     classList={{
                       'top-0': indicator() === 'before',
                       'bottom-0': indicator() === 'after',
@@ -234,14 +208,25 @@ export default function LayoutEditorForm(props: {
                 >
                   <Icon path={bars_3} class="h-4 w-4" />
                 </button>
-                <Icon
-                  path={row().node.type === 'group' ? folder : musicalNote}
-                  class="h-4 w-4 shrink-0 text-zinc-400"
-                />
+                <button
+                  type="button"
+                  class="shrink-0 rounded p-1 text-zinc-400 hover:bg-zinc-700"
+                  aria-label={`Select ${row().node.type} ${row().node.id}`}
+                  title={`Select ${row().node.type} ${row().node.id}`}
+                  aria-pressed={row().node.key === props.selectedTrack}
+                  onClick={() =>
+                    props.onSelect(row().node.type === 'track' ? row().node.key : undefined)
+                  }
+                >
+                  <Icon path={row().node.type === 'group' ? folder : musicalNote} class="h-4 w-4" />
+                </button>
                 <input
                   aria-label={`${row().node.type === 'group' ? 'Group' : 'Track'} name`}
                   class="min-w-[6rem] flex-1 rounded bg-transparent px-2 py-1 text-sm text-zinc-100 focus:bg-zinc-700 focus:outline-none"
                   value={row().node.id}
+                  onFocus={() =>
+                    props.onSelect(row().node.type === 'track' ? row().node.key : undefined)
+                  }
                   onInput={(event) => {
                     const name = event.currentTarget.value;
                     edit((nodes) => {
@@ -287,7 +272,7 @@ export default function LayoutEditorForm(props: {
           </div>
         </Show>
       </div>
-      <div class="flex gap-2">
+      <div class="flex shrink-0 gap-2">
         <button
           type="button"
           class="rounded-lg bg-zinc-700 px-3 py-2 text-sm hover:bg-zinc-600"
@@ -303,27 +288,6 @@ export default function LayoutEditorForm(props: {
           Add track
         </button>
       </div>
-      <Show when={error()}>
-        <p role="alert" class="text-sm text-rose-400">
-          {error()}
-        </p>
-      </Show>
-      <div class="flex justify-end gap-3">
-        <button
-          type="button"
-          class="rounded-xl border border-zinc-800 px-3 py-2 font-semibold text-zinc-400 transition-colors hocus:bg-zinc-800 hocus:text-zinc-300"
-          onClick={props.onCancel}
-        >
-          Cancel
-        </button>
-        <GradientButton
-          component="button"
-          type="submit"
-          class="rounded-xl px-3 py-2 font-semibold text-black"
-        >
-          Save
-        </GradientButton>
-      </div>
-    </form>
+    </aside>
   );
 }

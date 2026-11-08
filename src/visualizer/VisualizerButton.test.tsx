@@ -9,7 +9,7 @@ vi.mock('../TimelineContext', () => ({
 vi.mock('./VisualizerPanel', () => ({
   default: (props: { onClose: () => void }) => <button onClick={props.onClose}>Close panel</button>,
 }));
-vi.mock('./VisualizerEditor', () => ({ default: () => null }));
+vi.mock('../LayoutEditor', () => ({ default: () => null }));
 
 let host: HTMLDivElement;
 let dispose: () => void;

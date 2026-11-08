@@ -9,34 +9,30 @@ Use **Hide visualizer** or its close button to dismiss it. The saved house image
 stays visible while rectangles appear only for tracks that are on at the timeline's
 current time, including when seeking or paused. Beat objects use the same brief
 flash as the track tree. Opening or closing the panel does not affect playback.
-Saving visualizer edits refreshes an open panel automatically.
+Saving layout edits refreshes an open panel automatically.
 Visibility, position, and width are saved in localStorage under `shimmer.visualizer.visible`,
 `shimmer.visualizer.position`, and `shimmer.visualizer.width`
 and restored when reopening the app. Height follows the image's aspect ratio.
 
-Choose **Edit** in the floating panel (or **Set up visualizer** before adding a photo).
-Upload a house photo, select a non-group
-track, and add rectangles. Drag rectangles to move them and their white bottom-right
-corners to resize them. The object list and percentage fields also allow selecting
-and adjusting rectangles with the keyboard. Clicking a rectangle selects its owner
-track; it never reassigns the rectangle to a different track.
+Choose **Layout / Edit layout**, or **Edit** in the floating panel, to open the
+combined layout editor. Playback pauses while opening it. The editable tree is on
+the left; the background and light objects are on the right.
 
-Select a rectangle and choose **Duplicate rectangle** to make a copy on the same
-track with the same dimensions and color. The copy is offset slightly within the
-image and selected so you can move or edit it immediately.
+Drag tree handles to reorder tracks and groups. Select a track using its icon or
+name field, then choose **Add object**. Select an object on the image and drag it
+to move it; drag its white bottom-right handle to resize it. Use the color picker
+to change its color and the trash button or Delete/Backspace to remove it.
+Clicking an object selects its owning track. Objects are also focusable with Tab.
 
-To copy between tracks, select a rectangle, press **Ctrl+C** (or **⌘C**), select the
-destination track, and press **Ctrl+V** (or **⌘V**). The pasted rectangle keeps the
-copied position, size, and color, belongs only to the destination track, and is
-selected automatically. Each paste creates an independent copy. Copy/paste in
-editable fields continues to work normally.
+Copy a selected object with **Ctrl+C** (or **Cmd+C**), select a destination track,
+and paste with **Ctrl+V** (or **Cmd+V**). Each paste creates an independent copy.
+Text editing keeps its normal copy/paste and deletion behavior.
 
-You can also paste a copied image or screenshot with **Ctrl+V** (Windows/Linux) or
-**⌘V** (Mac) anywhere in the open visualizer. Pasting replaces the draft background
-while preserving rectangles, and only saves when you choose **Save and close**.
+Use **Add image** or **Change image** to upload a background. Pasting an image
+outside a text field also replaces the draft background while preserving objects.
+**Save** commits tree and visuals together. **Cancel**, the close button, and
+Escape discard both. Layouts can be saved without a background image.
 
-**Save and close** persists the draft. Cancel, the close button, and Escape discard
-unsaved changes. Replacing an image preserves the rectangle layout.
 Uploaded and pasted backgrounds are resized to at most approximately one megapixel,
 preserving aspect ratio without enlarging smaller images, and encoded as WebP at
 quality 0.65. The compressed image is previewed and saved; existing backgrounds
@@ -62,9 +58,9 @@ absent from the current show are retained but hidden. Group rows cannot own obje
 
 The background image is optional and embedded in the JSON so the file is portable.
 Coordinates and dimensions are normalized image fractions (0-1); colors are
-six-digit hex values. Both editors update the same reactive document. Renaming a
+six-digit hex values. The editor saves one combined document. Renaming a
 track in the tree carries its object mapping to the new name; removing a track
-removes its objects. Assigning objects to a show-only track adds it to the saved tree.
+removes its objects. Add a track to the layout before assigning objects to it.
 Layout edits do not rename show tracks or enter the show's undo history.
 
 The complete document is stored in IndexedDB, database `shimmer-editor`, store

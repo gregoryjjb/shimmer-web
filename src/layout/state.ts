@@ -1,13 +1,6 @@
 import { createSignal } from 'solid-js';
 import { DeepReadonly, LayoutNode } from '../timeline/types';
-import {
-  defaultLayout,
-  LayoutDocument,
-  LayoutVisuals,
-  parseLayoutDocument,
-  withTree,
-  withVisuals,
-} from './document';
+import { defaultLayout, LayoutDocument, parseLayoutDocument } from './document';
 import { loadLayout, saveLayout } from './storage';
 
 export function createLayoutState(
@@ -26,10 +19,10 @@ export function createLayoutState(
     .catch((cause) => setError(String(cause)))
     .finally(() => setLoading(false));
   let pending = Promise.resolve();
-  const update = (change: (current: DeepReadonly<LayoutDocument>) => LayoutDocument) => {
+  const replace = (input: unknown) => {
     const result = pending.then(async () => {
       await ready;
-      const next = parseLayoutDocument(change(document()));
+      const next = parseLayoutDocument(input);
       validateTree(next.tree);
       await saveLayout(next);
       applyTree(next.tree);
@@ -44,9 +37,6 @@ export function createLayoutState(
     loading,
     error,
     ready,
-    replace: (input: unknown) => update(() => parseLayoutDocument(input)),
-    updateTree: (tree: LayoutNode[], origins: Record<string, string>) =>
-      update((current) => withTree(current, tree, origins)),
-    updateVisuals: (visuals: LayoutVisuals) => update((current) => withVisuals(current, visuals)),
+    replace,
   };
 }
