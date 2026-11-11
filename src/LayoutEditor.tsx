@@ -259,9 +259,14 @@ export default function LayoutEditor(props: {
         }}
       >
         <header class="flex shrink-0 items-center justify-between border-b border-zinc-800 px-4 py-3">
-          <h1 id="layout-editor-title" class="text-lg font-bold">
-            Edit layout
-          </h1>
+          <div class="flex items-center gap-3">
+            <h1 id="layout-editor-title" class="text-lg font-bold">
+              Edit layout
+            </h1>
+            <span class="text-sm text-zinc-400">
+              {tracks().length} {tracks().length === 1 ? 'track' : 'tracks'}
+            </span>
+          </div>
           <button
             type="button"
             aria-label="Close layout editor"
