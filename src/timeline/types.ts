@@ -48,5 +48,6 @@ export interface Project {
  */
 export interface ProjectData {
   version: '3';
+  updatedAt?: string;
   tracks: Tracks;
 }

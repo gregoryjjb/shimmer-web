@@ -87,6 +87,10 @@ function upgradeTracks(data: Record<string, unknown>): unknown {
 export function parseProjectData(input: unknown): ProjectData {
   const data: unknown = typeof input === 'string' ? JSON.parse(input) : input;
   if (!isObject(data)) throw new Error('Project data must be an object');
+  const updatedAt =
+    typeof data.updatedAt === 'string' && Number.isFinite(Date.parse(data.updatedAt))
+      ? data.updatedAt
+      : undefined;
   const tracks = upgradeTracks(data);
   if (!isObject(tracks)) throw new Error('Project data must contain a tracks object');
 
@@ -106,7 +110,11 @@ export function parseProjectData(input: unknown): ProjectData {
       },
     ];
   });
-  return { version: '3', tracks: Object.fromEntries(entries) };
+  return {
+    version: '3',
+    ...(updatedAt === undefined ? {} : { updatedAt }),
+    tracks: Object.fromEntries(entries),
+  };
 }
 
 /** The archive contains show data and audio only. */

@@ -225,10 +225,16 @@ class TimelineData {
 
     this.deselectLockedTracks();
 
-    this.markEdit('Replaced all data');
+    this.markEdit('Replaced all data', true);
   };
 
-  private takeUndoSnapshot = (action: string) => {
+  private saveData = (preserveUpdatedAt = false) => {
+    if (!preserveUpdatedAt) this.data.updatedAt = new Date().toISOString();
+    this.openedProject?.saveData(this.data);
+  };
+
+  private takeUndoSnapshot = (action: string, preserveUpdatedAt: boolean) => {
+    this.saveData(preserveUpdatedAt);
     const marshaled = JSON.stringify(this.data);
 
     this.undoHistory.push({
@@ -236,7 +242,6 @@ class TimelineData {
       data: marshaled,
     });
 
-    this.openedProject?.saveData(this.data);
     this.emitDataChanged();
   };
 
@@ -250,8 +255,8 @@ class TimelineData {
     this.emitSelected();
   };
 
-  private markEdit = (action: string) => {
-    this.takeUndoSnapshot(action);
+  private markEdit = (action: string, preserveUpdatedAt = false) => {
+    this.takeUndoSnapshot(action, preserveUpdatedAt);
     this.emit(action);
   };
 
@@ -274,7 +279,7 @@ class TimelineData {
     }
 
     this.data = JSON.parse(snapshot.data);
-    this.openedProject?.saveData(this.data);
+    this.saveData();
     this.emitDataChanged();
     this.emit(`Undo '${undid.action}'`);
   };
@@ -287,7 +292,7 @@ class TimelineData {
     }
 
     this.data = JSON.parse(redone.data);
-    this.openedProject?.saveData(this.data);
+    this.saveData();
     this.emitDataChanged();
     this.emit(`Redo '${redone.action}'`);
   };

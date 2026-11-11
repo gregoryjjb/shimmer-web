@@ -11,6 +11,17 @@ const show: ProjectData = {
 };
 
 describe('flat show format', () => {
+  test('preserves valid timestamps and ignores invalid or missing ones', () => {
+    const updatedAt = '2026-11-08T12:00:00.000Z';
+    expect(parseProjectData(JSON.stringify({ ...show, updatedAt }))).toEqual({
+      ...show,
+      updatedAt,
+    });
+    for (const updatedAt of [undefined, null, 123, '', 'not a date', {}, []]) {
+      expect(parseProjectData({ ...show, updatedAt })).toEqual(show);
+    }
+  });
+
   test('parses objects and JSON without introducing layout or unused channels', () => {
     expect(parseProjectData(show)).toEqual(show);
     expect(parseProjectData(JSON.stringify(show))).toEqual(show);
@@ -55,14 +66,15 @@ describe('flat show format', () => {
   });
 
   test('round trips a show and audio with no layout in the archive', async () => {
+    const timestampedShow = { ...show, updatedAt: '2026-11-08T12:00:00.000Z' };
     const audio = new Blob(['test audio'], { type: 'audio/mpeg' });
-    const archive = await projectToBlob({ name: 'Test show', data: show, audio });
+    const archive = await projectToBlob({ name: 'Test show', data: timestampedShow, audio });
     const zip = await JSZip.loadAsync(archive);
     expect(Object.keys(zip.files).sort()).toEqual(['audio.mp3', 'data.json']);
-    expect(JSON.parse(await zip.file('data.json')!.async('string'))).toEqual(show);
+    expect(JSON.parse(await zip.file('data.json')!.async('string'))).toEqual(timestampedShow);
     const restored = await projectFromBlob('Test show', archive);
     expect(restored.name).toBe('Test show');
-    expect(restored.data).toEqual(show);
+    expect(restored.data).toEqual(timestampedShow);
     expect(restored.audio.size).toBe(audio.size);
     expect(await zip.file('audio.mp3')!.async('string')).toBe('test audio');
   });

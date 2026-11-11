@@ -136,7 +136,7 @@ export default function LayoutTreeEditor(props: {
   return (
     <aside
       aria-label="Layout tree"
-      class="flex min-h-0 flex-col gap-3 border-r border-zinc-800 p-3 max-md:max-h-[30vh] max-md:border-b max-md:border-r-0"
+      class="flex min-h-0 flex-col gap-3 border-r border-zinc-800 max-md:max-h-[30vh] max-md:border-b max-md:border-r-0"
       onKeyDown={(event) => {
         if (event.key === 'Escape' && dragged()) {
           event.preventDefault();
@@ -145,7 +145,7 @@ export default function LayoutTreeEditor(props: {
         }
       }}
     >
-      <div class="min-h-0 flex-1 overflow-auto">
+      <div class="min-h-0 flex-1 overflow-auto p-3">
         <Index each={rows()}>
           {(row) => {
             const index = () => row().path[row().path.length - 1];
@@ -272,7 +272,7 @@ export default function LayoutTreeEditor(props: {
           </div>
         </Show>
       </div>
-      <div class="flex shrink-0 gap-2">
+      <div class="flex shrink-0 gap-2 px-3 pb-3">
         <button
           type="button"
           class="rounded-lg bg-zinc-700 px-3 py-2 text-sm hover:bg-zinc-600"

@@ -36,6 +36,33 @@ const track = (ts: number, selected = false) => ({
 });
 
 describe('show editing with a separate house layout', () => {
+  test('imports preserve timestamps and edits, undo, and redo save the current time', async () => {
+    const { data, project } = makeData({ 'Roof 1': track(1, true) });
+    const imported = { ...data.data, updatedAt: '2025-01-01T00:00:00.000Z' };
+    data.replaceAll(imported);
+    expect(data.data.updatedAt).toBe(imported.updatedAt);
+    expect(project.data.updatedAt).toBe(imported.updatedAt);
+    data.load(project);
+    expect(data.data.updatedAt).toBe(imported.updatedAt);
+
+    const stored = vi.spyOn(project, 'saveData');
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      const actions = [() => data.moveSelected(1), data.undo, data.redo];
+      for (const [index, action] of actions.entries()) {
+        const now = new Date(Date.UTC(2026, 10, 8, 12, index));
+        vi.setSystemTime(now);
+        action();
+        expect(data.data.updatedAt).toBe(now.toISOString());
+        expect(project.data.updatedAt).toBe(now.toISOString());
+        expect(stored).toHaveBeenLastCalledWith(data.data);
+      }
+      expect(imported.updatedAt).toBe('2025-01-01T00:00:00.000Z');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   test('empty shows render without creating stored house tracks', () => {
     const { data } = makeData();
     expect(data.channels).toEqual([]);
@@ -198,7 +225,7 @@ describe('collapsed layout groups', () => {
     expect(data.data.tracks['Roof 1'].keyframes[0].ts).toBe(2);
     expect(data.collapsedGroupIDs).toEqual(['Roof parkview', 'Roof']);
     data.undo();
-    expect(data.data).toEqual(saved);
+    expect(data.data.tracks).toEqual(saved.tracks);
     data.setGroupCollapsed('Roof', false);
     expect(data.visibleRows.find((row) => row.id === 'Roof parkview')?.collapsed).toBe(true);
     expect(data.visibleRows.some((row) => row.id === 'Roof 1')).toBe(false);
